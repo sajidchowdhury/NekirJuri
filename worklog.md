@@ -51,3 +51,27 @@ Stage Summary:
 - Project pushed to GitHub: sajidchowdhury/NekirJuri
 - Docker setup complete: `docker-compose up -d --build` to run
 - User can pull repo and run with Docker immediately
+
+---
+Task ID: 3
+Agent: Backend Lead
+Task: Create API routes for Salary/Payroll, Accounting (Chart of Accounts, Journal Entries), and Inventory (Suppliers, Products, Purchases, Stock, Sales)
+
+Work Log:
+- Read existing project context (46 tables, api-utils, types)
+- Analyzed full Prisma schema for all 10 relevant models
+- Created 10 production-ready API route files with full CRUD, validation, and audit logging
+
+Stage Summary:
+- 10 API route files created across 3 domains:
+  - Salary/Payroll: salary-structures, salary-payments
+  - Accounting: accounts, journal-entries
+  - Inventory: suppliers, product-categories, products, purchases, stock-movements, sales
+- All routes enforce multi-tenancy via x-tenant-id header
+- Complex mutations use db.$transaction() for atomicity
+- Journal entries validate double-entry balance (debit === credit within 0.01)
+- Purchases auto-update product stock (+) and create stock movements (type='in')
+- Sales auto-update product stock (-) and create stock movements (type='out')
+- Salary structures auto-calculate totalSalary and netSalary
+- All operations audit-logged to AuditLog table
+- ESLint: 0 errors

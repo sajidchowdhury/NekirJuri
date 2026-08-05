@@ -1,0 +1,602 @@
+     1→     1→     1→// ============================================================
+     2→     2→     2→// Madrasha ERP & Accounting Management System (SaaS)
+     3→     3→     3→// Database Schema — Prisma + SQLite
+     4→     4→     4→// Version: 1.0
+     5→     5→     5→// ============================================================
+     6→     6→     6→// Design Principles:
+     7→     7→     7→//   - Multi-tenant: tenant_id on every business table
+     8→     8→     8→//   - Composite unique constraints prevent cross-tenant data leaks
+     9→     9→     9→//   - Soft delete (deleted_at) on transactional entities
+    10→    10→    10→//   - Audit fields: created_at, updated_at, created_by, updated_by
+    11→    11→    11→//   - Double-entry accounting foundation (chart_of_accounts, journal_entries)
+    12→    12→    12→//   - Index strategy optimized for reporting queries
+    13→    13→    13→//   - snake_case table names via @@map
+    14→    14→    14→//   - Singular table names for consistency
+    15→    15→    15→// ============================================================
+    16→    16→    16→
+    17→    17→    17→generator client {
+    18→    18→    18→  provider = "prisma-client-js"
+    19→    19→    19→}
+    20→    20→    20→
+    21→    21→    21→datasource db {
+    22→    22→    22→  provider = "sqlite"
+    23→    23→    23→  url      = env("DATABASE_URL")
+    24→    24→    24→}
+    25→    25→    25→
+    26→    26→    26→// ============================================================
+    27→    27→    27→// DOMAIN 1: SAAS — Tenants, Subscriptions, Billing
+    28→    28→    28→// ============================================================
+    29→    29→    29→
+    30→    30→    30→model Tenant {
+    31→    31→    31→  id          Int      @id @default(autoincrement())
+    32→    32→    32→  uuid        String   @unique @default(cuid())
+    33→    33→    33→  name        String
+    34→    34→    34→  slug        String   @unique
+    35→    35→    35→  domain      String?  @unique
+    36→    36→    36→  logoUrl     String?  @map("logo_url")
+    37→    37→    37→  address     String?
+    38→    38→    38→  city        String?
+    39→    39→    39→  state       String?
+    40→    40→    40→  country     String   @default("Bangladesh")
+    41→    41→    41→  postalCode  String?  @map("postal_code")
+    42→    42→    42→  phone       String?
+    43→    43→    43→  email       String?
+    44→    44→    44→  website     String?
+    45→    45→    45→  isActive    Boolean  @default(true) @map("is_active")
+    46→    46→    46→  settings    String?
+    47→    47→    47→  createdAt   DateTime @default(now()) @map("created_at")
+    48→    48→    48→  updatedAt   DateTime @updatedAt @map("updated_at")
+    49→    49→    49→
+    50→    50→    50→  subscriptions      Subscription[]
+    51→    51→    51→  users              User[]
+    52→    52→    52→  roles              Role[]
+    53→    53→    53→  academicSessions   AcademicSession[]
+    54→    54→    54→  classes            Class[]
+    55→    55→    55→  sections           Section[]
+    56→    56→    56→  students           Student[]
+    57→    57→    57→  guardians          Guardian[]
+    58→    58→    58→  teachers           Teacher[]
+    59→    59→    59→  employees          Employee[]
+    60→    60→    60→  studentPromotions  StudentPromotion[]
+    61→    61→    61→  feeCategories      FeeCategory[]
+    62→    62→    62→  feeStructures      FeeStructure[]
+    63→    63→    63→  feeInvoices        FeeInvoice[]
+    64→    64→    64→  feeInvoiceItems    FeeInvoiceItem[]
+    65→    65→    65→  feeCollections     FeeCollection[]
+    66→    66→    66→  feeDiscounts       FeeDiscount[]
+    67→    67→    67→  donationCategories DonationCategory[]
+    68→    68→    68→  donors             Donor[]
+    69→    69→    69→  donations          Donation[]
+    70→    70→    70→  expenseCategories  ExpenseCategory[]
+    71→    71→    71→  expenses           Expense[]
+    72→    72→    72→  salaryStructures   SalaryStructure[]
+    73→    73→    73→  salaryPayments     SalaryPayment[]
+    74→    74→    74→  suppliers          Supplier[]
+    75→    75→    75→  productCategories  ProductCategory[]
+    76→    76→    76→  products           Product[]
+    77→    77→    77→  purchases          Purchase[]
+    78→    78→    78→  purchaseItems      PurchaseItem[]
+    79→    79→    79→  stockMovements     StockMovement[]
+    80→    80→    80→  salesInvoices      SalesInvoice[]
+    81→    81→    81→  salesItems         SalesItem[]
+    82→    82→    82→  chartOfAccounts    ChartOfAccount[]
+    83→    83→    83→  journalEntries     JournalEntry[]
+    84→    84→    84→  journalEntryItems  JournalEntryItem[]
+    85→    85→    85→  websitePages       WebsitePage[]
+    86→    86→    86→  notices            Notice[]
+    87→    87→    87→  galleries          Gallery[]
+    88→    88→    88→  galleryImages      GalleryImage[]
+    89→    89→    89→  settingsEntries    Settings[]
+    90→    90→    90→  notifications      Notification[]
+    91→    91→    91→  activityLogs       ActivityLog[]
+    92→    92→    92→  auditLogs          AuditLog[]
+    93→    93→    93→
+    94→    94→    94→  @@map("tenants")
+    95→    95→    95→}
+    96→    96→    96→
+    97→    97→    97→model SubscriptionPlan {
+    98→    98→    98→  id           Int      @id @default(autoincrement())
+    99→    99→    99→  name         String
+   100→   100→   100→  slug         String   @unique
+   101→   101→   101→  description  String?
+   102→   102→   102→  priceMonthly Float    @map("price_monthly")
+   103→   103→   103→  priceYearly  Float?   @map("price_yearly")
+   104→   104→   104→  maxStudents  Int      @map("max_students")
+   105→   105→   105→  maxEmployees Int      @map("max_employees")
+   106→   106→   106→  maxStorageMb Int      @map("max_storage_mb")
+   107→   107→   107→  features     String?
+   108→   108→   108→  isActive     Boolean  @default(true) @map("is_active")
+   109→   109→   109→  createdAt    DateTime @default(now()) @map("created_at")
+   110→   110→   110→  updatedAt    DateTime @updatedAt @map("updated_at")
+   111→   111→   111→
+   112→   112→   112→  subscriptions Subscription[]
+   113→   113→   113→
+   114→   114→   114→  @@map("subscription_plans")
+   115→   115→   115→}
+   116→   116→   116→
+   117→   117→   117→model Subscription {
+   118→   118→   118→  id          Int      @id @default(autoincrement())
+   119→   119→   119→  tenantId    Int      @map("tenant_id")
+   120→   120→   120→  planId      Int      @map("plan_id")
+   121→   121→   121→  status      String
+   122→   122→   122→  startDate   DateTime @map("start_date")
+   123→   123→   123→  endDate     DateTime @map("end_date")
+   124→   124→   124→  trialEnd    DateTime? @map("trial_end")
+   125→   125→   125→  isAutoRenew Boolean  @default(false) @map("is_auto_renew")
+   126→   126→   126→  createdAt   DateTime @default(now()) @map("created_at")
+   127→   127→   127→  updatedAt   DateTime @updatedAt @map("updated_at")
+   128→   128→   128→
+   129→   129→   129→  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   130→   130→   130→  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+   131→   131→   131→
+   132→   132→   132→  @@index([tenantId])
+   133→   133→   133→  @@index([status])
+   134→   134→   134→  @@map("subscriptions")
+   135→   135→   135→}
+   136→   136→   136→
+   137→   137→   137→// ============================================================
+   138→   138→   138→// DOMAIN 2: SECURITY — Users, Roles, Permissions, RBAC
+   139→   139→   139→// ============================================================
+   140→   140→   140→
+   141→   141→   141→model User {
+   142→   142→   142→  id           Int       @id @default(autoincrement())
+   143→   143→   143→  uuid         String    @unique @default(cuid())
+   144→   144→   144→  tenantId     Int?      @map("tenant_id")
+   145→   145→   145→  email        String
+   146→   146→   146→  passwordHash String    @map("password_hash")
+   147→   147→   147→  name         String
+   148→   148→   148→  phone        String?
+   149→   149→   149→  avatarUrl    String?   @map("avatar_url")
+   150→   150→   150→  isActive     Boolean   @default(true) @map("is_active")
+   151→   151→   151→  isSuperAdmin Boolean   @default(false) @map("is_super_admin")
+   152→   152→   152→  lastLoginAt  DateTime? @map("last_login_at")
+   153→   153→   153→  createdAt    DateTime  @default(now()) @map("created_at")
+   154→   154→   154→  updatedAt    DateTime  @updatedAt @map("updated_at")
+   155→   155→   155→  deletedAt    DateTime? @map("deleted_at")
+   156→   156→   156→
+   157→   157→   157→  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   158→   158→   158→  userRoles     UserRole[]
+   159→   159→   159→  notifications Notification[]
+   160→   160→   160→
+   161→   161→   161→  @@unique([tenantId, email])
+   162→   162→   162→  @@index([tenantId])
+   163→   163→   163→  @@index([email])
+   164→   164→   164→  @@map("users")
+   165→   165→   165→}
+   166→   166→   166→
+   167→   167→   167→model Role {
+   168→   168→   168→  id          Int      @id @default(autoincrement())
+   169→   169→   169→  tenantId    Int      @map("tenant_id")
+   170→   170→   170→  name        String
+   171→   171→   171→  slug        String
+   172→   172→   172→  description String?
+   173→   173→   173→  isSystem    Boolean  @default(false) @map("is_system")
+   174→   174→   174→  createdAt   DateTime @default(now()) @map("created_at")
+   175→   175→   175→  updatedAt   DateTime @updatedAt @map("updated_at")
+   176→   176→   176→
+   177→   177→   177→  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   178→   178→   178→  rolePermissions RolePermission[]
+   179→   179→   179→  userRoles       UserRole[]
+   180→   180→   180→
+   181→   181→   181→  @@unique([tenantId, slug])
+   182→   182→   182→  @@index([tenantId])
+   183→   183→   183→  @@map("roles")
+   184→   184→   184→}
+   185→   185→   185→
+   186→   186→   186→model Permission {
+   187→   187→   187→  id          Int      @id @default(autoincrement())
+   188→   188→   188→  name        String
+   189→   189→   189→  slug        String   @unique
+   190→   190→   190→  module      String
+   191→   191→   191→  description String?
+   192→   192→   192→  createdAt   DateTime @default(now()) @map("created_at")
+   193→   193→   193→  updatedAt   DateTime @updatedAt @map("updated_at")
+   194→   194→   194→
+   195→   195→   195→  rolePermissions RolePermission[]
+   196→   196→   196→
+   197→   197→   197→  @@index([module])
+   198→   198→   198→  @@map("permissions")
+   199→   199→   199→}
+   200→   200→   200→
+   201→   201→   201→model RolePermission {
+   202→   202→   202→  id           Int      @id @default(autoincrement())
+   203→   203→   203→  roleId       Int      @map("role_id")
+   204→   204→   204→  permissionId Int      @map("permission_id")
+   205→   205→   205→  createdAt    DateTime @default(now()) @map("created_at")
+   206→   206→   206→
+   207→   207→   207→  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+   208→   208→   208→  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+   209→   209→   209→
+   210→   210→   210→  @@unique([roleId, permissionId])
+   211→   211→   211→  @@map("role_permissions")
+   212→   212→   212→}
+   213→   213→   213→
+   214→   214→   214→model UserRole {
+   215→   215→   215→  id        Int      @id @default(autoincrement())
+   216→   216→   216→  userId    Int      @map("user_id")
+   217→   217→   217→  roleId    Int      @map("role_id")
+   218→   218→   218→  createdAt DateTime @default(now()) @map("created_at")
+   219→   219→   219→
+   220→   220→   220→  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+   221→   221→   221→  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+   222→   222→   222→
+   223→   223→   223→  @@unique([userId, roleId])
+   224→   224→   224→  @@map("user_roles")
+   225→   225→   225→}
+   226→   226→   226→
+   227→   227→   227→// ============================================================
+   228→   228→   228→// DOMAIN 3: ACADEMIC — Sessions, Classes, Sections, Students,
+   229→   229→   229→//            Guardians, Teachers, Employees, Promotions
+   230→   230→   230→// ============================================================
+   231→   231→   231→
+   232→   232→   232→model AcademicSession {
+   233→   233→   233→  id        Int      @id @default(autoincrement())
+   234→   234→   234→  tenantId  Int      @map("tenant_id")
+   235→   235→   235→  name      String
+   236→   236→   236→  startDate DateTime @map("start_date")
+   237→   237→   237→  endDate   DateTime @map("end_date")
+   238→   238→   238→  isCurrent Boolean  @default(false) @map("is_current")
+   239→   239→   239→  status    String
+   240→   240→   240→  createdAt DateTime @default(now()) @map("created_at")
+   241→   241→   241→  updatedAt DateTime @updatedAt @map("updated_at")
+   242→   242→   242→
+   243→   243→   243→  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   244→   244→   244→  classes           Class[]
+   245→   245→   245→  students          Student[]
+   246→   246→   246→  feeStructures     FeeStructure[]
+   247→   247→   247→  feeInvoices       FeeInvoice[]
+   248→   248→   248→  studentPromotions StudentPromotion[]
+   249→   249→   249→
+   250→   250→   250→  @@unique([tenantId, name])
+   251→   251→   251→  @@index([tenantId])
+   252→   252→   252→  @@index([tenantId, status])
+   253→   253→   253→  @@map("academic_sessions")
+   254→   254→   254→}
+   255→   255→   255→
+   256→   256→   256→model Class {
+   257→   257→   257→  id                Int      @id @default(autoincrement())
+   258→   258→   258→  tenantId          Int      @map("tenant_id")
+   259→   259→   259→  name              String
+   260→   260→   260→  code              String
+   261→   261→   261→  orderSequence     Int      @map("order_sequence")
+   262→   262→   262→  academicSessionId Int      @map("academic_session_id")
+   263→   263→   263→  teacherId         Int?     @map("teacher_id")
+   264→   264→   264→  capacity          Int?
+   265→   265→   265→  description       String?
+   266→   266→   266→  status            String
+   267→   267→   267→  createdAt         DateTime @default(now()) @map("created_at")
+   268→   268→   268→  updatedAt         DateTime @updatedAt @map("updated_at")
+   269→   269→   269→
+   270→   270→   270→  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   271→   271→   271→  academicSession    AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+   272→   272→   272→  classTeacher       Teacher?        @relation("ClassTeacher", fields: [teacherId], references: [id])
+   273→   273→   273→  sections           Section[]
+   274→   274→   274→  students           Student[]
+   275→   275→   275→  feeStructures      FeeStructure[]
+   276→   276→   276→  feeInvoices        FeeInvoice[]
+   277→   277→   277→  promotionsFromClass StudentPromotion[] @relation("PromotionFromClass")
+   278→   278→   278→  promotionsToClass   StudentPromotion[] @relation("PromotionToClass")
+   279→   279→   279→
+   280→   280→   280→  @@unique([tenantId, code, academicSessionId])
+   281→   281→   281→  @@index([tenantId])
+   282→   282→   282→  @@index([tenantId, academicSessionId])
+   283→   283→   283→  @@map("classes")
+   284→   284→   284→}
+   285→   285→   285→
+   286→   286→   286→model Section {
+   287→   287→   287→  id        Int      @id @default(autoincrement())
+   288→   288→   288→  tenantId  Int      @map("tenant_id")
+   289→   289→   289→  classId   Int      @map("class_id")
+   290→   290→   290→  name      String
+   291→   291→   291→  teacherId Int?     @map("teacher_id")
+   292→   292→   292→  capacity  Int?
+   293→   293→   293→  status    String
+   294→   294→   294→  createdAt DateTime @default(now()) @map("created_at")
+   295→   295→   295→  updatedAt DateTime @updatedAt @map("updated_at")
+   296→   296→   296→
+   297→   297→   297→  tenant          Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   298→   298→   298→  class           Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+   299→   299→   299→  sectionInCharge Teacher? @relation("SectionInCharge", fields: [teacherId], references: [id])
+   300→   300→   300→  students        Student[]
+   301→   301→   301→
+   302→   302→   302→  @@unique([tenantId, classId, name])
+   303→   303→   303→  @@index([tenantId])
+   304→   304→   304→  @@index([tenantId, classId])
+   305→   305→   305→  @@map("sections")
+   306→   306→   306→}
+   307→   307→   307→
+   308→   308→   308→model Student {
+   309→   309→   309→  id                Int       @id @default(autoincrement())
+   310→   310→   310→  tenantId          Int       @map("tenant_id")
+   311→   311→   311→  uuid              String    @unique @default(cuid())
+   312→   312→   312→  registrationNo    String    @map("registration_no")
+   313→   313→   313→  admissionNo       String?   @map("admission_no")
+   314→   314→   314→  name              String
+   315→   315→   315→  nameBn            String?   @map("name_bn")
+   316→   316→   316→  fatherName        String?   @map("father_name")
+   317→   317→   317→  motherName        String?   @map("mother_name")
+   318→   318→   318→  dateOfBirth       DateTime? @map("date_of_birth")
+   319→   319→   319→  gender            String?
+   320→   320→   320→  bloodGroup        String?   @map("blood_group")
+   321→   321→   321→  nationality       String?   @default("Bangladeshi")
+   322→   322→   322→  religion          String?
+   323→   323→   323→  photoUrl          String?   @map("photo_url")
+   324→   324→   324→  phone             String?
+   325→   325→   325→  email             String?
+   326→   326→   326→  address           String?
+   327→   327→   327→  city              String?
+   328→   328→   328→  state             String?
+   329→   329→   329→  country           String?
+   330→   330→   330→  postalCode        String?   @map("postal_code")
+   331→   331→   331→  classId           Int       @map("class_id")
+   332→   332→   332→  sectionId         Int?      @map("section_id")
+   333→   333→   333→  academicSessionId Int       @map("academic_session_id")
+   334→   334→   334→  admissionDate     DateTime? @map("admission_date")
+   335→   335→   335→  previousSchool    String?   @map("previous_school")
+   336→   336→   336→  rollNo            String?   @map("roll_no")
+   337→   337→   337→  isActive          Boolean   @default(true) @map("is_active")
+   338→   338→   338→  status            String
+   339→   339→   339→  createdAt         DateTime  @default(now()) @map("created_at")
+   340→   340→   340→  updatedAt         DateTime  @updatedAt @map("updated_at")
+   341→   341→   341→  deletedAt         DateTime? @map("deleted_at")
+   342→   342→   342→  createdBy         Int?      @map("created_by")
+   343→   343→   343→  updatedBy         Int?      @map("updated_by")
+   344→   344→   344→
+   345→   345→   345→  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   346→   346→   346→  class            Class            @relation(fields: [classId], references: [id], onDelete: Restrict)
+   347→   347→   347→  section          Section?         @relation(fields: [sectionId], references: [id])
+   348→   348→   348→  academicSession  AcademicSession  @relation(fields: [academicSessionId], references: [id], onDelete: Restrict)
+   349→   349→   349→  studentGuardians StudentGuardian[]
+   350→   350→   350→  feeInvoices      FeeInvoice[]
+   351→   351→   351→  feeCollections   FeeCollection[]
+   352→   352→   352→  feeDiscounts     FeeDiscount[]
+   353→   353→   353→  studentPromotions StudentPromotion[]
+   354→   354→   354→  salesInvoices    SalesInvoice[]
+   355→   355→   355→
+   356→   356→   356→  @@unique([tenantId, registrationNo])
+   357→   357→   357→  @@index([tenantId])
+   358→   358→   358→  @@index([tenantId, classId])
+   359→   359→   359→  @@index([tenantId, status])
+   360→   360→   360→  @@index([tenantId, createdAt])
+   361→   361→   361→  @@index([registrationNo])
+   362→   362→   362→  @@map("students")
+   363→   363→   363→}
+   364→   364→   364→
+   365→   365→   365→model Guardian {
+   366→   366→   366→  id           Int       @id @default(autoincrement())
+   367→   367→   367→  tenantId     Int       @map("tenant_id")
+   368→   368→   368→  uuid         String    @unique @default(cuid())
+   369→   369→   369→  name         String
+   370→   370→   370→  nameBn       String?   @map("name_bn")
+   371→   371→   371→  relationship String
+   372→   372→   372→  phone        String
+   373→   373→   373→  phoneAlt     String?   @map("phone_alt")
+   374→   374→   374→  email        String?
+   375→   375→   375→  occupation   String?
+   376→   376→   376→  address      String?
+   377→   377→   377→  city         String?
+   378→   378→   378→  photoUrl     String?   @map("photo_url")
+   379→   379→   379→  nidNo        String?   @map("nid_no")
+   380→   380→   380→  isActive     Boolean   @default(true) @map("is_active")
+   381→   381→   381→  createdAt    DateTime  @default(now()) @map("created_at")
+   382→   382→   382→  updatedAt    DateTime  @updatedAt @map("updated_at")
+   383→   383→   383→  deletedAt    DateTime? @map("deleted_at")
+   384→   384→   384→
+   385→   385→   385→  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   386→   386→   386→  studentGuardians StudentGuardian[]
+   387→   387→   387→
+   388→   388→   388→  @@index([tenantId])
+   389→   389→   389→  @@index([phone])
+   390→   390→   390→  @@map("guardians")
+   391→   391→   391→}
+   392→   392→   392→
+   393→   393→   393→model StudentGuardian {
+   394→   394→   394→  id         Int      @id @default(autoincrement())
+   395→   395→   395→  studentId  Int      @map("student_id")
+   396→   396→   396→  guardianId Int      @map("guardian_id")
+   397→   397→   397→  isPrimary  Boolean  @default(false) @map("is_primary")
+   398→   398→   398→  createdAt  DateTime @default(now()) @map("created_at")
+   399→   399→   399→
+   400→   400→   400→  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+   401→   401→   401→  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+   402→   402→   402→
+   403→   403→   403→  @@unique([studentId, guardianId])
+   404→   404→   404→  @@map("student_guardians")
+   405→   405→   405→}
+   406→   406→   406→
+   407→   407→   407→model Teacher {
+   408→   408→   408→  id             Int       @id @default(autoincrement())
+   409→   409→   409→  tenantId       Int       @map("tenant_id")
+   410→   410→   410→  uuid           String    @unique @default(cuid())
+   411→   411→   411→  employeeIdNo   String    @map("employee_id_no")
+   412→   412→   412→  name           String
+   413→   413→   413→  nameBn         String?   @map("name_bn")
+   414→   414→   414→  fatherName     String?   @map("father_name")
+   415→   415→   415→  motherName     String?   @map("mother_name")
+   416→   416→   416→  dateOfBirth    DateTime? @map("date_of_birth")
+   417→   417→   417→  gender         String?
+   418→   418→   418→  bloodGroup     String?   @map("blood_group")
+   419→   419→   419→  nationality    String?
+   420→   420→   420→  religion       String?
+   421→   421→   421→  photoUrl       String?   @map("photo_url")
+   422→   422→   422→  phone          String
+   423→   423→   423→  email          String?
+   424→   424→   424→  address        String?
+   425→   425→   425→  city           String?
+   426→   426→   426→  qualification  String?
+   427→   427→   427→  specialization String?
+   428→   428→   428→  joiningDate    DateTime? @map("joining_date")
+   429→   429→   429→  leavingDate    DateTime? @map("leaving_date")
+   430→   430→   430→  isActive       Boolean   @default(true) @map("is_active")
+   431→   431→   431→  status         String
+   432→   432→   432→  createdAt      DateTime  @default(now()) @map("created_at")
+   433→   433→   433→  updatedAt      DateTime  @updatedAt @map("updated_at")
+   434→   434→   434→  deletedAt      DateTime? @map("deleted_at")
+   435→   435→   435→  createdBy      Int?      @map("created_by")
+   436→   436→   436→  updatedBy      Int?      @map("updated_by")
+   437→   437→   437→
+   438→   438→   438→  tenant               Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   439→   439→   439→  classesAsTeacher     Class[]           @relation("ClassTeacher")
+   440→   440→   440→  sectionsAsInCharge   Section[]         @relation("SectionInCharge")
+   441→   441→   441→  salaryStructures     SalaryStructure[] @relation("TeacherSalary")
+   442→   442→   442→  salaryPayments       SalaryPayment[]   @relation("TeacherSalaryPayment")
+   443→   443→   443→
+   444→   444→   444→  @@unique([tenantId, employeeIdNo])
+   445→   445→   445→  @@index([tenantId])
+   446→   446→   446→  @@index([tenantId, status])
+   447→   447→   447→  @@map("teachers")
+   448→   448→   448→}
+   449→   449→   449→
+   450→   450→   450→model Employee {
+   451→   451→   451→  id           Int       @id @default(autoincrement())
+   452→   452→   452→  tenantId     Int       @map("tenant_id")
+   453→   453→   453→  uuid         String    @unique @default(cuid())
+   454→   454→   454→  employeeIdNo String    @map("employee_id_no")
+   455→   455→   455→  name         String
+   456→   456→   456→  nameBn       String?   @map("name_bn")
+   457→   457→   457→  fatherName   String?   @map("father_name")
+   458→   458→   458→  dateOfBirth  DateTime? @map("date_of_birth")
+   459→   459→   459→  gender       String?
+   460→   460→   460→  phone        String
+   461→   461→   461→  email        String?
+   462→   462→   462→  address      String?
+   463→   463→   463→  designation  String?
+   464→   464→   464→  department   String?
+   465→   465→   465→  joiningDate  DateTime? @map("joining_date")
+   466→   466→   466→  leavingDate  DateTime? @map("leaving_date")
+   467→   467→   467→  photoUrl     String?   @map("photo_url")
+   468→   468→   468→  isActive     Boolean   @default(true) @map("is_active")
+   469→   469→   469→  status       String
+   470→   470→   470→  createdAt    DateTime  @default(now()) @map("created_at")
+   471→   471→   471→  updatedAt    DateTime  @updatedAt @map("updated_at")
+   472→   472→   472→  deletedAt    DateTime? @map("deleted_at")
+   473→   473→   473→  createdBy    Int?      @map("created_by")
+   474→   474→   474→  updatedBy    Int?      @map("updated_by")
+   475→   475→   475→
+   476→   476→   476→  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   477→   477→   477→  salaryStructures SalaryStructure[] @relation("EmployeeSalary")
+   478→   478→   478→  salaryPayments   SalaryPayment[]   @relation("EmployeeSalaryPayment")
+   479→   479→   479→
+   480→   480→   480→  @@unique([tenantId, employeeIdNo])
+   481→   481→   481→  @@index([tenantId])
+   482→   482→   482→  @@index([tenantId, status])
+   483→   483→   483→  @@map("employees")
+   484→   484→   484→}
+   485→   485→   485→
+   486→   486→   486→model StudentPromotion {
+   487→   487→   487→  id                Int      @id @default(autoincrement())
+   488→   488→   488→  tenantId          Int      @map("tenant_id")
+   489→   489→   489→  studentId         Int      @map("student_id")
+   490→   490→   490→  fromClassId       Int      @map("from_class_id")
+   491→   491→   491→  fromSectionId     Int?     @map("from_section_id")
+   492→   492→   492→  toClassId         Int      @map("to_class_id")
+   493→   493→   493→  toSectionId       Int?     @map("to_section_id")
+   494→   494→   494→  academicSessionId Int      @map("academic_session_id")
+   495→   495→   495→  promotionType     String   @map("promotion_type")
+   496→   496→   496→  remarks           String?
+   497→   497→   497→  promotedBy        Int?     @map("promoted_by")
+   498→   498→   498→  createdAt         DateTime @default(now()) @map("created_at")
+   499→   499→   499→  updatedAt         DateTime @updatedAt @map("updated_at")
+   500→   500→   500→
+   501→   501→   501→  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   502→   502→   502→  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+   503→   503→   503→  fromClass       Class           @relation("PromotionFromClass", fields: [fromClassId], references: [id])
+   504→   504→   504→  toClass         Class           @relation("PromotionToClass", fields: [toClassId], references: [id])
+   505→   505→   505→  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id])
+   506→   506→   506→
+   507→   507→   507→  @@index([tenantId])
+   508→   508→   508→  @@index([studentId])
+   509→   509→   509→  @@index([academicSessionId])
+   510→   510→   510→  @@map("student_promotions")
+   511→   511→   511→}
+   512→   512→   512→
+   513→   513→   513→// ============================================================
+   514→   514→   514→// DOMAIN 4: FINANCE — Fees, Donations, Expenses, Salary, Accounting
+   515→   515→   515→// ============================================================
+   516→   516→   516→
+   517→   517→   517→// --- FEE MANAGEMENT ---
+   518→   518→   518→
+   519→   519→   519→model FeeCategory {
+   520→   520→   520→  id          Int      @id @default(autoincrement())
+   521→   521→   521→  tenantId    Int      @map("tenant_id")
+   522→   522→   522→  name        String
+   523→   523→   523→  code        String
+   524→   524→   524→  description String?
+   525→   525→   525→  amount      Float
+   526→   526→   526→  isRecurring Boolean  @default(false) @map("is_recurring")
+   527→   527→   527→  frequency   String?
+   528→   528→   528→  isActive    Boolean  @default(true) @map("is_active")
+   529→   529→   529→  createdAt   DateTime @default(now()) @map("created_at")
+   530→   530→   530→  updatedAt   DateTime @updatedAt @map("updated_at")
+   531→   531→   531→
+   532→   532→   532→  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   533→   533→   533→  feeStructures FeeStructure[]
+   534→   534→   534→  invoiceItems  FeeInvoiceItem[]
+   535→   535→   535→  feeDiscounts  FeeDiscount[]
+   536→   536→   536→
+   537→   537→   537→  @@unique([tenantId, code])
+   538→   538→   538→  @@index([tenantId])
+   539→   539→   539→  @@map("fee_categories")
+   540→   540→   540→}
+   541→   541→   541→
+   542→   542→   542→model FeeStructure {
+   543→   543→   543→  id                Int      @id @default(autoincrement())
+   544→   544→   544→  tenantId          Int      @map("tenant_id")
+   545→   545→   545→  classId           Int      @map("class_id")
+   546→   546→   546→  feeCategoryId     Int      @map("fee_category_id")
+   547→   547→   547→  academicSessionId Int      @map("academic_session_id")
+   548→   548→   548→  amount            Float
+   549→   549→   549→  isMandatory       Boolean  @default(true) @map("is_mandatory")
+   550→   550→   550→  createdAt         DateTime @default(now()) @map("created_at")
+   551→   551→   551→  updatedAt         DateTime @updatedAt @map("updated_at")
+   552→   552→   552→
+   553→   553→   553→  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   554→   554→   554→  class           Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
+   555→   555→   555→  feeCategory     FeeCategory     @relation(fields: [feeCategoryId], references: [id], onDelete: Cascade)
+   556→   556→   556→  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+   557→   557→   557→
+   558→   558→   558→  @@unique([tenantId, classId, feeCategoryId, academicSessionId])
+   559→   559→   559→  @@index([tenantId])
+   560→   560→   560→  @@index([tenantId, classId])
+   561→   561→   561→  @@map("fee_structures")
+   562→   562→   562→}
+   563→   563→   563→
+   564→   564→   564→model FeeInvoice {
+   565→   565→   565→  id                Int       @id @default(autoincrement())
+   566→   566→   566→  tenantId          Int       @map("tenant_id")
+   567→   567→   567→  invoiceNo         String    @map("invoice_no")
+   568→   568→   568→  studentId         Int       @map("student_id")
+   569→   569→   569→  academicSessionId Int       @map("academic_session_id")
+   570→   570→   570→  classId           Int       @map("class_id")
+   571→   571→   571→  issueDate         DateTime  @map("issue_date")
+   572→   572→   572→  dueDate           DateTime  @map("due_date")
+   573→   573→   573→  totalAmount       Float     @map("total_amount")
+   574→   574→   574→  paidAmount        Float     @default(0) @map("paid_amount")
+   575→   575→   575→  discountAmount    Float     @default(0) @map("discount_amount")
+   576→   576→   576→  fineAmount        Float     @default(0) @map("fine_amount")
+   577→   577→   577→  balance           Float
+   578→   578→   578→  status            String
+   579→   579→   579→  remarks           String?
+   580→   580→   580→  feeMonth          Int?      @map("fee_month")
+   581→   581→   581→  feeYear           Int?      @map("fee_year")
+   582→   582→   582→  createdAt         DateTime  @default(now()) @map("created_at")
+   583→   583→   583→  updatedAt         DateTime  @updatedAt @map("updated_at")
+   584→   584→   584→  deletedAt         DateTime? @map("deleted_at")
+   585→   585→   585→  createdBy         Int?      @map("created_by")
+   586→   586→   586→  updatedBy         Int?      @map("updated_by")
+   587→   587→   587→
+   588→   588→   588→  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   589→   589→   589→  student         Student         @relation(fields: [studentId], references: [id], onDelete: Restrict)
+   590→   590→   590→  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id])
+   591→   591→   591→  class           Class           @relation(fields: [classId], references: [id])
+   592→   592→   592→  invoiceItems    FeeInvoiceItem[]
+   593→   593→   593→  feeCollections  FeeCollection[]
+   594→   594→   594→  feeDiscounts    FeeDiscount[]
+   595→   595→   595→
+   596→   596→   596→  @@unique([tenantId, invoiceNo])
+   597→   597→   597→  @@index([tenantId])
+   598→   598→   598→  @@index([tenantId, status])
+   599→   599→   599→  @@index([tenantId, createdAt])
+   600→   600→   600→  @@index([studentId])
+
+[showing lines 1-600 of 1309; use offset=601 with limit to continue reading]
