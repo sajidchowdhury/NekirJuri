@@ -1,7 +1,13 @@
 // ============================================================
 // Madrasha ERP & Accounting Management System (SaaS)
-// Database Schema — Prisma + PostgreSQL
+// Database Schema — Prisma (Dual Environment)
+// Dev: SQLite  |  Production: PostgreSQL
 // Version: 2.0
+// ============================================================
+// Environment Switch:
+//   Dev:  bun run db:dev       (switches to SQLite)
+//   Prod: bun run db:prod      (switches to PostgreSQL)
+//   The schema types (Decimal, Json) work with BOTH databases
 // ============================================================
 // Design Principles:
 //   - Multi-tenant: tenant_id on every business table
@@ -19,7 +25,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
