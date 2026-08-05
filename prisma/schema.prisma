@@ -1,0 +1,1308 @@
+// ============================================================
+// Madrasha ERP & Accounting Management System (SaaS)
+// Database Schema — Prisma + SQLite
+// Version: 1.0
+// ============================================================
+// Design Principles:
+//   - Multi-tenant: tenant_id on every business table
+//   - Composite unique constraints prevent cross-tenant data leaks
+//   - Soft delete (deleted_at) on transactional entities
+//   - Audit fields: created_at, updated_at, created_by, updated_by
+//   - Double-entry accounting foundation (chart_of_accounts, journal_entries)
+//   - Index strategy optimized for reporting queries
+//   - snake_case table names via @@map
+//   - Singular table names for consistency
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// DOMAIN 1: SAAS — Tenants, Subscriptions, Billing
+// ============================================================
+
+model Tenant {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(cuid())
+  name        String
+  slug        String   @unique
+  domain      String?  @unique
+  logoUrl     String?  @map("logo_url")
+  address     String?
+  city        String?
+  state       String?
+  country     String   @default("Bangladesh")
+  postalCode  String?  @map("postal_code")
+  phone       String?
+  email       String?
+  website     String?
+  isActive    Boolean  @default(true) @map("is_active")
+  settings    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  subscriptions      Subscription[]
+  users              User[]
+  roles              Role[]
+  academicSessions   AcademicSession[]
+  classes            Class[]
+  sections           Section[]
+  students           Student[]
+  guardians          Guardian[]
+  teachers           Teacher[]
+  employees          Employee[]
+  studentPromotions  StudentPromotion[]
+  feeCategories      FeeCategory[]
+  feeStructures      FeeStructure[]
+  feeInvoices        FeeInvoice[]
+  feeInvoiceItems    FeeInvoiceItem[]
+  feeCollections     FeeCollection[]
+  feeDiscounts       FeeDiscount[]
+  donationCategories DonationCategory[]
+  donors             Donor[]
+  donations          Donation[]
+  expenseCategories  ExpenseCategory[]
+  expenses           Expense[]
+  salaryStructures   SalaryStructure[]
+  salaryPayments     SalaryPayment[]
+  suppliers          Supplier[]
+  productCategories  ProductCategory[]
+  products           Product[]
+  purchases          Purchase[]
+  purchaseItems      PurchaseItem[]
+  stockMovements     StockMovement[]
+  salesInvoices      SalesInvoice[]
+  salesItems         SalesItem[]
+  chartOfAccounts    ChartOfAccount[]
+  journalEntries     JournalEntry[]
+  journalEntryItems  JournalEntryItem[]
+  websitePages       WebsitePage[]
+  notices            Notice[]
+  galleries          Gallery[]
+  galleryImages      GalleryImage[]
+  settingsEntries    Settings[]
+  notifications      Notification[]
+  activityLogs       ActivityLog[]
+  auditLogs          AuditLog[]
+
+  @@map("tenants")
+}
+
+model SubscriptionPlan {
+  id           Int      @id @default(autoincrement())
+  name         String
+  slug         String   @unique
+  description  String?
+  priceMonthly Float    @map("price_monthly")
+  priceYearly  Float?   @map("price_yearly")
+  maxStudents  Int      @map("max_students")
+  maxEmployees Int      @map("max_employees")
+  maxStorageMb Int      @map("max_storage_mb")
+  features     String?
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int      @map("tenant_id")
+  planId      Int      @map("plan_id")
+  status      String
+  startDate   DateTime @map("start_date")
+  endDate     DateTime @map("end_date")
+  trialEnd    DateTime? @map("trial_end")
+  isAutoRenew Boolean  @default(false) @map("is_auto_renew")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+// ============================================================
+// DOMAIN 2: SECURITY — Users, Roles, Permissions, RBAC
+// ============================================================
+
+model User {
+  id           Int       @id @default(autoincrement())
+  uuid         String    @unique @default(cuid())
+  tenantId     Int?      @map("tenant_id")
+  email        String
+  passwordHash String    @map("password_hash")
+  name         String
+  phone        String?
+  avatarUrl    String?   @map("avatar_url")
+  isActive     Boolean   @default(true) @map("is_active")
+  isSuperAdmin Boolean   @default(false) @map("is_super_admin")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles     UserRole[]
+  notifications Notification[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([email])
+  @@map("users")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int      @map("tenant_id")
+  name        String
+  slug        String
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("roles")
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  module      String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           Int      @id @default(autoincrement())
+  roleId       Int      @map("role_id")
+  permissionId Int      @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  roleId    Int      @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+// ============================================================
+// DOMAIN 3: ACADEMIC — Sessions, Classes, Sections, Students,
+//            Guardians, Teachers, Employees, Promotions
+// ============================================================
+
+model AcademicSession {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int      @map("tenant_id")
+  name      String
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  isCurrent Boolean  @default(false) @map("is_current")
+  status    String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classes           Class[]
+  students          Student[]
+  feeStructures     FeeStructure[]
+  feeInvoices       FeeInvoice[]
+  studentPromotions StudentPromotion[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("academic_sessions")
+}
+
+model Class {
+  id                Int      @id @default(autoincrement())
+  tenantId          Int      @map("tenant_id")
+  name              String
+  code              String
+  orderSequence     Int      @map("order_sequence")
+  academicSessionId Int      @map("academic_session_id")
+  teacherId         Int?     @map("teacher_id")
+  capacity          Int?
+  description       String?
+  status            String
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  academicSession    AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+  classTeacher       Teacher?        @relation("ClassTeacher", fields: [teacherId], references: [id])
+  sections           Section[]
+  students           Student[]
+  feeStructures      FeeStructure[]
+  feeInvoices        FeeInvoice[]
+  promotionsFromClass StudentPromotion[] @relation("PromotionFromClass")
+  promotionsToClass   StudentPromotion[] @relation("PromotionToClass")
+
+  @@unique([tenantId, code, academicSessionId])
+  @@index([tenantId])
+  @@index([tenantId, academicSessionId])
+  @@map("classes")
+}
+
+model Section {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int      @map("tenant_id")
+  classId   Int      @map("class_id")
+  name      String
+  teacherId Int?     @map("teacher_id")
+  capacity  Int?
+  status    String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant          Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  class           Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  sectionInCharge Teacher? @relation("SectionInCharge", fields: [teacherId], references: [id])
+  students        Student[]
+
+  @@unique([tenantId, classId, name])
+  @@index([tenantId])
+  @@index([tenantId, classId])
+  @@map("sections")
+}
+
+model Student {
+  id                Int       @id @default(autoincrement())
+  tenantId          Int       @map("tenant_id")
+  uuid              String    @unique @default(cuid())
+  registrationNo    String    @map("registration_no")
+  admissionNo       String?   @map("admission_no")
+  name              String
+  nameBn            String?   @map("name_bn")
+  fatherName        String?   @map("father_name")
+  motherName        String?   @map("mother_name")
+  dateOfBirth       DateTime? @map("date_of_birth")
+  gender            String?
+  bloodGroup        String?   @map("blood_group")
+  nationality       String?   @default("Bangladeshi")
+  religion          String?
+  photoUrl          String?   @map("photo_url")
+  phone             String?
+  email             String?
+  address           String?
+  city              String?
+  state             String?
+  country           String?
+  postalCode        String?   @map("postal_code")
+  classId           Int       @map("class_id")
+  sectionId         Int?      @map("section_id")
+  academicSessionId Int       @map("academic_session_id")
+  admissionDate     DateTime? @map("admission_date")
+  previousSchool    String?   @map("previous_school")
+  rollNo            String?   @map("roll_no")
+  isActive          Boolean   @default(true) @map("is_active")
+  status            String
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+  createdBy         Int?      @map("created_by")
+  updatedBy         Int?      @map("updated_by")
+
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  class            Class            @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section          Section?         @relation(fields: [sectionId], references: [id])
+  academicSession  AcademicSession  @relation(fields: [academicSessionId], references: [id], onDelete: Restrict)
+  studentGuardians StudentGuardian[]
+  feeInvoices      FeeInvoice[]
+  feeCollections   FeeCollection[]
+  feeDiscounts     FeeDiscount[]
+  studentPromotions StudentPromotion[]
+  salesInvoices    SalesInvoice[]
+
+  @@unique([tenantId, registrationNo])
+  @@index([tenantId])
+  @@index([tenantId, classId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([registrationNo])
+  @@map("students")
+}
+
+model Guardian {
+  id           Int       @id @default(autoincrement())
+  tenantId     Int       @map("tenant_id")
+  uuid         String    @unique @default(cuid())
+  name         String
+  nameBn       String?   @map("name_bn")
+  relationship String
+  phone        String
+  phoneAlt     String?   @map("phone_alt")
+  email        String?
+  occupation   String?
+  address      String?
+  city         String?
+  photoUrl     String?   @map("photo_url")
+  nidNo        String?   @map("nid_no")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  studentGuardians StudentGuardian[]
+
+  @@index([tenantId])
+  @@index([phone])
+  @@map("guardians")
+}
+
+model StudentGuardian {
+  id         Int      @id @default(autoincrement())
+  studentId  Int      @map("student_id")
+  guardianId Int      @map("guardian_id")
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, guardianId])
+  @@map("student_guardians")
+}
+
+model Teacher {
+  id             Int       @id @default(autoincrement())
+  tenantId       Int       @map("tenant_id")
+  uuid           String    @unique @default(cuid())
+  employeeIdNo   String    @map("employee_id_no")
+  name           String
+  nameBn         String?   @map("name_bn")
+  fatherName     String?   @map("father_name")
+  motherName     String?   @map("mother_name")
+  dateOfBirth    DateTime? @map("date_of_birth")
+  gender         String?
+  bloodGroup     String?   @map("blood_group")
+  nationality    String?
+  religion       String?
+  photoUrl       String?   @map("photo_url")
+  phone          String
+  email          String?
+  address        String?
+  city           String?
+  qualification  String?
+  specialization String?
+  joiningDate    DateTime? @map("joining_date")
+  leavingDate    DateTime? @map("leaving_date")
+  isActive       Boolean   @default(true) @map("is_active")
+  status         String
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdBy      Int?      @map("created_by")
+  updatedBy      Int?      @map("updated_by")
+
+  tenant               Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classesAsTeacher     Class[]           @relation("ClassTeacher")
+  sectionsAsInCharge   Section[]         @relation("SectionInCharge")
+  salaryStructures     SalaryStructure[] @relation("TeacherSalary")
+  salaryPayments       SalaryPayment[]   @relation("TeacherSalaryPayment")
+
+  @@unique([tenantId, employeeIdNo])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("teachers")
+}
+
+model Employee {
+  id           Int       @id @default(autoincrement())
+  tenantId     Int       @map("tenant_id")
+  uuid         String    @unique @default(cuid())
+  employeeIdNo String    @map("employee_id_no")
+  name         String
+  nameBn       String?   @map("name_bn")
+  fatherName   String?   @map("father_name")
+  dateOfBirth  DateTime? @map("date_of_birth")
+  gender       String?
+  phone        String
+  email        String?
+  address      String?
+  designation  String?
+  department   String?
+  joiningDate  DateTime? @map("joining_date")
+  leavingDate  DateTime? @map("leaving_date")
+  photoUrl     String?   @map("photo_url")
+  isActive     Boolean   @default(true) @map("is_active")
+  status       String
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdBy    Int?      @map("created_by")
+  updatedBy    Int?      @map("updated_by")
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  salaryStructures SalaryStructure[] @relation("EmployeeSalary")
+  salaryPayments   SalaryPayment[]   @relation("EmployeeSalaryPayment")
+
+  @@unique([tenantId, employeeIdNo])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("employees")
+}
+
+model StudentPromotion {
+  id                Int      @id @default(autoincrement())
+  tenantId          Int      @map("tenant_id")
+  studentId         Int      @map("student_id")
+  fromClassId       Int      @map("from_class_id")
+  fromSectionId     Int?     @map("from_section_id")
+  toClassId         Int      @map("to_class_id")
+  toSectionId       Int?     @map("to_section_id")
+  academicSessionId Int      @map("academic_session_id")
+  promotionType     String   @map("promotion_type")
+  remarks           String?
+  promotedBy        Int?     @map("promoted_by")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fromClass       Class           @relation("PromotionFromClass", fields: [fromClassId], references: [id])
+  toClass         Class           @relation("PromotionToClass", fields: [toClassId], references: [id])
+  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id])
+
+  @@index([tenantId])
+  @@index([studentId])
+  @@index([academicSessionId])
+  @@map("student_promotions")
+}
+
+// ============================================================
+// DOMAIN 4: FINANCE — Fees, Donations, Expenses, Salary, Accounting
+// ============================================================
+
+// --- FEE MANAGEMENT ---
+
+model FeeCategory {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int      @map("tenant_id")
+  name        String
+  code        String
+  description String?
+  amount      Float
+  isRecurring Boolean  @default(false) @map("is_recurring")
+  frequency   String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  feeStructures FeeStructure[]
+  invoiceItems  FeeInvoiceItem[]
+  feeDiscounts  FeeDiscount[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("fee_categories")
+}
+
+model FeeStructure {
+  id                Int      @id @default(autoincrement())
+  tenantId          Int      @map("tenant_id")
+  classId           Int      @map("class_id")
+  feeCategoryId     Int      @map("fee_category_id")
+  academicSessionId Int      @map("academic_session_id")
+  amount            Float
+  isMandatory       Boolean  @default(true) @map("is_mandatory")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  class           Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
+  feeCategory     FeeCategory     @relation(fields: [feeCategoryId], references: [id], onDelete: Cascade)
+  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, classId, feeCategoryId, academicSessionId])
+  @@index([tenantId])
+  @@index([tenantId, classId])
+  @@map("fee_structures")
+}
+
+model FeeInvoice {
+  id                Int       @id @default(autoincrement())
+  tenantId          Int       @map("tenant_id")
+  invoiceNo         String    @map("invoice_no")
+  studentId         Int       @map("student_id")
+  academicSessionId Int       @map("academic_session_id")
+  classId           Int       @map("class_id")
+  issueDate         DateTime  @map("issue_date")
+  dueDate           DateTime  @map("due_date")
+  totalAmount       Float     @map("total_amount")
+  paidAmount        Float     @default(0) @map("paid_amount")
+  discountAmount    Float     @default(0) @map("discount_amount")
+  fineAmount        Float     @default(0) @map("fine_amount")
+  balance           Float
+  status            String
+  remarks           String?
+  feeMonth          Int?      @map("fee_month")
+  feeYear           Int?      @map("fee_year")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+  createdBy         Int?      @map("created_by")
+  updatedBy         Int?      @map("updated_by")
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student         Student         @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id])
+  class           Class           @relation(fields: [classId], references: [id])
+  invoiceItems    FeeInvoiceItem[]
+  feeCollections  FeeCollection[]
+  feeDiscounts    FeeDiscount[]
+
+  @@unique([tenantId, invoiceNo])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([studentId])
+  @@index([invoiceNo])
+  @@map("fee_invoices")
+}
+
+model FeeInvoiceItem {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int      @map("tenant_id")
+  invoiceId      Int      @map("invoice_id")
+  feeCategoryId  Int      @map("fee_category_id")
+  amount         Float
+  discountAmount Float    @default(0) @map("discount_amount")
+  netAmount      Float    @map("net_amount")
+  description    String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice     FeeInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  feeCategory FeeCategory @relation(fields: [feeCategoryId], references: [id])
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@map("fee_invoice_items")
+}
+
+model FeeCollection {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int      @map("tenant_id")
+  receiptNo      String   @map("receipt_no")
+  invoiceId      Int      @map("invoice_id")
+  studentId      Int      @map("student_id")
+  amount         Float
+  paymentMethod  String   @map("payment_method")
+  paymentDate    DateTime @map("payment_date")
+  transactionRef String?  @map("transaction_ref")
+  bankName       String?  @map("bank_name")
+  chequeNo       String?  @map("cheque_no")
+  remarks        String?
+  status         String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdBy      Int?     @map("created_by")
+
+  tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice FeeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  student Student   @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, receiptNo])
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([studentId])
+  @@index([receiptNo])
+  @@map("fee_collections")
+}
+
+model FeeDiscount {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int      @map("tenant_id")
+  studentId      Int      @map("student_id")
+  invoiceId      Int?     @map("invoice_id")
+  feeCategoryId  Int?     @map("fee_category_id")
+  discountType   String   @map("discount_type")
+  discountValue  Float    @map("discount_value")
+  reason         String?
+  approvedBy     Int?     @map("approved_by")
+  status         String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdBy      Int?     @map("created_by")
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student     Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  invoice     FeeInvoice?  @relation(fields: [invoiceId], references: [id])
+  feeCategory FeeCategory? @relation(fields: [feeCategoryId], references: [id])
+
+  @@index([tenantId])
+  @@index([studentId])
+  @@map("fee_discounts")
+}
+
+// --- DONATION MANAGEMENT ---
+
+model DonationCategory {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int      @map("tenant_id")
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  donations Donation[]
+
+  @@index([tenantId])
+  @@map("donation_categories")
+}
+
+model Donor {
+  id           Int       @id @default(autoincrement())
+  tenantId     Int       @map("tenant_id")
+  name         String
+  phone        String?
+  email        String?
+  address      String?
+  occupation   String?
+  organization String?
+  nidNo        String?   @map("nid_no")
+  isRegular    Boolean   @default(false) @map("is_regular")
+  remarks      String?
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  donations Donation[]
+
+  @@index([tenantId])
+  @@index([phone])
+  @@map("donors")
+}
+
+model Donation {
+  id                 Int      @id @default(autoincrement())
+  tenantId           Int      @map("tenant_id")
+  donationCategoryId Int      @map("donation_category_id")
+  donorId            Int?     @map("donor_id")
+  receiptNo          String   @map("receipt_no")
+  amount             Float
+  paymentMethod      String   @map("payment_method")
+  paymentDate        DateTime @map("payment_date")
+  transactionRef     String?  @map("transaction_ref")
+  isAnonymous        Boolean  @default(false) @map("is_anonymous")
+  remarks            String?
+  status             String
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  createdBy          Int?     @map("created_by")
+
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  donationCategory DonationCategory @relation(fields: [donationCategoryId], references: [id], onDelete: Restrict)
+  donor            Donor?          @relation(fields: [donorId], references: [id])
+
+  @@unique([tenantId, receiptNo])
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([donationCategoryId])
+  @@map("donations")
+}
+
+// --- EXPENSE MANAGEMENT ---
+
+model ExpenseCategory {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int      @map("tenant_id")
+  name        String
+  code        String?
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+
+  @@index([tenantId])
+  @@map("expense_categories")
+}
+
+model Expense {
+  id                Int      @id @default(autoincrement())
+  tenantId          Int      @map("tenant_id")
+  voucherNo         String   @map("voucher_no")
+  expenseCategoryId Int      @map("expense_category_id")
+  amount            Float
+  description       String?
+  expenseDate       DateTime @map("expense_date")
+  paymentMethod     String   @map("payment_method")
+  paidTo            String?  @map("paid_to")
+  receiptAttachment String?  @map("receipt_attachment")
+  status            String
+  approvedBy        Int?     @map("approved_by")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdBy         Int?     @map("created_by")
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  expenseCategory ExpenseCategory @relation(fields: [expenseCategoryId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, voucherNo])
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@map("expenses")
+}
+
+// --- SALARY & PAYROLL ---
+
+model SalaryStructure {
+  id                 Int       @id @default(autoincrement())
+  tenantId           Int       @map("tenant_id")
+  employeeType       String    @map("employee_type")
+  teacherId          Int?      @map("teacher_id")
+  employeeId         Int?      @map("employee_id")
+  basicSalary        Float     @map("basic_salary")
+  houseRent          Float     @default(0) @map("house_rent")
+  medicalAllowance   Float     @default(0) @map("medical_allowance")
+  transportAllowance Float     @default(0) @map("transport_allowance")
+  otherAllowance     Float     @default(0) @map("other_allowance")
+  totalSalary        Float     @map("total_salary")
+  pfDeduction        Float     @default(0) @map("pf_deduction")
+  taxDeduction       Float     @default(0) @map("tax_deduction")
+  otherDeduction     Float     @default(0) @map("other_deduction")
+  netSalary          Float     @map("net_salary")
+  effectiveFrom      DateTime  @map("effective_from")
+  effectiveTo        DateTime? @map("effective_to")
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  createdBy          Int?      @map("created_by")
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teacher         Teacher?        @relation("TeacherSalary", fields: [teacherId], references: [id])
+  employee        Employee?       @relation("EmployeeSalary", fields: [employeeId], references: [id])
+  salaryPayments  SalaryPayment[]
+
+  @@index([tenantId])
+  @@index([tenantId, employeeType])
+  @@map("salary_structures")
+}
+
+model SalaryPayment {
+  id                Int      @id @default(autoincrement())
+  tenantId          Int      @map("tenant_id")
+  employeeType      String   @map("employee_type")
+  teacherId         Int?     @map("teacher_id")
+  employeeId        Int?     @map("employee_id")
+  salaryStructureId Int      @map("salary_structure_id")
+  month             Int
+  year              Int
+  basicSalary       Float    @map("basic_salary")
+  totalAllowance    Float    @map("total_allowance")
+  totalDeduction    Float    @map("total_deduction")
+  netSalary         Float    @map("net_salary")
+  paymentMethod     String   @map("payment_method")
+  paymentDate       DateTime @map("payment_date")
+  transactionRef    String?  @map("transaction_ref")
+  status            String
+  remarks           String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdBy         Int?     @map("created_by")
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  salaryStructure SalaryStructure @relation(fields: [salaryStructureId], references: [id], onDelete: Restrict)
+  teacher         Teacher?        @relation("TeacherSalaryPayment", fields: [teacherId], references: [id])
+  employee        Employee?       @relation("EmployeeSalaryPayment", fields: [employeeId], references: [id])
+
+  @@unique([tenantId, employeeType, teacherId, employeeId, month, year])
+  @@index([tenantId])
+  @@index([tenantId, month, year])
+  @@map("salary_payments")
+}
+
+// --- ACCOUNTING (Double-Entry Bookkeeping) ---
+
+model ChartOfAccount {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int      @map("tenant_id")
+  code           String
+  name           String
+  accountType    String   @map("account_type")
+  parentId       Int?     @map("parent_id")
+  isActive       Boolean  @default(true) @map("is_active")
+  openingBalance Float    @default(0) @map("opening_balance")
+  currentBalance Float    @default(0) @map("current_balance")
+  description    String?
+  isSystem       Boolean  @default(false) @map("is_system")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent       ChartOfAccount?   @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children     ChartOfAccount[]  @relation("AccountHierarchy")
+  journalItems JournalEntryItem[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, accountType])
+  @@map("chart_of_accounts")
+}
+
+model JournalEntry {
+  id            Int      @id @default(autoincrement())
+  tenantId      Int      @map("tenant_id")
+  entryNo       String   @map("entry_no")
+  entryDate     DateTime @map("entry_date")
+  narration     String?
+  referenceType String?  @map("reference_type")
+  referenceId   Int?     @map("reference_id")
+  totalDebit    Float    @map("total_debit")
+  totalCredit   Float    @map("total_credit")
+  status        String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdBy     Int?     @map("created_by")
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  journalItems JournalEntryItem[]
+
+  @@unique([tenantId, entryNo])
+  @@index([tenantId])
+  @@index([tenantId, entryDate])
+  @@index([referenceType, referenceId])
+  @@map("journal_entries")
+}
+
+model JournalEntryItem {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int      @map("tenant_id")
+  journalEntryId Int      @map("journal_entry_id")
+  accountId      Int      @map("account_id")
+  debit          Float    @default(0)
+  credit         Float    @default(0)
+  narration      String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  journalEntry JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_entry_items")
+}
+
+// ============================================================
+// DOMAIN 5: INVENTORY — Suppliers, Products, Purchases, Stock, Sales
+// ============================================================
+
+model Supplier {
+  id            Int       @id @default(autoincrement())
+  tenantId      Int       @map("tenant_id")
+  name          String
+  code          String?
+  phone         String?
+  email         String?
+  address       String?
+  city          String?
+  contactPerson String?   @map("contact_person")
+  nidNo         String?   @map("nid_no")
+  bankAccount   String?   @map("bank_account")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchases Purchase[]
+
+  @@index([tenantId])
+  @@map("suppliers")
+}
+
+model ProductCategory {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int      @map("tenant_id")
+  name        String
+  code        String?
+  description String?
+  parentId    Int?     @map("parent_id")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent   ProductCategory? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children ProductCategory[] @relation("CategoryHierarchy")
+  products Product[]
+
+  @@index([tenantId])
+  @@map("product_categories")
+}
+
+model Product {
+  id             Int       @id @default(autoincrement())
+  tenantId       Int       @map("tenant_id")
+  name           String
+  code           String
+  categoryId     Int       @map("category_id")
+  description    String?
+  unit           String?
+  purchasePrice  Float     @default(0) @map("purchase_price")
+  salePrice      Float     @default(0) @map("sale_price")
+  currentStock   Float     @default(0) @map("current_stock")
+  minStockLevel  Float     @default(0) @map("min_stock_level")
+  maxStockLevel  Float?    @map("max_stock_level")
+  isActive       Boolean   @default(true) @map("is_active")
+  hasExpiry      Boolean   @default(false) @map("has_expiry")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdBy      Int?      @map("created_by")
+  updatedBy      Int?      @map("updated_by")
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category       ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  purchaseItems  PurchaseItem[]
+  stockMovements StockMovement[]
+  salesItems     SalesItem[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, categoryId])
+  @@map("products")
+}
+
+model Purchase {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int      @map("tenant_id")
+  purchaseNo     String   @map("purchase_no")
+  supplierId     Int      @map("supplier_id")
+  purchaseDate   DateTime @map("purchase_date")
+  totalAmount    Float    @map("total_amount")
+  discountAmount Float    @default(0) @map("discount_amount")
+  taxAmount      Float    @default(0) @map("tax_amount")
+  netAmount      Float    @map("net_amount")
+  paymentStatus  String   @map("payment_status")
+  paymentMethod  String?  @map("payment_method")
+  remarks        String?
+  status         String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdBy      Int?     @map("created_by")
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier     Supplier      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchaseItems PurchaseItem[]
+
+  @@unique([tenantId, purchaseNo])
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int      @map("tenant_id")
+  purchaseId     Int      @map("purchase_id")
+  productId      Int      @map("product_id")
+  quantity       Float
+  unitPrice      Float    @map("unit_price")
+  totalPrice     Float    @map("total_price")
+  discountAmount Float    @default(0) @map("discount_amount")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([purchaseId])
+  @@map("purchase_items")
+}
+
+model StockMovement {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int      @map("tenant_id")
+  productId      Int      @map("product_id")
+  movementType   String   @map("movement_type")
+  quantity       Float
+  referenceType  String?  @map("reference_type")
+  referenceId    Int?     @map("reference_id")
+  remarks        String?
+  stockAfter     Float    @map("stock_after")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdBy      Int?     @map("created_by")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([productId])
+  @@index([tenantId, createdAt])
+  @@map("stock_movements")
+}
+
+model SalesInvoice {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int      @map("tenant_id")
+  invoiceNo      String   @map("invoice_no")
+  studentId      Int?     @map("student_id")
+  customerName   String?  @map("customer_name")
+  saleDate       DateTime @map("sale_date")
+  totalAmount    Float    @map("total_amount")
+  discountAmount Float    @default(0) @map("discount_amount")
+  netAmount      Float    @map("net_amount")
+  paymentMethod  String   @map("payment_method")
+  paymentStatus  String   @map("payment_status")
+  remarks        String?
+  status         String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdBy      Int?     @map("created_by")
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student     Student?    @relation(fields: [studentId], references: [id])
+  salesItems  SalesItem[]
+
+  @@unique([tenantId, invoiceNo])
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@map("sales_invoices")
+}
+
+model SalesItem {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int      @map("tenant_id")
+  salesInvoiceId Int      @map("sales_invoice_id")
+  productId      Int      @map("product_id")
+  quantity       Float
+  unitPrice      Float    @map("unit_price")
+  totalPrice     Float    @map("total_price")
+  discountAmount Float    @default(0) @map("discount_amount")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  salesInvoice SalesInvoice @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
+  product      Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([salesInvoiceId])
+  @@map("sales_items")
+}
+
+// ============================================================
+// DOMAIN 6: CMS — Website Pages, Notices, Galleries
+// ============================================================
+
+model WebsitePage {
+  id               Int       @id @default(autoincrement())
+  tenantId         Int       @map("tenant_id")
+  title            String
+  slug             String
+  content          String?
+  metaTitle        String?   @map("meta_title")
+  metaDescription  String?   @map("meta_description")
+  featuredImageUrl String?   @map("featured_image_url")
+  isPublished      Boolean   @default(false) @map("is_published")
+  publishedAt      DateTime? @map("published_at")
+  sortOrder        Int       @default(0) @map("sort_order")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  createdBy        Int?      @map("created_by")
+  updatedBy        Int?      @map("updated_by")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("website_pages")
+}
+
+model Notice {
+  id              Int       @id @default(autoincrement())
+  tenantId        Int       @map("tenant_id")
+  title           String
+  content         String?
+  noticeType      String    @map("notice_type")
+  isPublished     Boolean   @default(false) @map("is_published")
+  publishedAt     DateTime? @map("published_at")
+  targetAudience  String?   @map("target_audience")
+  attachmentUrl   String?   @map("attachment_url")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  createdBy       Int?      @map("created_by")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, noticeType])
+  @@map("notices")
+}
+
+model Gallery {
+  id            Int       @id @default(autoincrement())
+  tenantId      Int       @map("tenant_id")
+  title         String
+  description   String?
+  coverImageUrl String?   @map("cover_image_url")
+  isPublished   Boolean   @default(false) @map("is_published")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  createdBy     Int?      @map("created_by")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  images GalleryImage[]
+
+  @@index([tenantId])
+  @@map("galleries")
+}
+
+model GalleryImage {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int      @map("tenant_id")
+  galleryId Int      @map("gallery_id")
+  imageUrl  String   @map("image_url")
+  caption   String?
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  gallery Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([galleryId])
+  @@map("gallery_images")
+}
+
+// ============================================================
+// DOMAIN 7: SYSTEM — Settings, Notifications, Activity Logs, Audit Logs
+// ============================================================
+
+model Settings {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int      @map("tenant_id")
+  key       String
+  value     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@map("settings")
+}
+
+model Notification {
+  id        Int       @id @default(autoincrement())
+  tenantId  Int       @map("tenant_id")
+  userId    Int       @map("user_id")
+  title     String
+  message   String?
+  type      String
+  isRead    Boolean   @default(false) @map("is_read")
+  link      String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int      @map("tenant_id")
+  userId      Int?     @map("user_id")
+  action      String
+  entityType  String?  @map("entity_type")
+  entityId    Int?     @map("entity_id")
+  description String?
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  metadata    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@map("activity_logs")
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int      @map("tenant_id")
+  userId      Int?     @map("user_id")
+  action      String
+  entityType  String?  @map("entity_type")
+  entityId    Int?     @map("entity_id")
+  oldValues   String?  @map("old_values")
+  newValues   String?  @map("new_values")
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
