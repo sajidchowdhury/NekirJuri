@@ -1,7 +1,7 @@
 // ============================================================
 // Madrasha ERP & Accounting Management System (SaaS)
-// Database Schema — Prisma + SQLite
-// Version: 1.0
+// Database Schema — Prisma + PostgreSQL
+// Version: 2.0
 // ============================================================
 // Design Principles:
 //   - Multi-tenant: tenant_id on every business table
@@ -19,7 +19,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -43,7 +43,7 @@ model Tenant {
   email       String?
   website     String?
   isActive    Boolean  @default(true) @map("is_active")
-  settings    String?
+  settings    Json?
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -99,12 +99,12 @@ model SubscriptionPlan {
   name         String
   slug         String   @unique
   description  String?
-  priceMonthly Float    @map("price_monthly")
-  priceYearly  Float?   @map("price_yearly")
+  priceMonthly Decimal  @map("price_monthly")
+  priceYearly  Decimal? @map("price_yearly")
   maxStudents  Int      @map("max_students")
   maxEmployees Int      @map("max_employees")
   maxStorageMb Int      @map("max_storage_mb")
-  features     String?
+  features     Json?
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -522,7 +522,7 @@ model FeeCategory {
   name        String
   code        String
   description String?
-  amount      Float
+  amount      Decimal
   isRecurring Boolean  @default(false) @map("is_recurring")
   frequency   String?
   isActive    Boolean  @default(true) @map("is_active")
@@ -545,7 +545,7 @@ model FeeStructure {
   classId           Int      @map("class_id")
   feeCategoryId     Int      @map("fee_category_id")
   academicSessionId Int      @map("academic_session_id")
-  amount            Float
+  amount            Decimal
   isMandatory       Boolean  @default(true) @map("is_mandatory")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
@@ -570,11 +570,11 @@ model FeeInvoice {
   classId           Int       @map("class_id")
   issueDate         DateTime  @map("issue_date")
   dueDate           DateTime  @map("due_date")
-  totalAmount       Float     @map("total_amount")
-  paidAmount        Float     @default(0) @map("paid_amount")
-  discountAmount    Float     @default(0) @map("discount_amount")
-  fineAmount        Float     @default(0) @map("fine_amount")
-  balance           Float
+  totalAmount       Decimal     @map("total_amount")
+  paidAmount        Decimal     @default(0) @map("paid_amount")
+  discountAmount    Decimal     @default(0) @map("discount_amount")
+  fineAmount        Decimal     @default(0) @map("fine_amount")
+  balance           Decimal
   status            String
   remarks           String?
   feeMonth          Int?      @map("fee_month")
@@ -607,9 +607,9 @@ model FeeInvoiceItem {
   tenantId       Int      @map("tenant_id")
   invoiceId      Int      @map("invoice_id")
   feeCategoryId  Int      @map("fee_category_id")
-  amount         Float
-  discountAmount Float    @default(0) @map("discount_amount")
-  netAmount      Float    @map("net_amount")
+  amount         Decimal
+  discountAmount Decimal    @default(0) @map("discount_amount")
+  netAmount      Decimal    @map("net_amount")
   description    String?
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
@@ -629,7 +629,7 @@ model FeeCollection {
   receiptNo      String   @map("receipt_no")
   invoiceId      Int      @map("invoice_id")
   studentId      Int      @map("student_id")
-  amount         Float
+  amount         Decimal
   paymentMethod  String   @map("payment_method")
   paymentDate    DateTime @map("payment_date")
   transactionRef String?  @map("transaction_ref")
@@ -660,7 +660,7 @@ model FeeDiscount {
   invoiceId      Int?     @map("invoice_id")
   feeCategoryId  Int?     @map("fee_category_id")
   discountType   String   @map("discount_type")
-  discountValue  Float    @map("discount_value")
+  discountValue  Decimal    @map("discount_value")
   reason         String?
   approvedBy     Int?     @map("approved_by")
   status         String
@@ -727,7 +727,7 @@ model Donation {
   donationCategoryId Int      @map("donation_category_id")
   donorId            Int?     @map("donor_id")
   receiptNo          String   @map("receipt_no")
-  amount             Float
+  amount             Decimal
   paymentMethod      String   @map("payment_method")
   paymentDate        DateTime @map("payment_date")
   transactionRef     String?  @map("transaction_ref")
@@ -773,7 +773,7 @@ model Expense {
   tenantId          Int      @map("tenant_id")
   voucherNo         String   @map("voucher_no")
   expenseCategoryId Int      @map("expense_category_id")
-  amount            Float
+  amount            Decimal
   description       String?
   expenseDate       DateTime @map("expense_date")
   paymentMethod     String   @map("payment_method")
@@ -803,16 +803,16 @@ model SalaryStructure {
   employeeType       String    @map("employee_type")
   teacherId          Int?      @map("teacher_id")
   employeeId         Int?      @map("employee_id")
-  basicSalary        Float     @map("basic_salary")
-  houseRent          Float     @default(0) @map("house_rent")
-  medicalAllowance   Float     @default(0) @map("medical_allowance")
-  transportAllowance Float     @default(0) @map("transport_allowance")
-  otherAllowance     Float     @default(0) @map("other_allowance")
-  totalSalary        Float     @map("total_salary")
-  pfDeduction        Float     @default(0) @map("pf_deduction")
-  taxDeduction       Float     @default(0) @map("tax_deduction")
-  otherDeduction     Float     @default(0) @map("other_deduction")
-  netSalary          Float     @map("net_salary")
+  basicSalary        Decimal     @map("basic_salary")
+  houseRent          Decimal     @default(0) @map("house_rent")
+  medicalAllowance   Decimal     @default(0) @map("medical_allowance")
+  transportAllowance Decimal     @default(0) @map("transport_allowance")
+  otherAllowance     Decimal     @default(0) @map("other_allowance")
+  totalSalary        Decimal     @map("total_salary")
+  pfDeduction        Decimal     @default(0) @map("pf_deduction")
+  taxDeduction       Decimal     @default(0) @map("tax_deduction")
+  otherDeduction     Decimal     @default(0) @map("other_deduction")
+  netSalary          Decimal     @map("net_salary")
   effectiveFrom      DateTime  @map("effective_from")
   effectiveTo        DateTime? @map("effective_to")
   isActive           Boolean   @default(true) @map("is_active")
@@ -839,10 +839,10 @@ model SalaryPayment {
   salaryStructureId Int      @map("salary_structure_id")
   month             Int
   year              Int
-  basicSalary       Float    @map("basic_salary")
-  totalAllowance    Float    @map("total_allowance")
-  totalDeduction    Float    @map("total_deduction")
-  netSalary         Float    @map("net_salary")
+  basicSalary       Decimal    @map("basic_salary")
+  totalAllowance    Decimal    @map("total_allowance")
+  totalDeduction    Decimal    @map("total_deduction")
+  netSalary         Decimal    @map("net_salary")
   paymentMethod     String   @map("payment_method")
   paymentDate       DateTime @map("payment_date")
   transactionRef    String?  @map("transaction_ref")
@@ -873,8 +873,8 @@ model ChartOfAccount {
   accountType    String   @map("account_type")
   parentId       Int?     @map("parent_id")
   isActive       Boolean  @default(true) @map("is_active")
-  openingBalance Float    @default(0) @map("opening_balance")
-  currentBalance Float    @default(0) @map("current_balance")
+  openingBalance Decimal    @default(0) @map("opening_balance")
+  currentBalance Decimal    @default(0) @map("current_balance")
   description    String?
   isSystem       Boolean  @default(false) @map("is_system")
   createdAt      DateTime @default(now()) @map("created_at")
@@ -899,8 +899,8 @@ model JournalEntry {
   narration     String?
   referenceType String?  @map("reference_type")
   referenceId   Int?     @map("reference_id")
-  totalDebit    Float    @map("total_debit")
-  totalCredit   Float    @map("total_credit")
+  totalDebit    Decimal    @map("total_debit")
+  totalCredit   Decimal    @map("total_credit")
   status        String
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -921,8 +921,8 @@ model JournalEntryItem {
   tenantId       Int      @map("tenant_id")
   journalEntryId Int      @map("journal_entry_id")
   accountId      Int      @map("account_id")
-  debit          Float    @default(0)
-  credit         Float    @default(0)
+  debit          Decimal    @default(0)
+  credit         Decimal    @default(0)
   narration      String?
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
@@ -993,11 +993,11 @@ model Product {
   categoryId     Int       @map("category_id")
   description    String?
   unit           String?
-  purchasePrice  Float     @default(0) @map("purchase_price")
-  salePrice      Float     @default(0) @map("sale_price")
-  currentStock   Float     @default(0) @map("current_stock")
-  minStockLevel  Float     @default(0) @map("min_stock_level")
-  maxStockLevel  Float?    @map("max_stock_level")
+  purchasePrice  Decimal     @default(0) @map("purchase_price")
+  salePrice      Decimal     @default(0) @map("sale_price")
+  currentStock   Decimal     @default(0) @map("current_stock")
+  minStockLevel  Decimal     @default(0) @map("min_stock_level")
+  maxStockLevel  Decimal?    @map("max_stock_level")
   isActive       Boolean   @default(true) @map("is_active")
   hasExpiry      Boolean   @default(false) @map("has_expiry")
   createdAt      DateTime  @default(now()) @map("created_at")
@@ -1024,10 +1024,10 @@ model Purchase {
   purchaseNo     String   @map("purchase_no")
   supplierId     Int      @map("supplier_id")
   purchaseDate   DateTime @map("purchase_date")
-  totalAmount    Float    @map("total_amount")
-  discountAmount Float    @default(0) @map("discount_amount")
-  taxAmount      Float    @default(0) @map("tax_amount")
-  netAmount      Float    @map("net_amount")
+  totalAmount    Decimal    @map("total_amount")
+  discountAmount Decimal    @default(0) @map("discount_amount")
+  taxAmount      Decimal    @default(0) @map("tax_amount")
+  netAmount      Decimal    @map("net_amount")
   paymentStatus  String   @map("payment_status")
   paymentMethod  String?  @map("payment_method")
   remarks        String?
@@ -1051,10 +1051,10 @@ model PurchaseItem {
   tenantId       Int      @map("tenant_id")
   purchaseId     Int      @map("purchase_id")
   productId      Int      @map("product_id")
-  quantity       Float
-  unitPrice      Float    @map("unit_price")
-  totalPrice     Float    @map("total_price")
-  discountAmount Float    @default(0) @map("discount_amount")
+  quantity       Decimal
+  unitPrice      Decimal    @map("unit_price")
+  totalPrice     Decimal    @map("total_price")
+  discountAmount Decimal    @default(0) @map("discount_amount")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -1072,11 +1072,11 @@ model StockMovement {
   tenantId       Int      @map("tenant_id")
   productId      Int      @map("product_id")
   movementType   String   @map("movement_type")
-  quantity       Float
+  quantity       Decimal
   referenceType  String?  @map("reference_type")
   referenceId    Int?     @map("reference_id")
   remarks        String?
-  stockAfter     Float    @map("stock_after")
+  stockAfter     Decimal    @map("stock_after")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
   createdBy      Int?     @map("created_by")
@@ -1097,9 +1097,9 @@ model SalesInvoice {
   studentId      Int?     @map("student_id")
   customerName   String?  @map("customer_name")
   saleDate       DateTime @map("sale_date")
-  totalAmount    Float    @map("total_amount")
-  discountAmount Float    @default(0) @map("discount_amount")
-  netAmount      Float    @map("net_amount")
+  totalAmount    Decimal    @map("total_amount")
+  discountAmount Decimal    @default(0) @map("discount_amount")
+  netAmount      Decimal    @map("net_amount")
   paymentMethod  String   @map("payment_method")
   paymentStatus  String   @map("payment_status")
   remarks        String?
@@ -1124,10 +1124,10 @@ model SalesItem {
   tenantId       Int      @map("tenant_id")
   salesInvoiceId Int      @map("sales_invoice_id")
   productId      Int      @map("product_id")
-  quantity       Float
-  unitPrice      Float    @map("unit_price")
-  totalPrice     Float    @map("total_price")
-  discountAmount Float    @default(0) @map("discount_amount")
+  quantity       Decimal
+  unitPrice      Decimal    @map("unit_price")
+  totalPrice     Decimal    @map("total_price")
+  discountAmount Decimal    @default(0) @map("discount_amount")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -1233,7 +1233,7 @@ model Settings {
   id        Int      @id @default(autoincrement())
   tenantId  Int      @map("tenant_id")
   key       String
-  value     String?
+  value     Json?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -1275,7 +1275,7 @@ model ActivityLog {
   description String?
   ipAddress   String?  @map("ip_address")
   userAgent   String?  @map("user_agent")
-  metadata    String?
+  metadata    Json?
   createdAt   DateTime @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1294,8 +1294,8 @@ model AuditLog {
   action      String
   entityType  String?  @map("entity_type")
   entityId    Int?     @map("entity_id")
-  oldValues   String?  @map("old_values")
-  newValues   String?  @map("new_values")
+  oldValues   Json?    @map("old_values")
+  newValues   Json?    @map("new_values")
   ipAddress   String?  @map("ip_address")
   createdAt   DateTime @default(now()) @map("created_at")
 

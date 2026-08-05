@@ -1,0 +1,810 @@
+   500→
+   501→  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   502→  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+   503→  fromClass       Class           @relation("PromotionFromClass", fields: [fromClassId], references: [id])
+   504→  toClass         Class           @relation("PromotionToClass", fields: [toClassId], references: [id])
+   505→  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id])
+   506→
+   507→  @@index([tenantId])
+   508→  @@index([studentId])
+   509→  @@index([academicSessionId])
+   510→  @@map("student_promotions")
+   511→}
+   512→
+   513→// ============================================================
+   514→// DOMAIN 4: FINANCE — Fees, Donations, Expenses, Salary, Accounting
+   515→// ============================================================
+   516→
+   517→// --- FEE MANAGEMENT ---
+   518→
+   519→model FeeCategory {
+   520→  id          Int      @id @default(autoincrement())
+   521→  tenantId    Int      @map("tenant_id")
+   522→  name        String
+   523→  code        String
+   524→  description String?
+   525→  amount      Float
+   526→  isRecurring Boolean  @default(false) @map("is_recurring")
+   527→  frequency   String?
+   528→  isActive    Boolean  @default(true) @map("is_active")
+   529→  createdAt   DateTime @default(now()) @map("created_at")
+   530→  updatedAt   DateTime @updatedAt @map("updated_at")
+   531→
+   532→  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   533→  feeStructures FeeStructure[]
+   534→  invoiceItems  FeeInvoiceItem[]
+   535→  feeDiscounts  FeeDiscount[]
+   536→
+   537→  @@unique([tenantId, code])
+   538→  @@index([tenantId])
+   539→  @@map("fee_categories")
+   540→}
+   541→
+   542→model FeeStructure {
+   543→  id                Int      @id @default(autoincrement())
+   544→  tenantId          Int      @map("tenant_id")
+   545→  classId           Int      @map("class_id")
+   546→  feeCategoryId     Int      @map("fee_category_id")
+   547→  academicSessionId Int      @map("academic_session_id")
+   548→  amount            Float
+   549→  isMandatory       Boolean  @default(true) @map("is_mandatory")
+   550→  createdAt         DateTime @default(now()) @map("created_at")
+   551→  updatedAt         DateTime @updatedAt @map("updated_at")
+   552→
+   553→  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   554→  class           Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
+   555→  feeCategory     FeeCategory     @relation(fields: [feeCategoryId], references: [id], onDelete: Cascade)
+   556→  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+   557→
+   558→  @@unique([tenantId, classId, feeCategoryId, academicSessionId])
+   559→  @@index([tenantId])
+   560→  @@index([tenantId, classId])
+   561→  @@map("fee_structures")
+   562→}
+   563→
+   564→model FeeInvoice {
+   565→  id                Int       @id @default(autoincrement())
+   566→  tenantId          Int       @map("tenant_id")
+   567→  invoiceNo         String    @map("invoice_no")
+   568→  studentId         Int       @map("student_id")
+   569→  academicSessionId Int       @map("academic_session_id")
+   570→  classId           Int       @map("class_id")
+   571→  issueDate         DateTime  @map("issue_date")
+   572→  dueDate           DateTime  @map("due_date")
+   573→  totalAmount       Float     @map("total_amount")
+   574→  paidAmount        Float     @default(0) @map("paid_amount")
+   575→  discountAmount    Float     @default(0) @map("discount_amount")
+   576→  fineAmount        Float     @default(0) @map("fine_amount")
+   577→  balance           Float
+   578→  status            String
+   579→  remarks           String?
+   580→  feeMonth          Int?      @map("fee_month")
+   581→  feeYear           Int?      @map("fee_year")
+   582→  createdAt         DateTime  @default(now()) @map("created_at")
+   583→  updatedAt         DateTime  @updatedAt @map("updated_at")
+   584→  deletedAt         DateTime? @map("deleted_at")
+   585→  createdBy         Int?      @map("created_by")
+   586→  updatedBy         Int?      @map("updated_by")
+   587→
+   588→  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   589→  student         Student         @relation(fields: [studentId], references: [id], onDelete: Restrict)
+   590→  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id])
+   591→  class           Class           @relation(fields: [classId], references: [id])
+   592→  invoiceItems    FeeInvoiceItem[]
+   593→  feeCollections  FeeCollection[]
+   594→  feeDiscounts    FeeDiscount[]
+   595→
+   596→  @@unique([tenantId, invoiceNo])
+   597→  @@index([tenantId])
+   598→  @@index([tenantId, status])
+   599→  @@index([tenantId, createdAt])
+   600→  @@index([studentId])
+   601→  @@index([invoiceNo])
+   602→  @@map("fee_invoices")
+   603→}
+   604→
+   605→model FeeInvoiceItem {
+   606→  id             Int      @id @default(autoincrement())
+   607→  tenantId       Int      @map("tenant_id")
+   608→  invoiceId      Int      @map("invoice_id")
+   609→  feeCategoryId  Int      @map("fee_category_id")
+   610→  amount         Float
+   611→  discountAmount Float    @default(0) @map("discount_amount")
+   612→  netAmount      Float    @map("net_amount")
+   613→  description    String?
+   614→  createdAt      DateTime @default(now()) @map("created_at")
+   615→  updatedAt      DateTime @updatedAt @map("updated_at")
+   616→
+   617→  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   618→  invoice     FeeInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+   619→  feeCategory FeeCategory @relation(fields: [feeCategoryId], references: [id])
+   620→
+   621→  @@index([tenantId])
+   622→  @@index([invoiceId])
+   623→  @@map("fee_invoice_items")
+   624→}
+   625→
+   626→model FeeCollection {
+   627→  id             Int      @id @default(autoincrement())
+   628→  tenantId       Int      @map("tenant_id")
+   629→  receiptNo      String   @map("receipt_no")
+   630→  invoiceId      Int      @map("invoice_id")
+   631→  studentId      Int      @map("student_id")
+   632→  amount         Float
+   633→  paymentMethod  String   @map("payment_method")
+   634→  paymentDate    DateTime @map("payment_date")
+   635→  transactionRef String?  @map("transaction_ref")
+   636→  bankName       String?  @map("bank_name")
+   637→  chequeNo       String?  @map("cheque_no")
+   638→  remarks        String?
+   639→  status         String
+   640→  createdAt      DateTime @default(now()) @map("created_at")
+   641→  updatedAt      DateTime @updatedAt @map("updated_at")
+   642→  createdBy      Int?     @map("created_by")
+   643→
+   644→  tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   645→  invoice FeeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+   646→  student Student   @relation(fields: [studentId], references: [id], onDelete: Restrict)
+   647→
+   648→  @@unique([tenantId, receiptNo])
+   649→  @@index([tenantId])
+   650→  @@index([tenantId, createdAt])
+   651→  @@index([studentId])
+   652→  @@index([receiptNo])
+   653→  @@map("fee_collections")
+   654→}
+   655→
+   656→model FeeDiscount {
+   657→  id             Int      @id @default(autoincrement())
+   658→  tenantId       Int      @map("tenant_id")
+   659→  studentId      Int      @map("student_id")
+   660→  invoiceId      Int?     @map("invoice_id")
+   661→  feeCategoryId  Int?     @map("fee_category_id")
+   662→  discountType   String   @map("discount_type")
+   663→  discountValue  Float    @map("discount_value")
+   664→  reason         String?
+   665→  approvedBy     Int?     @map("approved_by")
+   666→  status         String
+   667→  createdAt      DateTime @default(now()) @map("created_at")
+   668→  updatedAt      DateTime @updatedAt @map("updated_at")
+   669→  createdBy      Int?     @map("created_by")
+   670→
+   671→  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   672→  student     Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+   673→  invoice     FeeInvoice?  @relation(fields: [invoiceId], references: [id])
+   674→  feeCategory FeeCategory? @relation(fields: [feeCategoryId], references: [id])
+   675→
+   676→  @@index([tenantId])
+   677→  @@index([studentId])
+   678→  @@map("fee_discounts")
+   679→}
+   680→
+   681→// --- DONATION MANAGEMENT ---
+   682→
+   683→model DonationCategory {
+   684→  id          Int      @id @default(autoincrement())
+   685→  tenantId    Int      @map("tenant_id")
+   686→  name        String
+   687→  description String?
+   688→  isActive    Boolean  @default(true) @map("is_active")
+   689→  createdAt   DateTime @default(now()) @map("created_at")
+   690→  updatedAt   DateTime @updatedAt @map("updated_at")
+   691→
+   692→  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   693→  donations Donation[]
+   694→
+   695→  @@index([tenantId])
+   696→  @@map("donation_categories")
+   697→}
+   698→
+   699→model Donor {
+   700→  id           Int       @id @default(autoincrement())
+   701→  tenantId     Int       @map("tenant_id")
+   702→  name         String
+   703→  phone        String?
+   704→  email        String?
+   705→  address      String?
+   706→  occupation   String?
+   707→  organization String?
+   708→  nidNo        String?   @map("nid_no")
+   709→  isRegular    Boolean   @default(false) @map("is_regular")
+   710→  remarks      String?
+   711→  isActive     Boolean   @default(true) @map("is_active")
+   712→  createdAt    DateTime  @default(now()) @map("created_at")
+   713→  updatedAt    DateTime  @updatedAt @map("updated_at")
+   714→  deletedAt    DateTime? @map("deleted_at")
+   715→
+   716→  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   717→  donations Donation[]
+   718→
+   719→  @@index([tenantId])
+   720→  @@index([phone])
+   721→  @@map("donors")
+   722→}
+   723→
+   724→model Donation {
+   725→  id                 Int      @id @default(autoincrement())
+   726→  tenantId           Int      @map("tenant_id")
+   727→  donationCategoryId Int      @map("donation_category_id")
+   728→  donorId            Int?     @map("donor_id")
+   729→  receiptNo          String   @map("receipt_no")
+   730→  amount             Float
+   731→  paymentMethod      String   @map("payment_method")
+   732→  paymentDate        DateTime @map("payment_date")
+   733→  transactionRef     String?  @map("transaction_ref")
+   734→  isAnonymous        Boolean  @default(false) @map("is_anonymous")
+   735→  remarks            String?
+   736→  status             String
+   737→  createdAt          DateTime @default(now()) @map("created_at")
+   738→  updatedAt          DateTime @updatedAt @map("updated_at")
+   739→  createdBy          Int?     @map("created_by")
+   740→
+   741→  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   742→  donationCategory DonationCategory @relation(fields: [donationCategoryId], references: [id], onDelete: Restrict)
+   743→  donor            Donor?          @relation(fields: [donorId], references: [id])
+   744→
+   745→  @@unique([tenantId, receiptNo])
+   746→  @@index([tenantId])
+   747→  @@index([tenantId, createdAt])
+   748→  @@index([donationCategoryId])
+   749→  @@map("donations")
+   750→}
+   751→
+   752→// --- EXPENSE MANAGEMENT ---
+   753→
+   754→model ExpenseCategory {
+   755→  id          Int      @id @default(autoincrement())
+   756→  tenantId    Int      @map("tenant_id")
+   757→  name        String
+   758→  code        String?
+   759→  description String?
+   760→  isActive    Boolean  @default(true) @map("is_active")
+   761→  createdAt   DateTime @default(now()) @map("created_at")
+   762→  updatedAt   DateTime @updatedAt @map("updated_at")
+   763→
+   764→  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   765→  expenses Expense[]
+   766→
+   767→  @@index([tenantId])
+   768→  @@map("expense_categories")
+   769→}
+   770→
+   771→model Expense {
+   772→  id                Int      @id @default(autoincrement())
+   773→  tenantId          Int      @map("tenant_id")
+   774→  voucherNo         String   @map("voucher_no")
+   775→  expenseCategoryId Int      @map("expense_category_id")
+   776→  amount            Float
+   777→  description       String?
+   778→  expenseDate       DateTime @map("expense_date")
+   779→  paymentMethod     String   @map("payment_method")
+   780→  paidTo            String?  @map("paid_to")
+   781→  receiptAttachment String?  @map("receipt_attachment")
+   782→  status            String
+   783→  approvedBy        Int?     @map("approved_by")
+   784→  createdAt         DateTime @default(now()) @map("created_at")
+   785→  updatedAt         DateTime @updatedAt @map("updated_at")
+   786→  createdBy         Int?     @map("created_by")
+   787→
+   788→  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   789→  expenseCategory ExpenseCategory @relation(fields: [expenseCategoryId], references: [id], onDelete: Restrict)
+   790→
+   791→  @@unique([tenantId, voucherNo])
+   792→  @@index([tenantId])
+   793→  @@index([tenantId, createdAt])
+   794→  @@index([tenantId, status])
+   795→  @@map("expenses")
+   796→}
+   797→
+   798→// --- SALARY & PAYROLL ---
+   799→
+   800→model SalaryStructure {
+   801→  id                 Int       @id @default(autoincrement())
+   802→  tenantId           Int       @map("tenant_id")
+   803→  employeeType       String    @map("employee_type")
+   804→  teacherId          Int?      @map("teacher_id")
+   805→  employeeId         Int?      @map("employee_id")
+   806→  basicSalary        Float     @map("basic_salary")
+   807→  houseRent          Float     @default(0) @map("house_rent")
+   808→  medicalAllowance   Float     @default(0) @map("medical_allowance")
+   809→  transportAllowance Float     @default(0) @map("transport_allowance")
+   810→  otherAllowance     Float     @default(0) @map("other_allowance")
+   811→  totalSalary        Float     @map("total_salary")
+   812→  pfDeduction        Float     @default(0) @map("pf_deduction")
+   813→  taxDeduction       Float     @default(0) @map("tax_deduction")
+   814→  otherDeduction     Float     @default(0) @map("other_deduction")
+   815→  netSalary          Float     @map("net_salary")
+   816→  effectiveFrom      DateTime  @map("effective_from")
+   817→  effectiveTo        DateTime? @map("effective_to")
+   818→  isActive           Boolean   @default(true) @map("is_active")
+   819→  createdAt          DateTime  @default(now()) @map("created_at")
+   820→  updatedAt          DateTime  @updatedAt @map("updated_at")
+   821→  createdBy          Int?      @map("created_by")
+   822→
+   823→  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   824→  teacher         Teacher?        @relation("TeacherSalary", fields: [teacherId], references: [id])
+   825→  employee        Employee?       @relation("EmployeeSalary", fields: [employeeId], references: [id])
+   826→  salaryPayments  SalaryPayment[]
+   827→
+   828→  @@index([tenantId])
+   829→  @@index([tenantId, employeeType])
+   830→  @@map("salary_structures")
+   831→}
+   832→
+   833→model SalaryPayment {
+   834→  id                Int      @id @default(autoincrement())
+   835→  tenantId          Int      @map("tenant_id")
+   836→  employeeType      String   @map("employee_type")
+   837→  teacherId         Int?     @map("teacher_id")
+   838→  employeeId        Int?     @map("employee_id")
+   839→  salaryStructureId Int      @map("salary_structure_id")
+   840→  month             Int
+   841→  year              Int
+   842→  basicSalary       Float    @map("basic_salary")
+   843→  totalAllowance    Float    @map("total_allowance")
+   844→  totalDeduction    Float    @map("total_deduction")
+   845→  netSalary         Float    @map("net_salary")
+   846→  paymentMethod     String   @map("payment_method")
+   847→  paymentDate       DateTime @map("payment_date")
+   848→  transactionRef    String?  @map("transaction_ref")
+   849→  status            String
+   850→  remarks           String?
+   851→  createdAt         DateTime @default(now()) @map("created_at")
+   852→  updatedAt         DateTime @updatedAt @map("updated_at")
+   853→  createdBy         Int?     @map("created_by")
+   854→
+   855→  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   856→  salaryStructure SalaryStructure @relation(fields: [salaryStructureId], references: [id], onDelete: Restrict)
+   857→  teacher         Teacher?        @relation("TeacherSalaryPayment", fields: [teacherId], references: [id])
+   858→  employee        Employee?       @relation("EmployeeSalaryPayment", fields: [employeeId], references: [id])
+   859→
+   860→  @@unique([tenantId, employeeType, teacherId, employeeId, month, year])
+   861→  @@index([tenantId])
+   862→  @@index([tenantId, month, year])
+   863→  @@map("salary_payments")
+   864→}
+   865→
+   866→// --- ACCOUNTING (Double-Entry Bookkeeping) ---
+   867→
+   868→model ChartOfAccount {
+   869→  id             Int      @id @default(autoincrement())
+   870→  tenantId       Int      @map("tenant_id")
+   871→  code           String
+   872→  name           String
+   873→  accountType    String   @map("account_type")
+   874→  parentId       Int?     @map("parent_id")
+   875→  isActive       Boolean  @default(true) @map("is_active")
+   876→  openingBalance Float    @default(0) @map("opening_balance")
+   877→  currentBalance Float    @default(0) @map("current_balance")
+   878→  description    String?
+   879→  isSystem       Boolean  @default(false) @map("is_system")
+   880→  createdAt      DateTime @default(now()) @map("created_at")
+   881→  updatedAt      DateTime @updatedAt @map("updated_at")
+   882→
+   883→  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   884→  parent       ChartOfAccount?   @relation("AccountHierarchy", fields: [parentId], references: [id])
+   885→  children     ChartOfAccount[]  @relation("AccountHierarchy")
+   886→  journalItems JournalEntryItem[]
+   887→
+   888→  @@unique([tenantId, code])
+   889→  @@index([tenantId])
+   890→  @@index([tenantId, accountType])
+   891→  @@map("chart_of_accounts")
+   892→}
+   893→
+   894→model JournalEntry {
+   895→  id            Int      @id @default(autoincrement())
+   896→  tenantId      Int      @map("tenant_id")
+   897→  entryNo       String   @map("entry_no")
+   898→  entryDate     DateTime @map("entry_date")
+   899→  narration     String?
+   900→  referenceType String?  @map("reference_type")
+   901→  referenceId   Int?     @map("reference_id")
+   902→  totalDebit    Float    @map("total_debit")
+   903→  totalCredit   Float    @map("total_credit")
+   904→  status        String
+   905→  createdAt     DateTime @default(now()) @map("created_at")
+   906→  updatedAt     DateTime @updatedAt @map("updated_at")
+   907→  createdBy     Int?     @map("created_by")
+   908→
+   909→  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   910→  journalItems JournalEntryItem[]
+   911→
+   912→  @@unique([tenantId, entryNo])
+   913→  @@index([tenantId])
+   914→  @@index([tenantId, entryDate])
+   915→  @@index([referenceType, referenceId])
+   916→  @@map("journal_entries")
+   917→}
+   918→
+   919→model JournalEntryItem {
+   920→  id             Int      @id @default(autoincrement())
+   921→  tenantId       Int      @map("tenant_id")
+   922→  journalEntryId Int      @map("journal_entry_id")
+   923→  accountId      Int      @map("account_id")
+   924→  debit          Float    @default(0)
+   925→  credit         Float    @default(0)
+   926→  narration      String?
+   927→  createdAt      DateTime @default(now()) @map("created_at")
+   928→  updatedAt      DateTime @updatedAt @map("updated_at")
+   929→
+   930→  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   931→  journalEntry JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+   932→  account      ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+   933→
+   934→  @@index([tenantId])
+   935→  @@index([journalEntryId])
+   936→  @@index([accountId])
+   937→  @@map("journal_entry_items")
+   938→}
+   939→
+   940→// ============================================================
+   941→// DOMAIN 5: INVENTORY — Suppliers, Products, Purchases, Stock, Sales
+   942→// ============================================================
+   943→
+   944→model Supplier {
+   945→  id            Int       @id @default(autoincrement())
+   946→  tenantId      Int       @map("tenant_id")
+   947→  name          String
+   948→  code          String?
+   949→  phone         String?
+   950→  email         String?
+   951→  address       String?
+   952→  city          String?
+   953→  contactPerson String?   @map("contact_person")
+   954→  nidNo         String?   @map("nid_no")
+   955→  bankAccount   String?   @map("bank_account")
+   956→  isActive      Boolean   @default(true) @map("is_active")
+   957→  createdAt     DateTime  @default(now()) @map("created_at")
+   958→  updatedAt     DateTime  @updatedAt @map("updated_at")
+   959→  deletedAt     DateTime? @map("deleted_at")
+   960→
+   961→  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   962→  purchases Purchase[]
+   963→
+   964→  @@index([tenantId])
+   965→  @@map("suppliers")
+   966→}
+   967→
+   968→model ProductCategory {
+   969→  id          Int      @id @default(autoincrement())
+   970→  tenantId    Int      @map("tenant_id")
+   971→  name        String
+   972→  code        String?
+   973→  description String?
+   974→  parentId    Int?     @map("parent_id")
+   975→  isActive    Boolean  @default(true) @map("is_active")
+   976→  createdAt   DateTime @default(now()) @map("created_at")
+   977→  updatedAt   DateTime @updatedAt @map("updated_at")
+   978→
+   979→  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+   980→  parent   ProductCategory? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+   981→  children ProductCategory[] @relation("CategoryHierarchy")
+   982→  products Product[]
+   983→
+   984→  @@index([tenantId])
+   985→  @@map("product_categories")
+   986→}
+   987→
+   988→model Product {
+   989→  id             Int       @id @default(autoincrement())
+   990→  tenantId       Int       @map("tenant_id")
+   991→  name           String
+   992→  code           String
+   993→  categoryId     Int       @map("category_id")
+   994→  description    String?
+   995→  unit           String?
+   996→  purchasePrice  Float     @default(0) @map("purchase_price")
+   997→  salePrice      Float     @default(0) @map("sale_price")
+   998→  currentStock   Float     @default(0) @map("current_stock")
+   999→  minStockLevel  Float     @default(0) @map("min_stock_level")
+  1000→  maxStockLevel  Float?    @map("max_stock_level")
+  1001→  isActive       Boolean   @default(true) @map("is_active")
+  1002→  hasExpiry      Boolean   @default(false) @map("has_expiry")
+  1003→  createdAt      DateTime  @default(now()) @map("created_at")
+  1004→  updatedAt      DateTime  @updatedAt @map("updated_at")
+  1005→  deletedAt      DateTime? @map("deleted_at")
+  1006→  createdBy      Int?      @map("created_by")
+  1007→  updatedBy      Int?      @map("updated_by")
+  1008→
+  1009→  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1010→  category       ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  1011→  purchaseItems  PurchaseItem[]
+  1012→  stockMovements StockMovement[]
+  1013→  salesItems     SalesItem[]
+  1014→
+  1015→  @@unique([tenantId, code])
+  1016→  @@index([tenantId])
+  1017→  @@index([tenantId, categoryId])
+  1018→  @@map("products")
+  1019→}
+  1020→
+  1021→model Purchase {
+  1022→  id             Int      @id @default(autoincrement())
+  1023→  tenantId       Int      @map("tenant_id")
+  1024→  purchaseNo     String   @map("purchase_no")
+  1025→  supplierId     Int      @map("supplier_id")
+  1026→  purchaseDate   DateTime @map("purchase_date")
+  1027→  totalAmount    Float    @map("total_amount")
+  1028→  discountAmount Float    @default(0) @map("discount_amount")
+  1029→  taxAmount      Float    @default(0) @map("tax_amount")
+  1030→  netAmount      Float    @map("net_amount")
+  1031→  paymentStatus  String   @map("payment_status")
+  1032→  paymentMethod  String?  @map("payment_method")
+  1033→  remarks        String?
+  1034→  status         String
+  1035→  createdAt      DateTime @default(now()) @map("created_at")
+  1036→  updatedAt      DateTime @updatedAt @map("updated_at")
+  1037→  createdBy      Int?     @map("created_by")
+  1038→
+  1039→  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1040→  supplier     Supplier      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  1041→  purchaseItems PurchaseItem[]
+  1042→
+  1043→  @@unique([tenantId, purchaseNo])
+  1044→  @@index([tenantId])
+  1045→  @@index([tenantId, createdAt])
+  1046→  @@map("purchases")
+  1047→}
+  1048→
+  1049→model PurchaseItem {
+  1050→  id             Int      @id @default(autoincrement())
+  1051→  tenantId       Int      @map("tenant_id")
+  1052→  purchaseId     Int      @map("purchase_id")
+  1053→  productId      Int      @map("product_id")
+  1054→  quantity       Float
+  1055→  unitPrice      Float    @map("unit_price")
+  1056→  totalPrice     Float    @map("total_price")
+  1057→  discountAmount Float    @default(0) @map("discount_amount")
+  1058→  createdAt      DateTime @default(now()) @map("created_at")
+  1059→  updatedAt      DateTime @updatedAt @map("updated_at")
+  1060→
+  1061→  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1062→  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  1063→  product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  1064→
+  1065→  @@index([tenantId])
+  1066→  @@index([purchaseId])
+  1067→  @@map("purchase_items")
+  1068→}
+  1069→
+  1070→model StockMovement {
+  1071→  id             Int      @id @default(autoincrement())
+  1072→  tenantId       Int      @map("tenant_id")
+  1073→  productId      Int      @map("product_id")
+  1074→  movementType   String   @map("movement_type")
+  1075→  quantity       Float
+  1076→  referenceType  String?  @map("reference_type")
+  1077→  referenceId    Int?     @map("reference_id")
+  1078→  remarks        String?
+  1079→  stockAfter     Float    @map("stock_after")
+  1080→  createdAt      DateTime @default(now()) @map("created_at")
+  1081→  updatedAt      DateTime @updatedAt @map("updated_at")
+  1082→  createdBy      Int?     @map("created_by")
+  1083→
+  1084→  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1085→  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  1086→
+  1087→  @@index([tenantId])
+  1088→  @@index([productId])
+  1089→  @@index([tenantId, createdAt])
+  1090→  @@map("stock_movements")
+  1091→}
+  1092→
+  1093→model SalesInvoice {
+  1094→  id             Int      @id @default(autoincrement())
+  1095→  tenantId       Int      @map("tenant_id")
+  1096→  invoiceNo      String   @map("invoice_no")
+  1097→  studentId      Int?     @map("student_id")
+  1098→  customerName   String?  @map("customer_name")
+  1099→  saleDate       DateTime @map("sale_date")
+  1100→  totalAmount    Float    @map("total_amount")
+  1101→  discountAmount Float    @default(0) @map("discount_amount")
+  1102→  netAmount      Float    @map("net_amount")
+  1103→  paymentMethod  String   @map("payment_method")
+  1104→  paymentStatus  String   @map("payment_status")
+  1105→  remarks        String?
+  1106→  status         String
+  1107→  createdAt      DateTime @default(now()) @map("created_at")
+  1108→  updatedAt      DateTime @updatedAt @map("updated_at")
+  1109→  createdBy      Int?     @map("created_by")
+  1110→
+  1111→  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1112→  student     Student?    @relation(fields: [studentId], references: [id])
+  1113→  salesItems  SalesItem[]
+  1114→
+  1115→  @@unique([tenantId, invoiceNo])
+  1116→  @@index([tenantId])
+  1117→  @@index([tenantId, createdAt])
+  1118→  @@index([tenantId, status])
+  1119→  @@map("sales_invoices")
+  1120→}
+  1121→
+  1122→model SalesItem {
+  1123→  id             Int      @id @default(autoincrement())
+  1124→  tenantId       Int      @map("tenant_id")
+  1125→  salesInvoiceId Int      @map("sales_invoice_id")
+  1126→  productId      Int      @map("product_id")
+  1127→  quantity       Float
+  1128→  unitPrice      Float    @map("unit_price")
+  1129→  totalPrice     Float    @map("total_price")
+  1130→  discountAmount Float    @default(0) @map("discount_amount")
+  1131→  createdAt      DateTime @default(now()) @map("created_at")
+  1132→  updatedAt      DateTime @updatedAt @map("updated_at")
+  1133→
+  1134→  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1135→  salesInvoice SalesInvoice @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
+  1136→  product      Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  1137→
+  1138→  @@index([tenantId])
+  1139→  @@index([salesInvoiceId])
+  1140→  @@map("sales_items")
+  1141→}
+  1142→
+  1143→// ============================================================
+  1144→// DOMAIN 6: CMS — Website Pages, Notices, Galleries
+  1145→// ============================================================
+  1146→
+  1147→model WebsitePage {
+  1148→  id               Int       @id @default(autoincrement())
+  1149→  tenantId         Int       @map("tenant_id")
+  1150→  title            String
+  1151→  slug             String
+  1152→  content          String?
+  1153→  metaTitle        String?   @map("meta_title")
+  1154→  metaDescription  String?   @map("meta_description")
+  1155→  featuredImageUrl String?   @map("featured_image_url")
+  1156→  isPublished      Boolean   @default(false) @map("is_published")
+  1157→  publishedAt      DateTime? @map("published_at")
+  1158→  sortOrder        Int       @default(0) @map("sort_order")
+  1159→  createdAt        DateTime  @default(now()) @map("created_at")
+  1160→  updatedAt        DateTime  @updatedAt @map("updated_at")
+  1161→  createdBy        Int?      @map("created_by")
+  1162→  updatedBy        Int?      @map("updated_by")
+  1163→
+  1164→  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1165→
+  1166→  @@unique([tenantId, slug])
+  1167→  @@index([tenantId])
+  1168→  @@map("website_pages")
+  1169→}
+  1170→
+  1171→model Notice {
+  1172→  id              Int       @id @default(autoincrement())
+  1173→  tenantId        Int       @map("tenant_id")
+  1174→  title           String
+  1175→  content         String?
+  1176→  noticeType      String    @map("notice_type")
+  1177→  isPublished     Boolean   @default(false) @map("is_published")
+  1178→  publishedAt     DateTime? @map("published_at")
+  1179→  targetAudience  String?   @map("target_audience")
+  1180→  attachmentUrl   String?   @map("attachment_url")
+  1181→  createdAt       DateTime  @default(now()) @map("created_at")
+  1182→  updatedAt       DateTime  @updatedAt @map("updated_at")
+  1183→  createdBy       Int?      @map("created_by")
+  1184→
+  1185→  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1186→
+  1187→  @@index([tenantId])
+  1188→  @@index([tenantId, noticeType])
+  1189→  @@map("notices")
+  1190→}
+  1191→
+  1192→model Gallery {
+  1193→  id            Int       @id @default(autoincrement())
+  1194→  tenantId      Int       @map("tenant_id")
+  1195→  title         String
+  1196→  description   String?
+  1197→  coverImageUrl String?   @map("cover_image_url")
+  1198→  isPublished   Boolean   @default(false) @map("is_published")
+  1199→  createdAt     DateTime  @default(now()) @map("created_at")
+  1200→  updatedAt     DateTime  @updatedAt @map("updated_at")
+  1201→  createdBy     Int?      @map("created_by")
+  1202→
+  1203→  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1204→  images GalleryImage[]
+  1205→
+  1206→  @@index([tenantId])
+  1207→  @@map("galleries")
+  1208→}
+  1209→
+  1210→model GalleryImage {
+  1211→  id        Int      @id @default(autoincrement())
+  1212→  tenantId  Int      @map("tenant_id")
+  1213→  galleryId Int      @map("gallery_id")
+  1214→  imageUrl  String   @map("image_url")
+  1215→  caption   String?
+  1216→  sortOrder Int      @default(0) @map("sort_order")
+  1217→  createdAt DateTime @default(now()) @map("created_at")
+  1218→  updatedAt DateTime @updatedAt @map("updated_at")
+  1219→
+  1220→  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1221→  gallery Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  1222→
+  1223→  @@index([tenantId])
+  1224→  @@index([galleryId])
+  1225→  @@map("gallery_images")
+  1226→}
+  1227→
+  1228→// ============================================================
+  1229→// DOMAIN 7: SYSTEM — Settings, Notifications, Activity Logs, Audit Logs
+  1230→// ============================================================
+  1231→
+  1232→model Settings {
+  1233→  id        Int      @id @default(autoincrement())
+  1234→  tenantId  Int      @map("tenant_id")
+  1235→  key       String
+  1236→  value     String?
+  1237→  createdAt DateTime @default(now()) @map("created_at")
+  1238→  updatedAt DateTime @updatedAt @map("updated_at")
+  1239→
+  1240→  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1241→
+  1242→  @@unique([tenantId, key])
+  1243→  @@index([tenantId])
+  1244→  @@map("settings")
+  1245→}
+  1246→
+  1247→model Notification {
+  1248→  id        Int       @id @default(autoincrement())
+  1249→  tenantId  Int       @map("tenant_id")
+  1250→  userId    Int       @map("user_id")
+  1251→  title     String
+  1252→  message   String?
+  1253→  type      String
+  1254→  isRead    Boolean   @default(false) @map("is_read")
+  1255→  link      String?
+  1256→  createdAt DateTime  @default(now()) @map("created_at")
+  1257→  updatedAt DateTime  @updatedAt @map("updated_at")
+  1258→
+  1259→  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1260→  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  1261→
+  1262→  @@index([tenantId])
+  1263→  @@index([userId])
+  1264→  @@index([isRead])
+  1265→  @@map("notifications")
+  1266→}
+  1267→
+  1268→model ActivityLog {
+  1269→  id          Int      @id @default(autoincrement())
+  1270→  tenantId    Int      @map("tenant_id")
+  1271→  userId      Int?     @map("user_id")
+  1272→  action      String
+  1273→  entityType  String?  @map("entity_type")
+  1274→  entityId    Int?     @map("entity_id")
+  1275→  description String?
+  1276→  ipAddress   String?  @map("ip_address")
+  1277→  userAgent   String?  @map("user_agent")
+  1278→  metadata    String?
+  1279→  createdAt   DateTime @default(now()) @map("created_at")
+  1280→
+  1281→  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1282→
+  1283→  @@index([tenantId])
+  1284→  @@index([tenantId, createdAt])
+  1285→  @@index([userId])
+  1286→  @@index([entityType, entityId])
+  1287→  @@map("activity_logs")
+  1288→}
+  1289→
+  1290→model AuditLog {
+  1291→  id          Int      @id @default(autoincrement())
+  1292→  tenantId    Int      @map("tenant_id")
+  1293→  userId      Int?     @map("user_id")
+  1294→  action      String
+  1295→  entityType  String?  @map("entity_type")
+  1296→  entityId    Int?     @map("entity_id")
+  1297→  oldValues   String?  @map("old_values")
+  1298→  newValues   String?  @map("new_values")
+  1299→  ipAddress   String?  @map("ip_address")
+  1300→  createdAt   DateTime @default(now()) @map("created_at")
+  1301→
+  1302→  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  1303→
+  1304→  @@index([tenantId])
+  1305→  @@index([tenantId, createdAt])
+  1306→  @@index([entityType, entityId])
+  1307→  @@map("audit_logs")
+  1308→}
+  1309→
