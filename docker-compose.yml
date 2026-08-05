@@ -1,0 +1,29 @@
+# ============================================================
+# Madrasha ERP SaaS — Docker Compose
+# Pull & Run: docker-compose up -d
+# ============================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: madrasha-erp
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:./db/custom.db
+      - NODE_ENV=production
+    volumes:
+      - erp-db:/app/db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  erp-db:
+    driver: local
