@@ -6,8 +6,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-bengali: var(--font-bengali);
+  --font-arabic: var(--font-arabic);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -37,86 +39,213 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent-soft: var(--accent-soft);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ============================================================
+   LIGHT THEME — Emerald & Gold (Islamic Modern Premium)
+   ============================================================ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --radius: 0.75rem;
+
+  /* Core Surfaces */
+  --background: oklch(0.98 0.005 85);     /* Warm white — not cold blue-gray */
+  --foreground: oklch(0.18 0.02 60);       /* Warm near-black (Stone 900) */
+  --card: oklch(1 0 0);                    /* Pure white cards */
+  --card-foreground: oklch(0.18 0.02 60);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.18 0.02 60);
+
+  /* Primary — Emerald Green (Islamic) */
+  --primary: oklch(0.48 0.16 163);         /* Emerald 700 — #047857 */
+  --primary-foreground: oklch(1 0 0);      /* White on primary */
+  --primary-soft: oklch(0.97 0.02 163);    /* Emerald 50 — subtle bg */
+
+  /* Secondary — Warm Stone */
+  --secondary: oklch(0.96 0.005 60);       /* Stone 100 */
+  --secondary-foreground: oklch(0.25 0.01 60);
+
+  /* Accent — Warm Gold */
+  --accent: oklch(0.68 0.15 75);           /* Amber 600 — #d97706 */
+  --accent-foreground: oklch(0.30 0.06 75); /* Amber 900 on gold */
+  --accent-soft: oklch(0.99 0.02 85);      /* Amber 50 — subtle gold bg */
+
+  /* Muted — Warm Gray */
+  --muted: oklch(0.96 0.005 60);           /* Stone 100 */
+  --muted-foreground: oklch(0.55 0.01 60); /* Stone 500 */
+
+  /* Semantic Colors */
+  --destructive: oklch(0.55 0.22 25);      /* Rose 600 */
+  --success: oklch(0.62 0.17 155);         /* Emerald 500 — #10b981 */
+  --warning: oklch(0.77 0.16 75);          /* Amber 500 — #f59e0b */
+  --info: oklch(0.55 0.17 230);            /* Sky 600 — #0284c7 */
+
+  /* Borders & Input */
+  --border: oklch(0.91 0.005 60);          /* Stone 200 */
+  --input: oklch(0.91 0.005 60);
+  --ring: oklch(0.48 0.16 163);            /* Emerald ring */
+
+  /* Chart Colors — Data Visualization */
+  --chart-1: oklch(0.62 0.17 155);         /* Emerald 500 */
+  --chart-2: oklch(0.77 0.16 75);          /* Amber 500 */
+  --chart-3: oklch(0.62 0.17 230);         /* Sky 500 */
+  --chart-4: oklch(0.70 0.17 10);          /* Rose 400 */
+  --chart-5: oklch(0.65 0.20 300);         /* Violet 400 */
+
+  /* Sidebar */
+  --sidebar: oklch(0.98 0.005 85);
+  --sidebar-foreground: oklch(0.18 0.02 60);
+  --sidebar-primary: oklch(0.48 0.16 163);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.97 0.02 163);  /* Emerald soft */
+  --sidebar-accent-foreground: oklch(0.48 0.16 163);
+  --sidebar-border: oklch(0.91 0.005 60);
+  --sidebar-ring: oklch(0.48 0.16 163);
 }
 
+/* ============================================================
+   DARK THEME — Emerald & Gold (Islamic Modern Premium)
+   ============================================================ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Core Surfaces */
+  --background: oklch(0.13 0.01 60);       /* Warm near-black (Stone 950) */
+  --foreground: oklch(0.97 0.005 85);      /* Warm off-white */
+  --card: oklch(0.18 0.01 60);             /* Stone 900 */
+  --card-foreground: oklch(0.97 0.005 85);
+  --popover: oklch(0.18 0.01 60);
+  --popover-foreground: oklch(0.97 0.005 85);
+
+  /* Primary — Brighter Emerald for dark bg */
+  --primary: oklch(5 0.72 0.16 163);       /* Emerald 400 — #34d399 */
+  --primary-foreground: oklch(0.13 0.01 60);
+  --primary-soft: oklch(0.20 0.04 163);    /* Emerald dark-soft */
+
+  /* Secondary */
+  --secondary: oklch(0.22 0.01 60);
+  --secondary-foreground: oklch(0.90 0.005 60);
+
+  /* Accent — Brighter Gold for dark bg */
+  --accent: oklch(0.82 0.16 85);           /* Amber 400 — #fbbf24 */
+  --accent-foreground: oklch(0.18 0.04 75);
+  --accent-soft: oklch(0.22 0.04 75);
+
+  /* Muted */
+  --muted: oklch(0.22 0.01 60);
+  --muted-foreground: oklch(0.65 0.01 60);
+
+  /* Semantic */
+  --destructive: oklch(0.62 0.22 25);      /* Rose 500 */
+  --success: oklch(0.62 0.17 155);         /* Emerald 500 */
+  --warning: oklch(0.77 0.16 75);          /* Amber 500 */
+  --info: oklch(0.62 0.17 230);            /* Sky 500 */
+
+  /* Borders */
+  --border: oklch(0.28 0.01 60);
+  --input: oklch(0.28 0.01 60);
+  --ring: oklch(0.55 0.14 163);
+
+  /* Chart Colors */
+  --chart-1: oklch(0.62 0.17 155);         /* Emerald 500 */
+  --chart-2: oklch(0.82 0.16 85);          /* Amber 400 */
+  --chart-3: oklch(0.62 0.17 230);         /* Sky 500 */
+  --chart-4: oklch(0.70 0.17 10);          /* Rose 400 */
+  --chart-5: oklch(0.65 0.20 300);         /* Violet 400 */
+
+  /* Sidebar */
+  --sidebar: oklch(0.15 0.01 60);
+  --sidebar-foreground: oklch(0.97 0.005 85);
+  --sidebar-primary: oklch(0.55 0.14 163);
+  --sidebar-primary-foreground: oklch(0.97 0.005 85);
+  --sidebar-accent: oklch(0.20 0.04 163);
+  --sidebar-accent-foreground: oklch(0.55 0.14 163);
+  --sidebar-border: oklch(0.28 0.01 60);
+  --sidebar-ring: oklch(0.55 0.14 163);
 }
 
+/* ============================================================
+   BASE LAYER
+   ============================================================ */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* ============================================================
+   CUSTOM UTILITY CLASSES
+   ============================================================ */
+@layer utilities {
+  /* Arabic text — right-to-left */
+  .text-arabic {
+    font-family: var(--font-arabic), serif;
+    direction: rtl;
+    text-align: right;
+  }
+
+  /* Bengali text */
+  .text-bengali {
+    font-family: var(--font-bengali), sans-serif;
+  }
+
+  /* Islamic geometric pattern overlay */
+  .islamic-pattern-bg {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23047857' fill-opacity='0.04'%3E%3Cpath d='M30 0L60 30L30 60L0 30z'/%3E%3Cpath d='M30 10L50 30L30 50L10 30z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* Warm gold gradient */
+  .gradient-gold {
+    background: linear-gradient(135deg, oklch(0.68 0.15 75), oklch(0.77 0.16 75));
+  }
+
+  /* Emerald gradient */
+  .gradient-emerald {
+    background: linear-gradient(135deg, oklch(0.48 0.16 163), oklch(0.55 0.17 163));
+  }
+
+  /* Premium shadow */
+  .shadow-premium {
+    box-shadow:
+      0 1px 3px 0 oklch(0 0 0 / 0.06),
+      0 1px 2px -1px oklch(0 0 0 / 0.06),
+      0 0 0 1px oklch(0.91 0.005 60);
+  }
+
+  /* Islamic pattern slow rotation */
+  @keyframes islamic-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Crescent moon glow pulse */
+  @keyframes crescent-glow {
+    0%, 100% { filter: drop-shadow(0 0 2px oklch(0.55 0.17 163 / 0.3)); }
+    50% { filter: drop-shadow(0 0 6px oklch(0.55 0.17 163 / 0.5)); }
+  }
+
+  /* Scrollbar styling */
+  .scrollbar-islamic {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.80 0.02 163) transparent;
+  }
+  .scrollbar-islamic::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-islamic::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-islamic::-webkit-scrollbar-thumb {
+    background-color: oklch(0.80 0.02 163);
+    border-radius: 3px;
   }
 }
