@@ -29,3 +29,25 @@ Stage Summary:
 - Database file: /home/z/my-project/db/custom.db
 - Schema file: /home/z/my-project/prisma/schema.prisma
 - Seed file: /home/z/my-project/prisma/seed.ts
+
+---
+Task ID: 2
+Agent: Main
+Task: Push project to GitHub repo with Docker setup for local testing
+
+Work Log:
+- Created multi-stage Dockerfile (Bun + Next.js standalone + Prisma + SQLite)
+- Created docker-compose.yml with volume persistence and healthcheck
+- Created .dockerignore for optimized Docker builds
+- Created .env.example with DATABASE_URL template
+- Updated .gitignore to allow .env.example
+- Added db:seed script to package.json
+- Created README.md with Docker quickstart and local dev instructions
+- Committed all changes
+- Pushed to https://github.com/sajidchowdhury/NekirJuri.git (main branch)
+- Removed PAT from git remote URL for security
+
+Stage Summary:
+- Project pushed to GitHub: sajidchowdhury/NekirJuri
+- Docker setup complete: `docker-compose up -d --build` to run
+- User can pull repo and run with Docker immediately
