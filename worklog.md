@@ -308,3 +308,40 @@ Stage Summary:
 - Payslip with print optimization, Bismillah, institutional branding
 - Responsive: mobile card view for tables, stacked layout on small screens
 - Phase 6 complete: HR & Payroll fully functional
+
+---
+Task ID: 7
+Agent: Full-Stack Developer
+Task: Phase 7 — Inventory & Procurement
+
+Work Log:
+- Created comprehensive inventory sample data at src/lib/inventory/sample-data.ts with 18 products (8 categories), 5 purchase orders, 6 sales, 15 stock movements, formatTaka helper, getStockStatus helper, generateSKU helper, getCategoryStockData helper, color class maps for categories/stock statuses/PO statuses/sale statuses/payment methods
+- Created product-list.tsx — DataTable with category icons, SKU monospace, category badges (color-coded), purchase/sale prices (gold), stock qty, min level, auto-determined stock status badges (In Stock=emerald, Low Stock=amber, Out of Stock=rose), Edit/Delete actions, mobile card view, filter support (All/Low Stock/Out of Stock)
+- Created product-form.tsx — react-hook-form + zod validation, Name, Category select, SKU with auto-generate button, Purchase Price, Sale Price, Current Stock, Min/Max Stock Levels, Unit select (Piece/Kg/Liter/Box/Pack/Dozen/Set), Description textarea, emerald submit button
+- Created purchase-order-list.tsx — DataTable with PO Number (monospace), Supplier, Date, Items Count, Grand Total (gold), Status badges (Draft=slate, Ordered=sky, Partial=amber, Received=emerald, Cancelled=rose), View/Edit/Receive actions, mobile card view, status filter support
+- Created purchase-order-form.tsx — react-hook-form + zod, Supplier Name, Order/Expected dates, Notes, Dynamic line items (Product select, Qty, Unit Price auto-filled, Total auto-calc), Add/Remove line items, Footer with Subtotal/Tax%/Shipping/Grand Total auto-calc, Save as Draft + Submit Order buttons
+- Created stock-dashboard.tsx — 4 StatCards (Total Stock Value, Total Products, Low Stock Items, Out of Stock), Recharts BarChart of stock levels by category with color-coded bars, Low Stock Alert section with amber border and Reorder buttons, Out of Stock section with rose border and Reorder buttons
+- Created stock-movement-log.tsx — Vertical timeline with colored dots (emerald=IN, rose=OUT), each entry shows DateTime, Type badge, Product Name, Quantity (±), Reference, Reason, Balance After, Filter tabs (All/Stock In/Stock Out), Framer Motion stagger animations
+- Created sales-list.tsx — DataTable with Invoice # (monospace), Date, Customer Name, Items Count, Total (gold), Payment Method badges (Cash=emerald, bKash=sky, Credit=amber), Status badges (Completed=emerald, Pending=amber, Cancelled=rose), View/Print actions, mobile card view
+- Created sales-form.tsx — react-hook-form + zod, Customer Name (default Walk-in), Phone, Dynamic line items (Product select showing stock, Qty with max validation, Unit Price auto-filled, Total auto-calc), Discount, Grand Total, Payment Method select, Complete Sale emerald button
+- Replaced /inventory/products page — PageHeader with Bismillah, Add Product button, ExportButton, filter tabs, ProductList DataTable, Add/Edit dialogs with ProductForm, Framer Motion animations
+- Replaced /inventory/purchases page — PageHeader with Bismillah, New PO button, ExportButton, status filter tabs, PurchaseOrderList DataTable, Add/Edit/View PO dialogs (View shows line items table + totals), Framer Motion animations
+- Replaced /inventory/stock page — PageHeader with Bismillah, ExportButton, 2-tab layout (Dashboard with StockDashboard, Movement Log with StockMovementLog), shadcn Tabs, Framer Motion animations
+- Replaced /inventory/sales page — PageHeader with Bismillah, New Sale button, ExportButton, SalesList DataTable, New Sale dialog with SalesForm, View Sale detail dialog with line items + totals, Framer Motion animations
+- All amounts in ৳ (Bengali Taka) using formatTaka helper
+- All pages use 'use client', Framer Motion entrance animations, emerald primary buttons, gold accent for amounts
+- Reused existing components: DataTable, StatCard, PageHeader, ExportButton, Badge, Dialog, Card, Button, Tabs, Select, Input, Label, Textarea, Separator
+- Lint: 0 errors (7 pre-existing warnings — TanStack Table + React Hook Form incompatible-library)
+- All 4 pages verified: HTTP 200
+
+Stage Summary:
+- 1 sample data file in src/lib/inventory/ (sample-data.ts) with 18 products, 5 POs, 6 sales, 15 stock movements
+- 8 inventory components in src/components/inventory/ (product-list, product-form, purchase-order-list, purchase-order-form, stock-dashboard, stock-movement-log, sales-list, sales-form)
+- 4 pages fully built: /inventory/products, /inventory/purchases, /inventory/stock, /inventory/sales
+- All amounts in ৳ format, Islamic styling with Bismillah on all pages
+- Emerald/gold/rose/amber/sky color coding for statuses, categories, payment methods
+- Recharts BarChart for stock levels by category
+- Vertical timeline for stock movements with colored dots
+- Dynamic line items in PO and Sales forms with auto-calculation
+- Responsive: mobile card view for tables, stacked layout on small screens
+- Phase 7 complete: Inventory & Procurement fully functional
