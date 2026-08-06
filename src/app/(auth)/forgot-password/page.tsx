@@ -1,18 +1,17 @@
 'use client';
 
 // ============================================================
-// Login Page — Split layout with Islamic pattern + LoginForm
+// Forgot Password Page — Split layout with Islamic pattern + form
 // Desktop: Left panel (pattern + branding) | Right panel (form)
 // Mobile: Full-screen form with subtle pattern
 // ============================================================
 
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import CrescentLogo from '@/components/islamic/crescent-logo';
 import AuthPattern from '@/components/auth/auth-pattern';
-import LoginForm from '@/components/auth/login-form';
+import ForgotPasswordForm from '@/components/auth/forgot-password-form';
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   return (
     <div className="relative min-h-screen flex">
       {/* Left panel — Islamic pattern + branding (hidden on mobile) */}
@@ -32,42 +31,20 @@ export default function LoginPage() {
               Madrasha ERP
             </h1>
             <p className="text-emerald-100/80 text-lg max-w-xs mx-auto">
-              Islamic Educational Institution Management System
+              Secure password recovery for your account
             </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-            className="mt-12 max-w-sm"
-          >
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold">500+</div>
-                <div className="text-xs text-emerald-100/60 mt-1">Institutions</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">50K+</div>
-                <div className="text-xs text-emerald-100/60 mt-1">Students</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">99.9%</div>
-                <div className="text-xs text-emerald-100/60 mt-1">Uptime</div>
-              </div>
-            </div>
           </motion.div>
         </div>
       </div>
 
-      {/* Right panel — Login form */}
+      {/* Right panel — Forgot password form */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 lg:p-12 bg-background">
         {/* Mobile branding */}
         <div className="lg:hidden mb-8 text-center">
           <CrescentLogo size="md" className="mx-auto mb-3" />
           <h1 className="text-xl font-bold text-foreground">Madrasha ERP</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Islamic Educational Institution Management
+            Reset your password
           </p>
         </div>
 
@@ -78,31 +55,14 @@ export default function LoginPage() {
             transition={{ duration: 0.4 }}
           >
             <h2 className="text-2xl font-semibold text-foreground mb-1">
-              Welcome back
+              Forgot Password?
             </h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Sign in to your institution&apos;s dashboard
+              No worries, we&apos;ll help you reset it
             </p>
           </motion.div>
 
-          <LoginForm />
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-            className="mt-6 text-center"
-          >
-            <p className="text-sm text-muted-foreground">
-              Don&apos;t have an account?{' '}
-              <Link
-                href="/register"
-                className="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
-              >
-                Register
-              </Link>
-            </p>
-          </motion.div>
+          <ForgotPasswordForm />
         </div>
       </div>
     </div>

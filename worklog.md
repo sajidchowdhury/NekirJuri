@@ -108,3 +108,33 @@ Stage Summary:
 - Dashboard HTML (96KB) contains all expected components
 - Login HTML (36KB) contains Islamic pattern background and arch card
 - Lint: clean, no errors
+
+---
+Task ID: 4
+Agent: Full-Stack Developer
+Task: Phase 2 — Authentication & Onboarding
+
+Work Log:
+- Created AuthPattern component with animated rotating Islamic geometric SVG pattern (Framer Motion, 120s rotation cycle)
+- Created LoginForm component with react-hook-form + zod validation, email/password/tenantSlug fields, remember me checkbox, forgot password link, show/hide password toggle, error handling, next-auth signIn integration
+- Created SubscriptionPlanCard component with gold border for recommended plan, emerald badge for selected, feature list with check icons, click-to-select with keyboard support
+- Created RegisterForm multi-step component (3 steps: Tenant Info, Admin User, Plan Selection) with step indicator, auto-slug generation, animated step transitions, final submit to /api/auth/register
+- Created ForgotPasswordForm component with email input, zod validation, success state with MailCheck icon, back-to-login link
+- Updated Login page with split layout: left panel (Islamic pattern + branding + stats), right panel (LoginForm), mobile fallback with CrescentLogo
+- Created Register page with same split layout pattern, right panel has RegisterForm, mobile fallback
+- Created Forgot-Password page with split layout, right panel has ForgotPasswordForm
+- Created API route /api/auth/register: validates input with zod, checks slug uniqueness, hashes password with bcryptjs, creates tenant + user + super admin role + subscription in Prisma transaction, auto-creates default subscription plans if none exist
+- Created API route /api/auth/forgot-password: validates email, finds user, generates reset token, logs activity, always returns success (security best practice)
+- Updated Auth layout to pass-through since pages handle their own full-screen split layouts
+- Ran lint — all clean, no errors
+
+Stage Summary:
+- 5 auth components in src/components/auth/: auth-pattern, login-form, register-form, forgot-password-form, subscription-plan-card
+- 3 auth pages: /login, /register, /forgot-password — all with split layout (desktop) and mobile-first responsive
+- 2 API routes: /api/auth/register (full registration flow) and /api/auth/forgot-password (reset request)
+- Login form integrates with next-auth signIn, supports tenant-aware login, error handling, loading states
+- Register form: 3-step wizard with animated transitions, auto-slug generation, plan selection
+- All forms use react-hook-form + zod for client-side validation
+- API uses bcryptjs for password hashing, Prisma transactions for atomic operations
+- Emerald focus rings, Islamic styling, Framer Motion animations throughout
+- Lint: clean, no errors

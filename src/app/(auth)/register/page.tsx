@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// Login Page — Split layout with Islamic pattern + LoginForm
+// Register Page — Split layout with Islamic pattern + RegisterForm
 // Desktop: Left panel (pattern + branding) | Right panel (form)
 // Mobile: Full-screen form with subtle pattern
 // ============================================================
@@ -10,9 +10,9 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import CrescentLogo from '@/components/islamic/crescent-logo';
 import AuthPattern from '@/components/auth/auth-pattern';
-import LoginForm from '@/components/auth/login-form';
+import RegisterForm from '@/components/auth/register-form';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <div className="relative min-h-screen flex">
       {/* Left panel — Islamic pattern + branding (hidden on mobile) */}
@@ -32,7 +32,7 @@ export default function LoginPage() {
               Madrasha ERP
             </h1>
             <p className="text-emerald-100/80 text-lg max-w-xs mx-auto">
-              Islamic Educational Institution Management System
+              Start managing your institution with Islamic values at the core
             </p>
           </motion.div>
 
@@ -42,50 +42,50 @@ export default function LoginPage() {
             transition={{ duration: 0.6, delay: 0.6 }}
             className="mt-12 max-w-sm"
           >
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold">500+</div>
-                <div className="text-xs text-emerald-100/60 mt-1">Institutions</div>
+            <div className="space-y-4 text-sm text-emerald-100/70">
+              <div className="flex items-center gap-2">
+                <span className="size-1.5 rounded-full bg-emerald-400" />
+                <span>Complete institution setup in 3 easy steps</span>
               </div>
-              <div>
-                <div className="text-2xl font-bold">50K+</div>
-                <div className="text-xs text-emerald-100/60 mt-1">Students</div>
+              <div className="flex items-center gap-2">
+                <span className="size-1.5 rounded-full bg-emerald-400" />
+                <span>14-day free trial on all plans</span>
               </div>
-              <div>
-                <div className="text-2xl font-bold">99.9%</div>
-                <div className="text-xs text-emerald-100/60 mt-1">Uptime</div>
+              <div className="flex items-center gap-2">
+                <span className="size-1.5 rounded-full bg-emerald-400" />
+                <span>No credit card required to start</span>
               </div>
             </div>
           </motion.div>
         </div>
       </div>
 
-      {/* Right panel — Login form */}
+      {/* Right panel — Register form */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 lg:p-12 bg-background">
         {/* Mobile branding */}
         <div className="lg:hidden mb-8 text-center">
           <CrescentLogo size="md" className="mx-auto mb-3" />
           <h1 className="text-xl font-bold text-foreground">Madrasha ERP</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Islamic Educational Institution Management
+            Create your institution account
           </p>
         </div>
 
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-lg">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
             <h2 className="text-2xl font-semibold text-foreground mb-1">
-              Welcome back
+              Create Account
             </h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Sign in to your institution&apos;s dashboard
+              Set up your institution and admin account
             </p>
           </motion.div>
 
-          <LoginForm />
+          <RegisterForm />
 
           <motion.div
             initial={{ opacity: 0 }}
@@ -94,12 +94,12 @@ export default function LoginPage() {
             className="mt-6 text-center"
           >
             <p className="text-sm text-muted-foreground">
-              Don&apos;t have an account?{' '}
+              Already have an account?{' '}
               <Link
-                href="/register"
+                href="/login"
                 className="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
               >
-                Register
+                Sign In
               </Link>
             </p>
           </motion.div>
