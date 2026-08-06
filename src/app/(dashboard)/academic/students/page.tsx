@@ -210,7 +210,7 @@ export default function StudentsPage() {
       <PageHeader
         title="Students"
         description="Manage student admissions, enrollment, and academic records"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <ExportButton

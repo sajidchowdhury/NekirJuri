@@ -40,7 +40,7 @@ export default function FeesPage() {
       <PageHeader
         title="Fee Management"
         description="Manage fee categories, structures, and student invoices"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <Button

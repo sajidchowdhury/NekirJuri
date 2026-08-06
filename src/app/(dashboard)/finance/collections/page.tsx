@@ -139,7 +139,7 @@ export default function CollectionsPage() {
       <PageHeader
         title="Fee Collections"
         description="Collect payments, view receipts, and manage discounts"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <Button

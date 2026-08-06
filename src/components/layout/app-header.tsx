@@ -2,7 +2,8 @@
 
 // ============================================================
 // AppHeader — Top header bar with sidebar trigger, breadcrumbs,
-// search, notifications, theme toggle, and user menu
+// Bismillah (subtle, centered), search, notifications, theme toggle, and user menu
+// CR-1: Bismillah shown in top bar only, not on individual pages
 // ============================================================
 
 import { usePathname } from 'next/navigation'
@@ -101,6 +102,16 @@ export function AppHeader() {
           </BreadcrumbList>
         </Breadcrumb>
       </div>
+
+      {/* Center: Bismillah — subtle, only visible on desktop */}
+      <p
+        className="hidden lg:flex text-arabic text-emerald-600/60 dark:text-emerald-400/50 text-sm font-medium leading-none select-none"
+        dir="rtl"
+        lang="ar"
+        aria-label="Bismillah"
+      >
+        بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+      </p>
 
       {/* Right: Search + Notifications + Theme + User */}
       <div className="flex items-center gap-1 shrink-0">

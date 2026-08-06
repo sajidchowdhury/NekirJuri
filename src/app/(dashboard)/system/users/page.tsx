@@ -45,7 +45,7 @@ export default function UsersPage() {
       <PageHeader
         title="Users & Roles"
         description="Manage system users, roles, and permissions"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <Button

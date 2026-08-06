@@ -84,7 +84,7 @@ export default function PayrollPage() {
       <PageHeader
         title="Payroll Management"
         description="Process salary payments, manage salary structures, and generate payslips"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             {(activeTab === 'structures' || activeTab === 'history') && (

@@ -25,7 +25,7 @@ export default function StockPage() {
       <PageHeader
         title="Stock Management"
         description="Monitor stock levels, movements, and inventory status"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <ExportButton />

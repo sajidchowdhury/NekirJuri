@@ -80,7 +80,7 @@ export default function ChartOfAccountsPage() {
       <PageHeader
         title="Chart of Accounts"
         description="Manage accounting ledger and account hierarchy"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <ExportButton />

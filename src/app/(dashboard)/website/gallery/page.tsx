@@ -120,7 +120,7 @@ export default function GalleryPage() {
       <PageHeader
         title="Photo Gallery"
         description="Upload and manage photos and media gallery"
-        showBismillah
+
         actions={
           <Button
             onClick={handleCreateAlbum}

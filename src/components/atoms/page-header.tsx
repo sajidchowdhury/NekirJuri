@@ -2,12 +2,13 @@
 
 // ============================================================
 // PageHeader — Consistent page header component
-// Renders title, description, optional Bismillah, actions, and breadcrumb
+// Renders title, description, actions, and breadcrumb
+// CR-1: Bismillah removed from page headers (now in top bar only)
+// Print layouts still use BismillahHeader directly
 // ============================================================
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import BismillahHeader from '@/components/islamic/bismillah-header';
 
 /** Props for PageHeader component */
 export interface PageHeaderProps {
@@ -15,8 +16,6 @@ export interface PageHeaderProps {
   title: string;
   /** Optional description text */
   description?: string;
-  /** Show small Bismillah above title (default: false) */
-  showBismillah?: boolean;
   /** Optional action buttons/elements (right-aligned on desktop) */
   actions?: React.ReactNode;
   /** Optional breadcrumb slot above the title */
@@ -27,7 +26,6 @@ export interface PageHeaderProps {
 
 /**
  * PageHeader provides a consistent page header layout with:
- * - Optional Bismillah (small size)
  * - Optional breadcrumb
  * - Title (h1) and description
  * - Action slot (right-aligned on desktop, below title on mobile)
@@ -35,18 +33,12 @@ export interface PageHeaderProps {
 export default function PageHeader({
   title,
   description,
-  showBismillah = false,
   actions,
   breadcrumb,
   className,
 }: PageHeaderProps) {
   return (
     <div className={cn('flex flex-col gap-3', className)}>
-      {/* Optional Bismillah */}
-      {showBismillah && (
-        <BismillahHeader size="sm" className="self-start" />
-      )}
-
       {/* Optional Breadcrumb */}
       {breadcrumb && (
         <div className="flex items-center">

@@ -47,7 +47,7 @@ export default function SalesPage() {
       <PageHeader
         title="Sales Management"
         description="Track sales transactions and manage invoices"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <ExportButton />

@@ -47,7 +47,7 @@ export default function ProductsPage() {
       <PageHeader
         title="Product Management"
         description="Manage inventory products, categories, and stock levels"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <ExportButton />

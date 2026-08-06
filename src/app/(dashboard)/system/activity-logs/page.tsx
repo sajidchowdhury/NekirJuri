@@ -21,7 +21,7 @@ export default function ActivityLogsPage() {
       <PageHeader
         title="Activity & Audit Logs"
         description="View system activity logs and audit trail"
-        showBismillah
+
         actions={
           <ExportButton
             onExportCSV={() => {}}

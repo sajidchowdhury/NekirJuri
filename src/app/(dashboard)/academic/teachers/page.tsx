@@ -161,7 +161,7 @@ export default function TeachersPage() {
       <PageHeader
         title="Teachers"
         description="Manage teacher profiles, assignments, and qualifications"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <ExportButton

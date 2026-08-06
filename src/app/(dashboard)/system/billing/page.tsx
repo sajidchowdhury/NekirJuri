@@ -21,7 +21,7 @@ export default function BillingRoutePage() {
       <PageHeader
         title="Billing & Subscription"
         description="Manage your subscription plan, payments, and billing history"
-        showBismillah
+
       />
 
       <BillingPage />

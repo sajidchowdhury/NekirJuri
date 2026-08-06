@@ -24,7 +24,7 @@ export default function SettingsPageWrapper() {
       <PageHeader
         title="System Settings"
         description="Configure system settings and institution profile"
-        showBismillah
+
       />
 
       <motion.div

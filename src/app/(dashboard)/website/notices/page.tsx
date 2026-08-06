@@ -94,7 +94,7 @@ export default function NoticesPage() {
       <PageHeader
         title="Notice Board"
         description="Publish and manage notices and announcements"
-        showBismillah
+
         actions={
           <Button
             onClick={handleOpenCreate}

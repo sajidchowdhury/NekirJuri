@@ -79,7 +79,7 @@ export default function ClassesPage() {
       <PageHeader
         title="Classes & Sections"
         description="Manage classes, sections, and class assignments"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <Button onClick={() => setSectionFormOpen(true)} variant="outline" className="gap-1.5">

@@ -103,7 +103,7 @@ export default function WebsitePagesPage() {
       <PageHeader
         title="Website Pages"
         description="Manage public website pages and content"
-        showBismillah
+
         actions={
           <Button
             onClick={handleOpenCreate}

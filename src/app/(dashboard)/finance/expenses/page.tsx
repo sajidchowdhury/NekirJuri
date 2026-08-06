@@ -48,7 +48,7 @@ export default function ExpensesPage() {
       <PageHeader
         title="Expense Management"
         description="Track and categorize institutional expenses, monitor budgets"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <ExportButton onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />

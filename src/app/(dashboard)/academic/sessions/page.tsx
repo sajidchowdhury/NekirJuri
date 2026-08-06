@@ -59,7 +59,7 @@ export default function SessionsPage() {
       <PageHeader
         title="Academic Sessions"
         description="Manage academic sessions, terms, and yearly schedules"
-        showBismillah
+
         actions={
           <Button onClick={() => setFormOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 gap-1.5">
             <Plus className="h-4 w-4" /> Add Session

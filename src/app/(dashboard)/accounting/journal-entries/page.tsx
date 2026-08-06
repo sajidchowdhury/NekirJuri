@@ -114,7 +114,7 @@ export default function JournalEntriesPage() {
       <PageHeader
         title="Journal Entries"
         description="Record and manage double-entry journal transactions"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <ExportButton />

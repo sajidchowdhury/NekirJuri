@@ -134,7 +134,7 @@ export default function EmployeesPage() {
       <PageHeader
         title="Employees"
         description="Manage employee records, departments, and employment details"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <ExportButton onExportCSV={() => toast.info('CSV export coming soon')} onExportPDF={() => toast.info('PDF export coming soon')} />

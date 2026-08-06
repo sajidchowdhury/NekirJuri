@@ -63,7 +63,7 @@ export default function PurchasesPage() {
       <PageHeader
         title="Purchase Orders"
         description="Track purchases, suppliers, and manage purchase orders"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <ExportButton />

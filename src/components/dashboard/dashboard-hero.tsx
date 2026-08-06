@@ -2,13 +2,13 @@
 
 // ============================================================
 // DashboardHero — Welcome section with institution name and date
-// Features CrescentLogo, emerald gradient text, and Bismillah header
+// Features CrescentLogo and emerald gradient text
+// CR-1: Bismillah removed (now in top bar only)
 // ============================================================
 
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import CrescentLogo from '@/components/islamic/crescent-logo';
-import BismillahHeader from '@/components/islamic/bismillah-header';
 
 export interface DashboardHeroProps {
   /** Institution name (default: 'Al-Huda Academy') */
@@ -17,8 +17,7 @@ export interface DashboardHeroProps {
 
 /**
  * DashboardHero renders the welcome section at the top of the dashboard
- * with the CrescentLogo, institution name in emerald gradient, current date,
- * and a subtle BismillahHeader.
+ * with the CrescentLogo, institution name in emerald gradient, and current date.
  */
 export default function DashboardHero({
   institutionName = 'Al-Huda Academy',
@@ -32,13 +31,6 @@ export default function DashboardHero({
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
       className="flex flex-col gap-4"
     >
-      {/* Subtle Bismillah */}
-      <BismillahHeader
-        size="sm"
-        showTranslation={false}
-        className="opacity-60"
-      />
-
       {/* Main row: welcome + date */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         {/* Left: Logo + welcome */}

@@ -265,7 +265,7 @@ export default function PromotionsPage() {
       <PageHeader
         title="Student Promotions"
         description="Promote students to the next class for a new academic session"
-        showBismillah
+
       />
 
       <Card>

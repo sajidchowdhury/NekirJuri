@@ -20,7 +20,7 @@ export default function NotificationsPage() {
       <PageHeader
         title="Notification Center"
         description="View and manage system notifications"
-        showBismillah
+
       />
 
       <motion.div

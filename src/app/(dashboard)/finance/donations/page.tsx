@@ -50,7 +50,7 @@ export default function DonationsPage() {
       <PageHeader
         title="Donation Management"
         description="Track donations, manage donors, and analyze giving patterns"
-        showBismillah
+
         actions={
           <div className="flex items-center gap-2">
             <ExportButton onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
