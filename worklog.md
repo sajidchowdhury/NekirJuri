@@ -687,3 +687,29 @@ Stage Summary:
 - ChevronDown indicator rotates 180° when group is expanded
 - Active group label highlighted with emerald color
 - Collapsible animation using Radix Collapsible primitive
+
+---
+Task ID: CR-1
+Agent: Main
+Task: CR-1 — Bismillah Placement (Move to top bar only)
+
+Work Log:
+- Added subtle Bismillah Arabic text to AppHeader (top bar), centered between breadcrumbs and search/actions
+- Bismillah styled: text-arabic, emerald-600/60 (subtle opacity), text-sm, hidden on mobile/tablet (lg:flex only)
+- Added dir="rtl" lang="ar" aria-label="Bismillah" for accessibility
+- Removed showBismillah prop from PageHeader component (src/components/atoms/page-header.tsx)
+- Removed showBismillah from all 25 page files using batch perl replacement
+- Removed BismillahHeader import and render from DashboardHero component
+- Kept BismillahHeader in print layout components: payslip-view, fee-invoice-detail, payment-receipt, financial-report-shell, institution-profile
+- Kept showBismillahOnReports toggle in settings page for print layout control
+- Lint: 0 errors, 14 pre-existing warnings
+- Verified with Agent Browser: Bismillah visible in header on all pages, NOT in page content
+- Committed and pushed to GitHub
+
+Stage Summary:
+- Bismillah now appears ONLY in the top bar (AppHeader), per CR-1 spec
+- Subtle styling: emerald with 60% opacity, Arabic font, small size
+- Visible on desktop (lg+), hidden on mobile for space efficiency
+- All 25 page files cleaned of showBismillah prop
+- Print layouts (payslip, invoice, receipt, financial report) retain BismillahHeader
+- DashboardHero no longer shows Bismillah (it's in the header instead)
