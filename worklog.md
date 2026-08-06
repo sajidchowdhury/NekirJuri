@@ -211,3 +211,67 @@ Stage Summary:
 - Design tokens extended with upcoming/graduated/transferred status colors
 - All pages responsive: mobile card list view, desktop table view
 - Phase 4 complete: Academic Management fully functional"
+---
+Task ID: 5a
+Agent: Full-Stack Developer
+Task: Phase 5A — Fee Management + Fee Collections
+
+Work Log:
+- Created comprehensive sample data file at src/lib/finance/sample-data.ts with realistic Bangladeshi Islamic school data (8 fee categories, 11 classes, 8 invoices, 10 collection records, collection summary stats)
+- Created fee-category-list.tsx — Card grid with 8 fee categories (Bengali+English names, ৳ amounts, frequency badges, student counts), inline edit capability, hover pencil icon
+- Created fee-structure-builder.tsx — Matrix table (Classes × Categories) with editable cells, academic session selector, color-coded (green=set, amber=default, gray=N/A), horizontal scroll on mobile, sticky row/column headers
+- Created fee-invoice-list.tsx — DataTable with status-colored rows (paid=emerald, partial=amber, overdue=rose), Invoice #, Student, Class, Total, Paid, Balance, Status, Due Date, Actions dropdown, mobile card view
+- Created generate-invoice-wizard.tsx — 4-step FormWizard (Session+Class → Select Students with search/checkbox → Review Fee Structure → Confirm & Generate), shows student count and total amount
+- Created fee-invoice-detail.tsx — Invoice detail with Bismillah header, student info card, line items table (fee, amount, discount, net), totals section (subtotal, discount, total, paid, balance), payment history timeline, print button
+- Created collect-payment-form.tsx — Search student by name/ID → outstanding invoices list → select invoice → enter payment amount → payment method (Cash/bKash/Bank/Cheque radio cards) → note → submit, success state
+- Created payment-receipt.tsx — Print-optimized receipt with Bismillah header, emerald/gold accent borders, institution name, receipt #, date, student info, payment amount hero, "Received by" line, stamp area, download/print buttons
+- Created collection-report.tsx — 3 StatCards (Today/Month/Year), breakdown by payment method with progress bars and percentages, Recharts BarChart colored by method
+- Created fee-discount-form.tsx — Search student → select invoice → discount type (Percentage/Flat radio) → amount/percentage → before/after amounts comparison → reason → approval reference → submit
+- Built /finance/fees page — Tab-based layout (Fee Categories, Fee Structure, Invoices), Generate Invoice dialog with FormWizard, Invoice Detail dialog, Add Category dialog, PageHeader with Bismillah
+- Built /finance/collections page — Left: CollectPaymentForm card, Right: Tabs (Collection Report, Recent Collections DataTable), Apply Discount dialog, Receipt Preview dialog, PageHeader with Bismillah
+- All amounts in ৳ (Bengali Taka) using formatTaka helper
+- All pages use 'use client', Framer Motion entrance animations, emerald primary buttons, gold accent for amounts
+- Reused existing components: DataTable, FormWizard, StatusBadge, PageHeader, StatCard, BismillahHeader, ExportButton, EmptyState
+- Lint: 0 errors (1 pre-existing TanStack Table warning)
+- Both pages verified: HTTP 200, content renders correctly
+
+Stage Summary:
+- 9 finance components in src/components/finance/ (fee-category-list, fee-structure-builder, fee-invoice-list, generate-invoice-wizard, fee-invoice-detail, collect-payment-form, payment-receipt, collection-report, fee-discount-form)
+- 1 sample data file in src/lib/finance/ (sample-data.ts)
+- 2 pages fully built: /finance/fees (3 tabs) and /finance/collections (form + 2 tabs)
+- All amounts in ৳ format, Islamic styling with Bismillah on receipts and print layouts
+- Emerald/gold/rose color coding for paid/partial/overdue statuses
+- Responsive: mobile card view for tables, horizontal scroll for matrix, stacked layout on small screens
+- Phase 5A complete: Fee Management + Fee Collections fully functional
+
+---
+Task ID: 5b
+Agent: Full-Stack Developer
+Task: Phase 5B — Donations + Expenses
+
+Work Log:
+- Appended donation and expense types + sample data to src/lib/finance/sample-data.ts (Donor, DonationRecord, DonationCategory, ExpenseCategory, ExpenseRecord, BudgetAllocation interfaces; 8 donors, 15 donations, 6-month trend, category breakdown; 20 expenses, 7 budget allocations)
+- Created donation-dashboard.tsx — 4 StatCards (This Month, This Year, Donors, Avg Donation), Recharts AreaChart with emerald gradient fill for 6-month trend, Top 3 donors list with avatar/rank/amount, Category breakdown (Zakat/Sadaqah/General/Construction/Education) with colored bars
+- Created donor-list.tsx — DataTable with 8 donors, columns: Name+Bengali, Category (color-coded badges: Zakat=emerald, Sadaqah=amber, General=sky, Construction=violet, Education=cyan), Total Donated (gold), Last Donation, Phone, Actions dropdown (View/Edit/Delete), mobile card view
+- Created donation-form.tsx — react-hook-form + zod validation, Donor Name with autocomplete/search from existing donors + "New Donor" option, Phone, Category select, Amount (৳), Date (default today), Payment Method select, Note/Reference, emerald submit button, success toast
+- Created expense-dashboard.tsx — 4 StatCards (This Month, Last Month, Budget Used %, Transactions), Recharts PieChart (donut) with center total and legend, Budget vs Actual comparison bars (emerald for within budget, rose for over budget) with percentage indicators
+- Created expense-list.tsx — DataTable with 20 expenses, columns: Date, Category (color-coded badges: Utilities=sky, Maintenance=amber, Stationery=violet, Food=emerald, Transport=rose, Salary=slate, Misc=gray), Description, Amount (gold), Payment Method, Receipt link, Actions dropdown, mobile card view
+- Created expense-form.tsx — react-hook-form + zod validation, Category select, Amount (৳), Date, Payment Method, Description textarea, Receipt/Reference #, Note, emerald submit button, success toast
+- Built /finance/donations page — PageHeader with Bismillah + emerald "Add Donation" button + ExportButton, DonationDashboard, DonorList, Add/Edit Donation in Dialog with DonationForm, slideUp animation
+- Built /finance/expenses page — PageHeader with Bismillah + emerald "Add Expense" button + ExportButton, ExpenseDashboard, ExpenseList, Add/Edit Expense in Dialog with ExpenseForm, slideUp animation
+- All amounts in ৳ (Bengali Taka) using formatTaka helper
+- All pages use 'use client', Framer Motion entrance animations, emerald primary buttons, gold accent for amounts
+- Reused existing components: DataTable, StatCard, PageHeader, BismillahHeader, ExportButton, Avatar, Badge, Dialog, Select, Textarea, Label
+- Lint: 0 errors (3 pre-existing warnings — TanStack Table + React Hook Form incompatible-library)
+- Both pages verified: HTTP 200, content renders correctly
+
+Stage Summary:
+- 6 finance components in src/components/finance/ (donation-dashboard, donor-list, donation-form, expense-dashboard, expense-list, expense-form)
+- 2 pages fully built: /finance/donations and /finance/expenses
+- Sample data appended: 8 donors, 15 donations, 20 expenses, 7 budget allocations
+- All amounts in ৳ format, Islamic styling with Bismillah
+- Emerald/gold color coding for donations, color-coded category badges for expenses
+- Donut pie chart for expense categories, area chart for donation trend
+- Budget vs Actual bars with over-budget indicators (rose color)
+- Responsive: mobile card view for tables, stacked layout on small screens
+- Phase 5B complete: Donations + Expenses fully functional
