@@ -4,6 +4,7 @@
 // EmptyState — Illustrated empty state component
 // Shows large icon, title, description, and optional CTA button
 // Fade-in + slide-up animation on mount
+// Phase 11: Added floating animation to the icon area
 // ============================================================
 
 import * as React from 'react';
@@ -12,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import CrescentLogo from '@/components/islamic/crescent-logo';
 import { slideUp, transitions } from '@/lib/animations';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 /** Props for EmptyState component */
 export interface EmptyStateProps {
@@ -34,7 +36,7 @@ export interface EmptyStateProps {
  * EmptyState displays a centered, illustrated empty state
  * with an icon inside an emerald-tinted circle, title,
  * description, and optional CTA button. Animates on mount
- * with fade-in + slide-up.
+ * with fade-in + slide-up. The icon area gently floats.
  */
 export default function EmptyState({
   title,
@@ -43,6 +45,8 @@ export default function EmptyState({
   action,
   className,
 }: EmptyStateProps) {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <motion.div
       initial={slideUp.initial}
@@ -53,10 +57,22 @@ export default function EmptyState({
         className
       )}
     >
-      {/* Icon area with emerald-tinted circle background */}
-      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-950/30">
+      {/* Icon area with emerald-tinted circle background + floating animation */}
+      <motion.div
+        className="flex items-center justify-center w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-950/30"
+        animate={
+          prefersReducedMotion
+            ? undefined
+            : { y: [-4, 4, -4] }
+        }
+        transition={
+          prefersReducedMotion
+            ? undefined
+            : { duration: 3, repeat: Infinity, ease: 'easeInOut' }
+        }
+      >
         {icon ?? <CrescentLogo size="lg" animated={false} />}
-      </div>
+      </motion.div>
 
       {/* Title */}
       <h3 className="text-lg font-semibold text-foreground">

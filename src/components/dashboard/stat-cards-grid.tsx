@@ -3,10 +3,13 @@
 // ============================================================
 // StatCardsGrid — Responsive grid of 4 key metric stat cards
 // Shows: Total Students, Fee Collection, Pending Fees, Collection Rate
+// Phase 11: Enabled count-up animation (animateValue) for stat cards
 // ============================================================
 
+import { motion } from 'framer-motion';
 import { GraduationCap, Banknote, ReceiptText, TrendingUp } from 'lucide-react';
 import StatCard from '@/components/molecules/stat-card';
+import { staggerFast } from '@/lib/animations';
 
 /** Dashboard data shape (matches API response) */
 export interface DashboardStats {
@@ -46,6 +49,7 @@ function formatNumber(num: number): string {
 /**
  * StatCardsGrid renders 4 StatCards in a responsive grid
  * showing the most important dashboard metrics.
+ * Stats animate with count-up from 0 on initial load.
  */
 export default function StatCardsGrid({
   data,
@@ -91,7 +95,12 @@ export default function StatCardsGrid({
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <motion.div
+      variants={staggerFast}
+      initial="initial"
+      animate="animate"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+    >
       {cards.map((card) => (
         <StatCard
           key={card.title}
@@ -101,8 +110,9 @@ export default function StatCardsGrid({
           variant={card.variant}
           trend={card.trend}
           loading={loading}
+          animateValue={!loading}
         />
       ))}
-    </div>
+    </motion.div>
   );
 }

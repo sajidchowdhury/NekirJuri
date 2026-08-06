@@ -2,7 +2,8 @@
 
 // ============================================================
 // StatCard — Dashboard statistic card with icon, value, and trend
-// Supports variant-based color theming and loading skeleton state
+// Supports variant-based color theming, loading skeleton state,
+// count-up animation, and hover lift effect
 // ============================================================
 
 import * as React from 'react';
@@ -11,6 +12,7 @@ import { ArrowUp, ArrowDown, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import AnimatedCounter from '@/components/ui/animated-counter';
 
 /** Trend data for the stat card */
 export interface StatCardTrend {
@@ -34,6 +36,8 @@ export interface StatCardProps {
   variant?: 'default' | 'emerald' | 'gold' | 'rose';
   /** Loading state */
   loading?: boolean;
+  /** Animate value with count-up from 0 */
+  animateValue?: boolean;
   /** Additional CSS classes */
   className?: string;
 }
@@ -62,9 +66,30 @@ const variantStyles = {
   },
 } as const;
 
+/** Extract numeric value from a formatted string (e.g., "PKR 12,500" → 12500) */
+function parseNumericValue(value: string): number {
+  // Remove common currency symbols, commas, spaces, and percentage signs
+  const cleaned = value.replace(/[PKR$৳%,\s]/g, '');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
+/** Extract prefix from a formatted string (e.g., "PKR 12,500" → "PKR ") */
+function extractPrefix(value: string): string | undefined {
+  const match = value.match(/^([^0-9]+)/);
+  return match ? match[1].trim() + ' ' : undefined;
+}
+
+/** Extract suffix from a formatted string (e.g., "85%" → "%") */
+function extractSuffix(value: string): string | undefined {
+  const match = value.match(/([^0-9.,]+)$/);
+  return match ? match[1].trim() : undefined;
+}
+
 /**
  * StatCard displays a key metric with icon, value, and optional trend.
  * Uses a decorative 3px top border (ArchCard-like) and colored icon circle.
+ * When animateValue is true, renders AnimatedCounter instead of static text.
  */
 export default function StatCard({
   title,
@@ -73,6 +98,7 @@ export default function StatCard({
   trend,
   variant = 'default',
   loading = false,
+  animateValue = false,
   className,
 }: StatCardProps) {
   const styles = variantStyles[variant];
@@ -92,6 +118,7 @@ export default function StatCard({
           'border-t-[3px]',
           styles.border,
           'transition-shadow duration-150 hover:shadow-md',
+          'hover:-translate-y-0.5 transition-transform duration-150',
           className
         )}
       >
@@ -129,7 +156,16 @@ export default function StatCard({
 
           {/* Value */}
           <div className="mt-3">
-            <p className="text-2xl font-bold tracking-tight">{value}</p>
+            {animateValue ? (
+              <AnimatedCounter
+                value={parseNumericValue(value)}
+                prefix={extractPrefix(value)}
+                suffix={extractSuffix(value)}
+                className="text-2xl font-bold tracking-tight"
+              />
+            ) : (
+              <p className="text-2xl font-bold tracking-tight">{value}</p>
+            )}
             <p className="mt-1 text-xs text-muted-foreground">{title}</p>
           </div>
 
