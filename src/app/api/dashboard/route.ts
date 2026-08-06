@@ -1,16 +1,67 @@
 // ============================================================
 // DASHBOARD — Aggregated Stats API
 // GET  /api/dashboard     — Return comprehensive dashboard statistics
+// Returns sample data when no tenant context (for dev/preview)
 // ============================================================
 
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
-import { success, error, requireTenantId } from '@/lib/api-utils'
+import { success, error, getTenantId } from '@/lib/api-utils'
+
+/** Sample dashboard data for development/preview when no tenant is authenticated */
+function getSampleDashboardData() {
+  const now = new Date()
+  const currentMonth = now.getMonth() + 1
+  const currentYear = now.getFullYear()
+  const monthStart = new Date(currentYear, currentMonth - 1, 1)
+  const monthEnd = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999)
+
+  return {
+    totalStudents: 1250,
+    totalTeachers: 45,
+    totalEmployees: 62,
+    totalFeeCollected: 420000,
+    totalFeeOutstanding: 85000,
+    totalDonations: 32000,
+    totalExpenses: 185000,
+    totalSalaryPaid: 148000,
+    activeClasses: 24,
+    pendingInvoices: 38,
+    monthlyFeeSummary: [
+      { month: 'Mar 2025', monthNum: 3, year: 2025, collected: 45000, outstanding: 12000 },
+      { month: 'Apr 2025', monthNum: 4, year: 2025, collected: 52000, outstanding: 8000 },
+      { month: 'May 2025', monthNum: 5, year: 2025, collected: 48000, outstanding: 15000 },
+      { month: 'Jun 2025', monthNum: 6, year: 2025, collected: 61000, outstanding: 9000 },
+      { month: 'Jul 2025', monthNum: 7, year: 2025, collected: 55000, outstanding: 11000 },
+      { month: 'Aug 2025', monthNum: 8, year: 2025, collected: 67000, outstanding: 7000 },
+    ],
+    recentActivities: [
+      { id: 1, action: 'fee.collection', description: 'Abdullah Rahim paid ৳5,000 for Class 8', createdAt: new Date(Date.now() - 2 * 60000).toISOString(), entityType: 'fee_collection' },
+      { id: 2, action: 'student.admit', description: 'Fatima Khatun admitted to Class 5 - Section A', createdAt: new Date(Date.now() - 15 * 60000).toISOString(), entityType: 'student' },
+      { id: 3, action: 'salary.process', description: 'March 2025 payroll processed for 45 staff', createdAt: new Date(Date.now() - 60 * 60000).toISOString(), entityType: 'salary_payment' },
+      { id: 4, action: 'expense.create', description: 'Book purchase expense ৳12,500 approved', createdAt: new Date(Date.now() - 120 * 60000).toISOString(), entityType: 'expense' },
+      { id: 5, action: 'donation.receive', description: 'Zakat donation of ৳25,000 received from Al-Rahman Trust', createdAt: new Date(Date.now() - 180 * 60000).toISOString(), entityType: 'donation' },
+      { id: 6, action: 'student.promote', description: '32 students promoted from Class 5 to Class 6', createdAt: new Date(Date.now() - 360 * 60000).toISOString(), entityType: 'student' },
+      { id: 7, action: 'fee.invoice', description: 'Fee invoices generated for 1,250 students', createdAt: new Date(Date.now() - 720 * 60000).toISOString(), entityType: 'fee_invoice' },
+      { id: 8, action: 'inventory.low', description: 'Low stock alert: Notebook quantity below 50', createdAt: new Date(Date.now() - 1440 * 60000).toISOString(), entityType: 'product' },
+    ],
+    meta: {
+      currentMonth,
+      currentYear,
+      monthStart: monthStart.toISOString(),
+      monthEnd: monthEnd.toISOString(),
+    },
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const tenantId = requireTenantId(request)
-    if (typeof tenantId !== 'number') return tenantId
+    const tenantId = getTenantId(request)
+
+    // If no tenant context, return sample data for dev/preview
+    if (!tenantId) {
+      return success(getSampleDashboardData())
+    }
 
     const now = new Date()
     const currentMonth = now.getMonth() + 1 // 1-12

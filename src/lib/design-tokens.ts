@@ -109,6 +109,9 @@ export const statusColors = {
   rejected: { bg: "bg-rose-100 dark:bg-rose-900/30", text: "text-rose-700 dark:text-rose-400", dot: "bg-rose-500" },
   completed: { bg: "bg-sky-100 dark:bg-sky-900/30", text: "text-sky-700 dark:text-sky-400", dot: "bg-sky-500" },
   cancelled: { bg: "bg-stone-100 dark:bg-stone-800/30", text: "text-stone-600 dark:text-stone-400", dot: "bg-stone-400" },
+  upcoming: { bg: "bg-sky-100 dark:bg-sky-900/30", text: "text-sky-700 dark:text-sky-400", dot: "bg-sky-500" },
+  graduated: { bg: "bg-violet-100 dark:bg-violet-900/30", text: "text-violet-700 dark:text-violet-400", dot: "bg-violet-500" },
+  transferred: { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400", dot: "bg-amber-500" },
 } as const;
 
 export type StatusType = keyof typeof statusColors;
