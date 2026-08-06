@@ -9,7 +9,7 @@ import QueryProvider from "@/components/providers/query-provider";
 import { ErrorBoundaryProvider } from "@/components/providers/error-boundary-provider";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getLocale } from "next-intl/server";
-import { getLocaleDirection, type Locale } from "@/i18n/request";
+import { getLocaleDirection, type Locale } from "@/i18n/config";
 
 const inter = Inter({
   variable: "--font-sans",

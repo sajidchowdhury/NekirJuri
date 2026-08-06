@@ -7,7 +7,7 @@
 
 import { useCallback } from 'react'
 import { useLocale as useNextIntlLocale } from 'next-intl'
-import type { Locale } from '@/i18n/request'
+import type { Locale } from '@/i18n/config'
 
 export function useAppLocale() {
   const currentLocale = useNextIntlLocale() as Locale

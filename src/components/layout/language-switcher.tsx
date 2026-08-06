@@ -16,8 +16,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { useAppLocale } from '@/hooks/use-locale'
-import type { Locale } from '@/i18n/request'
-import { localeLabels, rtlLocales } from '@/i18n/request'
+import type { Locale } from '@/i18n/config'
+import { localeLabels, rtlLocales } from '@/i18n/config'
 
 const locales: Locale[] = ['en', 'bn', 'ar']
 
