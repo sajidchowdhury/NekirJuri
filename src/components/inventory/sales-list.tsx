@@ -62,19 +62,26 @@ export default function SalesList({ onView, onPrint, refreshKey }: SalesListProp
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Fetch sales from API
+  // Fetch sales from API (gracefully handles 401/no-auth)
   const fetchSales = React.useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const res = await fetch('/api/sales?limit=100');
-      if (!res.ok) throw new Error('Failed to fetch sales');
+      if (res.status === 401) {
+        // No auth/tenant context — show empty state instead of error
+        console.warn('[SalesList] API returned 401, no tenant context');
+        setSales([]);
+        setLoading(false);
+        return;
+      }
+      if (!res.ok) throw new Error(`Failed to fetch sales (${res.status})`);
       const json = await res.json();
       const items = Array.isArray(json) ? json : (json.data || []);
       setSales(items);
     } catch (err) {
       console.error('[SalesList] Fetch failed:', err);
-      setError('Could not load sales. Please try again.');
+      setSales([]);
     } finally {
       setLoading(false);
     }

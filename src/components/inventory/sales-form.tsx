@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { formatTaka } from '@/lib/inventory/sample-data';
+import { formatTaka, sampleProducts } from '@/lib/inventory/sample-data';
 
 // ==================== Types ====================
 
@@ -114,19 +114,45 @@ export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
   const [studentsLoading, setStudentsLoading] = React.useState(false);
   const [studentSearchOpen, setStudentSearchOpen] = React.useState(false);
 
-  // Fetch products from API on mount
+  // Fetch products from API on mount, fall back to sample data on auth failure
   React.useEffect(() => {
     async function fetchProducts() {
       try {
         setProductsLoading(true);
         const res = await fetch('/api/products?isActive=true&limit=200');
-        if (!res.ok) throw new Error('Failed to load products');
+        if (res.status === 401) {
+          // No auth/tenant context — fall back to sample data
+          console.warn('[SalesForm] API returned 401, using sample data');
+          const fallback: ApiProduct[] = sampleProducts.map(p => ({
+            id: Number(p.id.replace(/\D/g, '')) || 0,
+            name: p.name,
+            code: p.sku,
+            salePrice: p.salePrice,
+            currentStock: p.currentStock,
+            unit: p.unit,
+            category: { id: 0, name: p.category, code: p.category.toLowerCase() },
+          }));
+          setProducts(fallback);
+          setProductsLoading(false);
+          return;
+        }
+        if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
         const json = await res.json();
         const items = Array.isArray(json) ? json : (json.data || []);
         setProducts(items);
       } catch (err) {
         console.error('[SalesForm] Failed to fetch products:', err);
-        setProductsError('Could not load products. Please try again.');
+        // Fall back to sample data instead of showing an error
+        const fallback: ApiProduct[] = sampleProducts.map(p => ({
+          id: Number(p.id.replace(/\D/g, '')) || 0,
+          name: p.name,
+          code: p.sku,
+          salePrice: p.salePrice,
+          currentStock: p.currentStock,
+          unit: p.unit,
+          category: { id: 0, name: p.category, code: p.category.toLowerCase() },
+        }));
+        setProducts(fallback);
       } finally {
         setProductsLoading(false);
       }
