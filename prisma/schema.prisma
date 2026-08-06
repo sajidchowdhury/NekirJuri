@@ -750,9 +750,12 @@ model Donor {
   occupation   String?
   organization String?
   nidNo        String?   @map("nid_no")
-  isRegular    Boolean   @default(false) @map("is_regular")
-  remarks      String?
-  isActive     Boolean   @default(true) @map("is_active")
+  isRegular       Boolean   @default(false) @map("is_regular")
+  totalPledged    Decimal     @default(0) @map("total_pledged")
+  reminderConsent Boolean   @default(true) @map("reminder_consent")
+  reminderMethod  String    @default("email") @map("reminder_method")
+  remarks         String?
+  isActive        Boolean   @default(true) @map("is_active")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
@@ -776,6 +779,12 @@ model Donation {
   paymentDate        DateTime @map("payment_date")
   transactionRef     String?  @map("transaction_ref")
   isAnonymous        Boolean  @default(false) @map("is_anonymous")
+  isRecurring        Boolean  @default(false) @map("is_recurring")
+  recurringFrequency String?  @map("recurring_frequency")
+  recurringAmount    Decimal?   @map("recurring_amount")
+  nextDueDate        DateTime?  @map("next_due_date")
+  reminderSent       Boolean  @default(false) @map("reminder_sent")
+  lastPaymentDate    DateTime?  @map("last_payment_date")
   remarks            String?
   status             String
   createdAt          DateTime @default(now()) @map("created_at")
@@ -790,6 +799,8 @@ model Donation {
   @@index([tenantId])
   @@index([tenantId, createdAt])
   @@index([donationCategoryId])
+  @@index([tenantId, isRecurring])
+  @@index([nextDueDate])
   @@map("donations")
 }
 

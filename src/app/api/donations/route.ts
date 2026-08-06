@@ -1,5 +1,6 @@
 // ============================================================
 // Donations API — GET (list with filters), POST (create with receipt)
+// CR-5: Recurring donations — isRecurring, recurringFrequency, nextDueDate
 // Auto-generate receipt number: DON-{year}-{seq}
 // ============================================================
 
@@ -12,6 +13,7 @@ import {
   getPaginationParams,
   getUserId,
   requireTenantId,
+  success,
 } from '@/lib/api-utils'
 
 /** Generate the next donation receipt number: DON-{year}-{seq} */
@@ -33,6 +35,17 @@ async function generateDonationReceiptNo(tenantId: number, year: number): Promis
   return `${prefix}${String(seq).padStart(5, '0')}`
 }
 
+/** Calculate nextDueDate based on frequency and current date */
+function calculateNextDueDate(frequency: string, fromDate: Date): Date {
+  const next = new Date(fromDate)
+  if (frequency === 'monthly') {
+    next.setMonth(next.getMonth() + 1)
+  } else if (frequency === 'yearly') {
+    next.setFullYear(next.getFullYear() + 1)
+  }
+  return next
+}
+
 // --- GET: List donations with pagination, filters, date range ---
 export async function GET(request: NextRequest) {
   try {
@@ -47,6 +60,8 @@ export async function GET(request: NextRequest) {
     const paymentMethod = url.searchParams.get('paymentMethod')
     const dateFrom = url.searchParams.get('dateFrom')
     const dateTo = url.searchParams.get('dateTo')
+    const isRecurring = url.searchParams.get('isRecurring')
+    const upcomingDays = url.searchParams.get('upcomingDays')
 
     const skip = (page - 1) * limit
 
@@ -55,6 +70,18 @@ export async function GET(request: NextRequest) {
     if (donorId) where.donorId = Number(donorId)
     if (status) where.status = status
     if (paymentMethod) where.paymentMethod = paymentMethod
+    if (isRecurring !== null && isRecurring !== undefined && isRecurring !== '') {
+      where.isRecurring = isRecurring === 'true'
+    }
+
+    // CR-5: Filter upcoming recurring donations (nextDueDate within N days)
+    if (upcomingDays) {
+      const now = new Date()
+      const futureDate = new Date()
+      futureDate.setDate(futureDate.getDate() + Number(upcomingDays))
+      where.isRecurring = true
+      where.nextDueDate = { gte: now, lte: futureDate }
+    }
 
     // Date range filter
     if (dateFrom || dateTo) {
@@ -82,7 +109,7 @@ export async function GET(request: NextRequest) {
           : { createdAt: 'desc' },
         include: {
           donationCategory: { select: { id: true, name: true } },
-          donor: { select: { id: true, name: true, phone: true } },
+          donor: { select: { id: true, name: true, phone: true, email: true, reminderConsent: true } },
         },
       }),
       db.donation.count({ where }),
@@ -96,6 +123,7 @@ export async function GET(request: NextRequest) {
 }
 
 // --- POST: Create donation with auto-generated receipt ---
+// CR-5: If isRecurring, calculate nextDueDate and update donor totalPledged
 export async function POST(request: NextRequest) {
   try {
     const tid = requireTenantId(request)
@@ -111,6 +139,9 @@ export async function POST(request: NextRequest) {
       paymentDate,
       transactionRef,
       isAnonymous,
+      isRecurring = false,
+      recurringFrequency,
+      recurringAmount,
       remarks,
       status,
     } = body
@@ -121,6 +152,14 @@ export async function POST(request: NextRequest) {
 
     if (Number(amount) <= 0) {
       return error('Amount must be positive')
+    }
+
+    // CR-5: Validate recurring fields
+    if (isRecurring && !recurringFrequency) {
+      return error('recurringFrequency is required for recurring donations (monthly or yearly)')
+    }
+    if (isRecurring && !['monthly', 'yearly'].includes(recurringFrequency)) {
+      return error('recurringFrequency must be "monthly" or "yearly"')
     }
 
     // Verify donation category belongs to tenant
@@ -140,6 +179,13 @@ export async function POST(request: NextRequest) {
     const year = new Date().getFullYear()
     const receiptNo = await generateDonationReceiptNo(tid, year)
 
+    // CR-5: Calculate nextDueDate for recurring donations
+    let nextDueDate: Date | null = null
+    const pledgeAmount = recurringAmount ? Number(recurringAmount) : Number(amount)
+    if (isRecurring) {
+      nextDueDate = calculateNextDueDate(recurringFrequency, new Date(paymentDate))
+    }
+
     const record = await db.donation.create({
       data: {
         tenantId: tid,
@@ -151,6 +197,12 @@ export async function POST(request: NextRequest) {
         paymentDate: new Date(paymentDate),
         transactionRef: transactionRef || null,
         isAnonymous: isAnonymous ?? false,
+        isRecurring: isRecurring ? true : false,
+        recurringFrequency: isRecurring ? recurringFrequency : null,
+        recurringAmount: isRecurring ? pledgeAmount : null,
+        nextDueDate,
+        reminderSent: false,
+        lastPaymentDate: isRecurring ? new Date(paymentDate) : null,
         remarks: remarks || null,
         status: status || 'completed',
         createdBy: userId,
@@ -160,6 +212,17 @@ export async function POST(request: NextRequest) {
         donor: { select: { id: true, name: true, phone: true } },
       },
     })
+
+    // CR-5: Update donor's totalPledged if recurring
+    if (isRecurring && donorId) {
+      await db.donor.update({
+        where: { id: Number(donorId) },
+        data: {
+          totalPledged: { increment: pledgeAmount },
+          isRegular: true,
+        },
+      })
+    }
 
     // Audit log
     await db.auditLog.create({
@@ -173,9 +236,82 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return created(record)
+    const message = isRecurring
+      ? `Recurring donation created (${recurringFrequency}). Next due: ${nextDueDate?.toLocaleDateString()}`
+      : undefined
+
+    return created(record, message)
   } catch (err) {
     console.error('[donations][POST]', err)
     return error('Failed to create donation', 500)
+  }
+}
+
+// --- PATCH: Record payment for recurring donation, advance nextDueDate ---
+export async function PATCH(request: NextRequest) {
+  try {
+    const tid = requireTenantId(request)
+    if (typeof tid !== 'number') return tid
+    const userId = getUserId(request)
+
+    const body = await request.json()
+    const { id, amount, paymentDate, paymentMethod, transactionRef } = body
+
+    if (!id || !amount || !paymentDate) {
+      return error('id, amount, and paymentDate are required')
+    }
+
+    // Find the recurring donation
+    const donation = await db.donation.findFirst({
+      where: { id: Number(id), tenantId: tid, isRecurring: true },
+      include: { donor: { select: { id: true, name: true } } },
+    })
+
+    if (!donation) {
+      return error('Recurring donation not found', 404)
+    }
+
+    if (!donation.recurringFrequency) {
+      return error('Donation is not a recurring donation')
+    }
+
+    // Update the donation: advance nextDueDate, reset reminderSent
+    const newNextDueDate = calculateNextDueDate(donation.recurringFrequency, new Date(paymentDate))
+
+    const updated = await db.donation.update({
+      where: { id: donation.id },
+      data: {
+        amount: Number(amount),
+        paymentDate: new Date(paymentDate),
+        paymentMethod: paymentMethod || donation.paymentMethod,
+        transactionRef: transactionRef || donation.transactionRef,
+        lastPaymentDate: new Date(paymentDate),
+        nextDueDate: newNextDueDate,
+        reminderSent: false,
+        status: 'completed',
+        updatedAt: new Date(),
+      },
+      include: {
+        donationCategory: { select: { id: true, name: true } },
+        donor: { select: { id: true, name: true, phone: true } },
+      },
+    })
+
+    // Audit log
+    await db.auditLog.create({
+      data: {
+        tenantId: tid,
+        userId,
+        action: 'UPDATE',
+        entityType: 'Donation',
+        entityId: donation.id,
+        newValues: JSON.stringify({ action: 'recurring_payment', amount, nextDueDate: newNextDueDate }),
+      },
+    })
+
+    return success(updated, `Recurring payment recorded. Next due: ${newNextDueDate.toLocaleDateString()}`)
+  } catch (err) {
+    console.error('[donations][PATCH]', err)
+    return error('Failed to record recurring payment', 500)
   }
 }

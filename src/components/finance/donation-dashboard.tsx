@@ -7,7 +7,7 @@
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import {
-  HandHeart, TrendingUp, Users, CalendarDays,
+  HandHeart, TrendingUp, Users, CalendarDays, RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -228,6 +228,109 @@ export default function DonationDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* CR-5: Upcoming Recurring Donations Widget */}
+      <Card className="border-t-[3px] border-t-amber-500 dark:border-t-amber-400">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 text-amber-500" />
+              Upcoming Recurring Donations
+            </CardTitle>
+            <span className="text-xs text-muted-foreground">Next 30 days</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <RecurringDonationsWidget />
+        </CardContent>
+      </Card>
     </motion.div>
+  );
+}
+
+/** CR-5: Widget showing upcoming recurring donations from API */
+function RecurringDonationsWidget() {
+  const [donations, setDonations] = React.useState<Array<{
+    id: number;
+    receiptNo: string;
+    amount: number;
+    recurringAmount?: number | null;
+    recurringFrequency?: string | null;
+    nextDueDate?: string | null;
+    donor?: { name: string } | null;
+    donationCategory?: { name: string } | null;
+  }>>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    async function fetchUpcoming() {
+      try {
+        const res = await fetch('/api/donations?isRecurring=true&upcomingDays=30&limit=10');
+        if (!res.ok) throw new Error('Failed');
+        const json = await res.json();
+        const items = Array.isArray(json) ? json : (json.data || []);
+        setDonations(items);
+      } catch {
+        setDonations([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchUpcoming();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-6 text-sm text-muted-foreground gap-2">
+        <RefreshCw className="h-4 w-4 animate-spin" />
+        Loading...
+      </div>
+    );
+  }
+
+  if (donations.length === 0) {
+    return (
+      <div className="text-center py-6 text-sm text-muted-foreground">
+        No upcoming recurring donations in the next 30 days.
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-border">
+      {donations.map((d) => {
+        const dueDate = d.nextDueDate ? new Date(d.nextDueDate) : null;
+        const daysUntilDue = dueDate ? Math.ceil((dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+        const isUrgent = daysUntilDue !== null && daysUntilDue <= 3;
+
+        return (
+          <div key={d.id} className="flex items-center gap-3 px-1 py-3">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${isUrgent ? 'bg-rose-100 dark:bg-rose-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+              <RefreshCw className={`h-4 w-4 ${isUrgent ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{d.donor?.name || 'Anonymous'}</p>
+              <p className="text-xs text-muted-foreground">
+                ৳{(Number(d.recurringAmount || d.amount)).toLocaleString('en-IN')}/{d.recurringFrequency === 'monthly' ? 'mo' : 'yr'}
+                {' • '}
+                {d.donationCategory?.name || ''}
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              {dueDate && (
+                <p className={`text-xs font-medium ${isUrgent ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {daysUntilDue !== null && daysUntilDue <= 0 ? 'Overdue!' : `${daysUntilDue}d left`}
+                </p>
+              )}
+              {dueDate && (
+                <p className="text-[10px] text-muted-foreground">
+                  {dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

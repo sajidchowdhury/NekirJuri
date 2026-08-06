@@ -2,6 +2,8 @@
 
 // ============================================================
 // DonationForm — Add/Edit donation with react-hook-form + zod
+// CR-5: Recurring donations — One-time/Monthly/Yearly toggle,
+// recurring amount, next due date display
 // ============================================================
 
 import * as React from 'react';
@@ -13,6 +15,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { CalendarClock, RefreshCw } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -34,7 +39,16 @@ const donationSchema = z.object({
   amount: z.coerce.number().min(1, 'Amount must be at least ৳1'),
   date: z.string().min(1, 'Date is required'),
   method: z.enum(['cash', 'bkash', 'bank', 'cheque']),
+  isRecurring: z.boolean().default(false),
+  recurringFrequency: z.enum(['monthly', 'yearly']).optional(),
+  recurringAmount: z.coerce.number().min(1).optional(),
   note: z.string().optional(),
+}).refine((data) => {
+  if (data.isRecurring && !data.recurringFrequency) return false;
+  return true;
+}, {
+  message: 'Frequency is required for recurring donations',
+  path: ['recurringFrequency'],
 });
 
 type DonationFormValues = z.infer<typeof donationSchema>;
@@ -54,6 +68,15 @@ const methodOptions: { value: PaymentMethod; label: string }[] = [
   { value: 'cheque', label: 'Cheque / চেক' },
 ];
 
+/** Calculate next due date display */
+function getNextDueDate(frequency: string, fromDate: string): string {
+  if (!fromDate || !frequency) return '';
+  const d = new Date(fromDate);
+  if (frequency === 'monthly') d.setMonth(d.getMonth() + 1);
+  else if (frequency === 'yearly') d.setFullYear(d.getFullYear() + 1);
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 interface DonationFormProps {
   onSuccess?: () => void;
   editDefaults?: Partial<DonationFormValues>;
@@ -72,9 +95,18 @@ export default function DonationForm({ onSuccess, editDefaults }: DonationFormPr
       amount: editDefaults?.amount ?? 0,
       date: editDefaults?.date ?? new Date().toISOString().split('T')[0],
       method: editDefaults?.method ?? 'cash',
+      isRecurring: editDefaults?.isRecurring ?? false,
+      recurringFrequency: editDefaults?.recurringFrequency,
+      recurringAmount: editDefaults?.recurringAmount,
       note: editDefaults?.note ?? '',
     },
   });
+
+  const isRecurring = form.watch('isRecurring');
+  const recurringFrequency = form.watch('recurringFrequency');
+  const donationDate = form.watch('date');
+  const recurringAmount = form.watch('recurringAmount');
+  const donationAmount = form.watch('amount');
 
   const filteredDonors = sampleDonors.filter((d) =>
     d.name.toLowerCase().includes(donorSearch.toLowerCase())
@@ -88,10 +120,18 @@ export default function DonationForm({ onSuccess, editDefaults }: DonationFormPr
   };
 
   const onSubmit = (data: DonationFormValues) => {
-    // Simulate save
-    toast.success('Donation recorded successfully', {
-      description: `${data.donorName} — ৳${data.amount.toLocaleString('en-IN')} (${data.category})`,
-    });
+    const pledgeAmount = data.isRecurring ? (data.recurringAmount || data.amount) : data.amount;
+    const nextDue = data.isRecurring ? getNextDueDate(data.recurringFrequency!, data.date) : '';
+
+    if (data.isRecurring) {
+      toast.success('Recurring donation recorded', {
+        description: `${data.donorName} — ৳${pledgeAmount.toLocaleString('en-IN')}/${data.recurringFrequency} (${data.category}). Next due: ${nextDue}`,
+      });
+    } else {
+      toast.success('Donation recorded successfully', {
+        description: `${data.donorName} — ৳${data.amount.toLocaleString('en-IN')} (${data.category})`,
+      });
+    }
     onSuccess?.();
   };
 
@@ -123,7 +163,7 @@ export default function DonationForm({ onSuccess, editDefaults }: DonationFormPr
           }}
         />
         {showDonorSuggestions && filteredDonors.length > 0 && (
-          <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-40 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
+          <div className="absolute top-full left-0 right'0 z-50 mt-1 max-h-40 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
             {filteredDonors.map((donor) => (
               <button
                 key={donor.id}
@@ -197,6 +237,89 @@ export default function DonationForm({ onSuccess, editDefaults }: DonationFormPr
         </div>
       </div>
 
+      {/* CR-5: Recurring Donation Toggle */}
+      <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <Label className="text-sm font-medium cursor-pointer" onClick={() => form.setValue('isRecurring', !isRecurring)}>
+              Recurring Donation
+            </Label>
+          </div>
+          <Switch
+            checked={isRecurring}
+            onCheckedChange={(v) => {
+              form.setValue('isRecurring', v);
+              if (!v) {
+                form.setValue('recurringFrequency', undefined);
+                form.setValue('recurringAmount', undefined);
+              }
+            }}
+          />
+        </div>
+
+        {isRecurring && (
+          <div className="space-y-3">
+            {/* Frequency selector */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Frequency</Label>
+                <Select
+                  value={recurringFrequency || ''}
+                  onValueChange={(val) => form.setValue('recurringFrequency', val as 'monthly' | 'yearly')}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">
+                      <div className="flex items-center gap-2">
+                        <CalendarClock className="h-3.5 w-3.5" />
+                        Monthly / মাসিক
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="yearly">
+                      <div className="flex items-center gap-2">
+                        <CalendarClock className="h-3.5 w-3.5" />
+                        Yearly / বার্ষিক
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.recurringFrequency && (
+                  <p className="text-xs text-rose-500">{form.formState.errors.recurringFrequency.message}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Pledge Amount (৳)</Label>
+                <Input
+                  type="number"
+                  placeholder={String(donationAmount || 0)}
+                  className="h-9 text-sm"
+                  {...form.register('recurringAmount', { valueAsNumber: true })}
+                />
+                <p className="text-[10px] text-muted-foreground">Per period. Defaults to donation amount if blank.</p>
+              </div>
+            </div>
+
+            {/* Next due date preview */}
+            {recurringFrequency && donationDate && (
+              <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                  <span className="text-amber-700 dark:text-amber-300">
+                    Next payment due: <strong>{getNextDueDate(recurringFrequency, donationDate)}</strong>
+                  </span>
+                </div>
+                <p className="mt-1 text-amber-600/80 dark:text-amber-400/80">
+                  Reminders will be sent 7 days before due date.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Date + Payment Method */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
@@ -244,7 +367,14 @@ export default function DonationForm({ onSuccess, editDefaults }: DonationFormPr
         type="submit"
         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
       >
-        Record Donation
+        {isRecurring ? (
+          <span className="flex items-center gap-1.5">
+            <RefreshCw className="h-4 w-4" />
+            Record Recurring Donation
+          </span>
+        ) : (
+          'Record Donation'
+        )}
       </Button>
     </motion.form>
   );
