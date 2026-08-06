@@ -381,3 +381,34 @@ Stage Summary:
 - FinancialReportShell provides print-optimized layout with institution branding
 - Responsive: mobile card view for tables, stacked layout on small screens
 - Phase 8 complete: Accounting & Reports fully functional
+
+---
+Task ID: 9
+Agent: Full-Stack Developer
+Task: Phase 9 — CMS & Communication
+
+Work Log:
+- Created `src/lib/website/sample-data.ts` with all types (WebsitePage, Notice, GalleryAlbum, GalleryImage) and sample data (6 pages, 8 notices, 4 albums with 26 images)
+- Created `src/components/website/page-list.tsx` — DataTable of website pages with columns (Title, Slug, Status, Last Updated, Author, Actions), filter tabs (All/Published/Draft), mobile card view
+- Created `src/components/website/page-editor.tsx` — Rich page editor form with react-hook-form + zod, auto-slug generation, content textarea (Markdown), SEO fields, status toggle (Published/Draft), featured image URL
+- Created `src/components/website/notice-board.tsx` — Card-based notice grid (1/2/3 cols responsive) with priority badges (Urgent=rose+pulse, Important=amber, Normal=emerald), audience badges, pin indicator, search, filter tabs (All/Urgent/Pinned)
+- Created `src/components/website/notice-form.tsx` — Notice create/edit form with react-hook-form + zod, priority select, audience select, date input, pinned toggle, attachment simulation
+- Created `src/components/website/gallery-manager.tsx` — Two-view gallery: Albums grid (cover gradients, image count badges) and Image grid view (breadcrumb, hover overlay with edit/delete, upload button)
+- Created `src/components/website/image-uploader.tsx` — Simulated upload dialog with drop zone, browse button, preview cards with gradient placeholders, caption inputs, remove buttons
+- Created `src/components/website/album-form.tsx` — Album create form with name, description, gradient color picker, cover preview
+- Replaced 3 placeholder pages with full implementations:
+  - `/website/pages/page.tsx` — PageHeader + PageList + Dialog(PageEditor)
+  - `/website/notices/page.tsx` — PageHeader + NoticeBoard + Dialog(NoticeForm)
+  - `/website/gallery/page.tsx` — PageHeader + GalleryManager + Dialog(AlbumForm) + Dialog(ImageUploader)
+- All pages use 'use client', Framer Motion animations (fadeIn, slideUp, staggerChildren), emerald primary buttons
+- Lint passes with 0 errors (12 warnings are pre-existing react-hooks/incompatible-library)
+- All 3 pages compile and return HTTP 200
+
+Stage Summary:
+- 3 fully functional CMS pages replacing placeholders
+- 7 new components in `src/components/website/`
+- 1 new data file in `src/lib/website/sample-data.ts`
+- Bengali notice titles with proper Unicode support
+- Gradient placeholder images (emerald/amber/sky/rose/violet) replacing real image dependencies
+- All forms validated with react-hook-form + zod
+- Responsive design: mobile card views, 1→2→3 column grids, mobile-friendly dialogs
