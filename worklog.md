@@ -713,3 +713,60 @@ Stage Summary:
 - All 25 page files cleaned of showBismillah prop
 - Print layouts (payslip, invoice, receipt, financial report) retain BismillahHeader
 - DashboardHero no longer shows Bismillah (it's in the header instead)
+
+---
+Task ID: CR-6
+Agent: Main
+Task: CR-6: Fix New Sale Modal
+
+Work Log:
+- Identified 8 major issues in the New Sale Modal:
+  1. SalesForm used hardcoded `sampleProducts` instead of real API data (string IDs 'p1','p2' vs numeric DB IDs)
+  2. No API call on submit — onSubmit just closed the dialog
+  3. SalesList used hardcoded `sampleSales` instead of fetching from API
+  4. Missing `invoiceNo` field — API requires it but form didn't generate it
+  5. Missing `saleDate` field — API requires it but form had no date picker
+  6. Product ID mismatch — sample IDs vs real database numeric IDs
+  7. No loading/saving states or error handling
+  8. No toast notifications for success/failure
+- Rewrote `src/components/inventory/sales-form.tsx`:
+  - Fetches real products from `/api/products` on mount with loading/error states
+  - Added Invoice No field with auto-generation (SL-YYYYMM-XXXX format)
+  - Added Sale Date field with today's date as default
+  - Uses real product data with numeric IDs from the database
+  - Stock validation with visual warning when qty exceeds stock
+  - Discount validation (cannot exceed subtotal)
+  - Submit button disabled during loading or when there are stock warnings
+  - Loading spinner during submission
+  - Error states for products loading failure
+- Rewrote `src/components/inventory/sales-list.tsx`:
+  - Fetches sales from `/api/sales` API instead of sample data
+  - Uses real `ApiSale` type matching database schema
+  - Loading state with spinner, error state with retry button
+  - `refreshKey` prop to trigger re-fetch after creating a sale
+  - Handles both paginated and direct array API responses
+- Rewrote `src/app/(dashboard)/inventory/sales/page.tsx`:
+  - Wires up real API submission via POST to `/api/sales`
+  - Toast notifications (sonner) for success and error
+  - Auto-refreshes sales list after creating a sale
+  - Maps form data to API payload (string→number productId, payment status for Credit)
+  - View dialog updated to use ApiSale type from database
+- Fixed `src/middleware.ts`:
+  - Added JWT decoding for API routes using `getToken` from next-auth/jwt
+  - Injects `x-tenant-id` and `x-user-id` headers from JWT claims
+  - This fixes ALL API routes that use `getTenantId()`/`getUserId()` helpers
+  - Previously, client-side fetch calls had no tenant context, causing 401 errors
+- Ran lint: 0 errors, 13 pre-existing warnings
+- API verification tests (all 5 pass):
+  1. Products API returns real products from database ✅
+  2. Create Sale API creates sale with stock deduction ✅
+  3. List Sales API returns all sales ✅
+  4. Duplicate invoice number correctly rejected ✅
+  5. Insufficient stock correctly rejected ✅
+
+Stage Summary:
+- Files modified: 4 (sales-form.tsx, sales-list.tsx, sales page.tsx, middleware.ts)
+- New Sale Modal now fully integrated with real API backend
+- All CRUD operations work through the API with proper validation
+- Middleware now provides tenant/user context for all API requests
+- Key fix: middleware injects x-tenant-id/x-user-id headers from JWT for API routes

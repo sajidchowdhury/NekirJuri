@@ -1,33 +1,87 @@
 'use client';
 
 // ============================================================
-// SalesList — DataTable of sales with status filter
+// SalesList — DataTable of sales fetched from API
 // ============================================================
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { type ColumnDef } from '@tanstack/react-table';
-import { Eye, Printer } from 'lucide-react';
+import { Eye, Printer, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/organisms/data-table';
 import {
-  type Sale,
   type SaleStatus,
   type PaymentMethod,
   formatTaka,
   saleStatusClasses,
   paymentMethodClasses,
-  sampleSales,
 } from '@/lib/inventory/sample-data';
 
-export interface SalesListProps {
-  onView?: (sale: Sale) => void;
-  onPrint?: (sale: Sale) => void;
+// ==================== API Sale Type ====================
+
+export interface ApiSale {
+  id: number;
+  invoiceNo: string;
+  customerName?: string | null;
+  saleDate: string;
+  totalAmount: number;
+  discountAmount: number;
+  netAmount: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  status: string;
+  student?: { id: number; name: string; registrationNo?: string | null } | null;
+  salesItems: {
+    id: number;
+    productId: number;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    product: { id: number; name: string; code: string; unit?: string | null };
+  }[];
+  createdAt: string;
 }
 
-export default function SalesList({ onView, onPrint }: SalesListProps) {
-  const columns: ColumnDef<Sale, unknown>[] = React.useMemo(() => [
+// ==================== Props ====================
+
+export interface SalesListProps {
+  onView?: (sale: ApiSale) => void;
+  onPrint?: (sale: ApiSale) => void;
+  refreshKey?: number; // Change this to trigger a re-fetch
+}
+
+// ==================== Component ====================
+
+export default function SalesList({ onView, onPrint, refreshKey }: SalesListProps) {
+  const [sales, setSales] = React.useState<ApiSale[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Fetch sales from API
+  const fetchSales = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch('/api/sales?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch sales');
+      const json = await res.json();
+      const items = Array.isArray(json) ? json : (json.data || []);
+      setSales(items);
+    } catch (err) {
+      console.error('[SalesList] Fetch failed:', err);
+      setError('Could not load sales. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchSales();
+  }, [fetchSales, refreshKey]);
+
+  const columns: ColumnDef<ApiSale, unknown>[] = React.useMemo(() => [
     {
       accessorKey: 'invoiceNo',
       header: 'Invoice #',
@@ -36,11 +90,11 @@ export default function SalesList({ onView, onPrint }: SalesListProps) {
       ),
     },
     {
-      accessorKey: 'date',
+      accessorKey: 'saleDate',
       header: 'Date',
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
-          {new Date(row.original.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+          {new Date(row.original.saleDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
         </span>
       ),
     },
@@ -48,21 +102,23 @@ export default function SalesList({ onView, onPrint }: SalesListProps) {
       accessorKey: 'customerName',
       header: 'Customer',
       cell: ({ row }) => (
-        <span className="text-sm">{row.original.customerName}</span>
+        <span className="text-sm">{row.original.customerName || row.original.student?.name || '—'}</span>
       ),
     },
     {
       id: 'itemsCount',
       header: 'Items',
       cell: ({ row }) => (
-        <span className="text-sm">{row.original.items.length}</span>
+        <span className="text-sm">{row.original.salesItems?.length ?? 0}</span>
       ),
     },
     {
-      accessorKey: 'grandTotal',
+      accessorKey: 'netAmount',
       header: 'Total',
       cell: ({ row }) => (
-        <span className="text-sm font-medium text-amber-600 dark:text-amber-400">{formatTaka(row.original.grandTotal)}</span>
+        <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+          {formatTaka(Number(row.original.netAmount))}
+        </span>
       ),
     },
     {
@@ -71,6 +127,7 @@ export default function SalesList({ onView, onPrint }: SalesListProps) {
       cell: ({ row }) => {
         const method = row.original.paymentMethod as PaymentMethod;
         const mc = paymentMethodClasses[method];
+        if (!mc) return <span className="text-sm">{method}</span>;
         return (
           <Badge variant="secondary" className={`${mc.bg} ${mc.text} gap-1`}>
             <span className={`h-1.5 w-1.5 rounded-full ${mc.dot}`} />
@@ -85,6 +142,7 @@ export default function SalesList({ onView, onPrint }: SalesListProps) {
       cell: ({ row }) => {
         const status = row.original.status as SaleStatus;
         const sc = saleStatusClasses[status];
+        if (!sc) return <span className="text-sm">{status}</span>;
         return (
           <Badge variant="secondary" className={`${sc.bg} ${sc.text} gap-1`}>
             <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
@@ -109,33 +167,61 @@ export default function SalesList({ onView, onPrint }: SalesListProps) {
     },
   ], [onView, onPrint]);
 
-  const renderCard = React.useCallback((sale: Sale) => {
-    const sc = saleStatusClasses[sale.status];
-    const mc = paymentMethodClasses[sale.paymentMethod];
+  const renderCard = React.useCallback((sale: ApiSale) => {
+    const sc = saleStatusClasses[sale.status as SaleStatus];
+    const mc = paymentMethodClasses[sale.paymentMethod as PaymentMethod];
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
         <div className="flex items-start justify-between">
           <span className="font-mono text-sm font-medium">{sale.invoiceNo}</span>
-          <Badge variant="secondary" className={`${sc.bg} ${sc.text} gap-1 text-[10px]`}>
-            <span className={`h-1 w-1 rounded-full ${sc.dot}`} />
-            {sc.label}
-          </Badge>
+          {sc && (
+            <Badge variant="secondary" className={`${sc.bg} ${sc.text} gap-1 text-[10px]`}>
+              <span className={`h-1 w-1 rounded-full ${sc.dot}`} />
+              {sc.label}
+            </Badge>
+          )}
         </div>
-        <p className="text-sm">{sale.customerName}</p>
+        <p className="text-sm">{sale.customerName || sale.student?.name || '—'}</p>
         <div className="flex items-center justify-between">
-          <Badge variant="secondary" className={`${mc.bg} ${mc.text} text-[10px]`}>
-            {sale.paymentMethod}
-          </Badge>
-          <span className="text-sm font-medium text-amber-600 dark:text-amber-400">{formatTaka(sale.grandTotal)}</span>
+          {mc && (
+            <Badge variant="secondary" className={`${mc.bg} ${mc.text} text-[10px]`}>
+              {sale.paymentMethod}
+            </Badge>
+          )}
+          <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+            {formatTaka(Number(sale.netAmount))}
+          </span>
         </div>
       </motion.div>
     );
   }, []);
 
+  // Loading state
+  if (loading && sales.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12 text-sm text-muted-foreground gap-2">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        Loading sales...
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && sales.length === 0) {
+    return (
+      <div className="text-center py-12 space-y-3">
+        <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>
+        <Button variant="outline" size="sm" onClick={fetchSales}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <DataTable
       columns={columns}
-      data={sampleSales}
+      data={sales}
       searchPlaceholder="Search sales..."
       renderCard={renderCard}
       pageSize={10}

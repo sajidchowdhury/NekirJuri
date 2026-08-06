@@ -1,11 +1,13 @@
 // ============================================================
 // Madrasha ERP SaaS — Next.js Middleware
 // Tenant isolation + Route protection + Subscription enforcement
+// CR-6: Fix New Sale Modal — Add tenant/user context to API requests
 // CR-7: SaaS Subscription Enforcement
 // ============================================================
 
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
 // Routes that don't require authentication
 const publicRoutes = [
@@ -35,7 +37,7 @@ const readOnlyRoutes = [
   '/system/activity-logs',
 ]
 
-export default function middleware(req: NextRequest) {
+export default async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname
 
   // Allow public routes
@@ -52,8 +54,24 @@ export default function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // For API routes, pass through (API routes handle their own auth)
+  // For API routes, decode JWT and inject tenant/user ID headers
   if (path.startsWith('/api/')) {
+    try {
+      const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+      if (token) {
+        const requestHeaders = new Headers(req.headers)
+        if (token.tenantId) requestHeaders.set('x-tenant-id', String(token.tenantId))
+        if (token.sub) requestHeaders.set('x-user-id', String(token.sub))
+
+        return NextResponse.next({
+          request: {
+            headers: requestHeaders,
+          },
+        })
+      }
+    } catch {
+      // Token decode failed — proceed without headers; API will return 401
+    }
     return NextResponse.next()
   }
 
@@ -76,9 +94,6 @@ export default function middleware(req: NextRequest) {
   // 2. SubscriptionBanner component shows warnings based on enforcementLevel
   // 3. Feature gating hook (useSubscriptionGuard) blocks write operations
   // 4. API routes validate enforcement on each request
-  //
-  // Middleware doesn't have easy access to decoded JWT claims,
-  // so we defer the heavy enforcement to client-side + API-level checks.
 
   return NextResponse.next()
 }
