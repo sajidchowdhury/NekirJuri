@@ -167,6 +167,7 @@ export function DataTable<TData, TValue>({
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className="pl-9"
+              aria-label="Search table"
             />
           </div>
         </div>
@@ -258,14 +259,14 @@ export function DataTable<TData, TValue>({
 
       {paginated && totalPages > 1 && (
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground" aria-live="polite">
             Showing {currentIdx * pageSize + 1}–{Math.min((currentIdx + 1) * pageSize, totalCount ?? data.length)} of {totalCount ?? data.length}
           </p>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => goToPage(0)} disabled={currentIdx === 0}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => goToPage(0)} disabled={currentIdx === 0} aria-label="Go to first page">
               <ChevronsLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => goToPage(currentIdx - 1)} disabled={currentIdx === 0}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => goToPage(currentIdx - 1)} disabled={currentIdx === 0} aria-label="Previous page">
               <ChevronLeft className="h-4 w-4" />
             </Button>
             {pageNumbers.map((page) => (
@@ -279,10 +280,10 @@ export function DataTable<TData, TValue>({
                 {page + 1}
               </Button>
             ))}
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => goToPage(currentIdx + 1)} disabled={currentIdx >= totalPages - 1}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => goToPage(currentIdx + 1)} disabled={currentIdx >= totalPages - 1} aria-label="Next page">
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => goToPage(totalPages - 1)} disabled={currentIdx >= totalPages - 1}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => goToPage(totalPages - 1)} disabled={currentIdx >= totalPages - 1} aria-label="Go to last page">
               <ChevronsRight className="h-4 w-4" />
             </Button>
           </div>

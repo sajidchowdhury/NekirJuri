@@ -477,3 +477,38 @@ Stage Summary:
 - Status badges pulse for active/paid states
 - Empty state icons gently float
 - Cards have hover lift effects
+
+---
+Task ID: 12
+Agent: Full-Stack Developer
+Task: Phase 12 — Accessibility & Final QA
+
+Work Log:
+- Created `src/components/ui/skip-to-content.tsx` — visually hidden skip link, appears on Tab focus with emerald bg, scrolls to #main-content
+- Created `src/components/ui/error-boundary.tsx` — React class-based ErrorBoundary with Islamic-themed fallback (crescent SVG, pattern bg, Try Again + Go to Dashboard buttons, dev-only error details). Also exported `withErrorBoundary` HOC and `DefaultErrorFallback`
+- Created `src/components/providers/error-boundary-provider.tsx` — wraps app in ErrorBoundary at root level
+- Enhanced `src/app/(dashboard)/layout.tsx` — added SkipToContent as first focusable element, id="main-content" + role="main" + aria-label + tabIndex on <main>, wrapped children in ErrorBoundary
+- Enhanced `src/app/layout.tsx` — added dir="ltr" to <html>, wrapped providers with ErrorBoundaryProvider
+- Added print stylesheet to `src/app/globals.css` — @media print rules (hide nav/sidebar/buttons, full-width main, page-break rules, print-color-adjust exact, reduced font size, link URL display), focus-ring utility classes (.focus-ring, .focus-visible-ring), prefers-reduced-motion override (kills all animations/transitions)
+- Enhanced `src/components/organisms/data-table.tsx` — added aria-label="Search table" on search input (both instances), aria-live="polite" on pagination info text, aria-label on pagination buttons (Go to first page, Previous page, Next page, Go to last page)
+- Enhanced `src/components/layout/app-sidebar.tsx` — added role="navigation" + aria-label="Main navigation" on Sidebar, role="heading" + aria-level={2} on SidebarGroupLabel
+- Enhanced `src/components/layout/app-header.tsx` — added role="banner" on <header>, aria-label="Search" on both search trigger buttons
+- Enhanced `src/components/layout/notification-dropdown.tsx` — added aria-label="Notifications" + aria-haspopup="true" on bell button
+- Created `src/app/(dashboard)/loading.tsx` — skeleton loading UI for dashboard route group (header, stat cards, content grids)
+- Created `src/app/(auth)/loading.tsx` — skeleton loading UI for auth route group (logo, form fields)
+- Created `src/app/(dashboard)/error.tsx` — Next.js error boundary with mosque emoji, Try Again button
+- Created `src/app/(auth)/error.tsx` — Next.js auth error boundary with mosque emoji, Try Again button
+- Created `src/app/not-found.tsx` — 404 page with mosque emoji, Go to Dashboard link
+- Ran lint — 0 errors, 13 pre-existing warnings (React Compiler incompatible-library)
+- Dev server compiles and serves successfully
+
+Stage Summary:
+- Skip-to-content: First focusable element, emerald bg, skips to #main-content
+- Error boundaries: React class ErrorBoundary (component-level) + Next.js error.tsx (route-level) + ErrorBoundaryProvider (app-level)
+- ARIA: role="banner", role="main", role="navigation", role="heading", aria-label on all interactive elements, aria-live="polite" on pagination, aria-haspopup on notification dropdown
+- Focus indicators: .focus-ring and .focus-visible-ring utilities (2px solid emerald #047857, 2px offset)
+- Print stylesheet: Hides nav/sidebar/buttons, full-width content, page-break rules, URL display for links, exact color printing
+- Reduced motion: @media (prefers-reduced-motion: reduce) kills all animations/transitions globally
+- Loading states: Skeleton-based loading.tsx for dashboard and auth route groups
+- 404: Custom not-found.tsx with Islamic-themed design
+- All changes are backward-compatible, no existing functionality broken

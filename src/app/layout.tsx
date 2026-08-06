@@ -6,6 +6,7 @@ import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import QueryProvider from "@/components/providers/query-provider";
+import { ErrorBoundaryProvider } from "@/components/providers/error-boundary-provider";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -49,7 +50,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" dir="ltr" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${notoBengali.variable} ${notoArabic.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
@@ -59,19 +60,21 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <QueryProvider>
-            <div className="min-h-screen flex flex-col bg-background text-foreground">
-              {children}
-            </div>
-            <Toaster
-              position="bottom-right"
-              toastOptions={{
-                classNames: {
-                  toast: "bg-card text-card-foreground border-border",
-                },
-              }}
-            />
-          </QueryProvider>
+          <ErrorBoundaryProvider>
+            <QueryProvider>
+              <div className="min-h-screen flex flex-col bg-background text-foreground">
+                {children}
+              </div>
+              <Toaster
+                position="bottom-right"
+                toastOptions={{
+                  classNames: {
+                    toast: "bg-card text-card-foreground border-border",
+                  },
+                }}
+              />
+            </QueryProvider>
+          </ErrorBoundaryProvider>
         </ThemeProvider>
       </body>
     </html>

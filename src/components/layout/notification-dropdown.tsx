@@ -47,6 +47,8 @@ export function NotificationDropdown() {
           variant="ghost"
           size="icon"
           className="relative h-9 w-9 text-muted-foreground hover:text-foreground"
+          aria-label="Notifications"
+          aria-haspopup="true"
         >
           <Bell className="size-4" />
           {/* Red badge */}

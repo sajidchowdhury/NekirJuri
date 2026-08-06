@@ -70,7 +70,7 @@ export function AppHeader() {
     .filter(Boolean)
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/80 backdrop-blur-md px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/80 backdrop-blur-md px-4" role="banner">
       {/* Left: Sidebar trigger + Breadcrumb */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <SidebarTrigger className="shrink-0" />
@@ -111,6 +111,7 @@ export function AppHeader() {
             // Trigger command palette via custom event
             window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))
           }}
+          aria-label="Search"
         >
           <Search className="size-3.5" />
           <span className="text-xs">Search...</span>
@@ -125,6 +126,7 @@ export function AppHeader() {
           onClick={() => {
             window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))
           }}
+          aria-label="Search"
         >
           <Search className="size-4" />
         </Button>

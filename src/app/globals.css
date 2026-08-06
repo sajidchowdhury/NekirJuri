@@ -334,3 +334,96 @@
     animation: shimmer 1.5s linear infinite;
   }
 }
+
+/* ── Phase 12: Print Stylesheet ── */
+
+@media print {
+  /* Hide non-essential elements */
+  nav,
+  aside,
+  [data-sidebar],
+  .sidebar,
+  button,
+  [data-print-hide],
+  .no-print {
+    display: none !important;
+  }
+
+  /* Show main content full-width */
+  main {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Remove shadows and borders for cleaner print */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Ensure backgrounds print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Page breaks */
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+  
+  table, figure, img {
+    page-break-inside: avoid;
+  }
+
+  /* Print-specific: show print-only elements */
+  [data-print-only] {
+    display: block !important;
+  }
+
+  /* Reduce font sizes slightly for print */
+  body {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Links: show URL in parentheses after link text */
+  a[href]:after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #666;
+  }
+  
+  a[href^="#"]:after,
+  a[href^="javascript"]:after {
+    content: "";
+  }
+}
+
+/* ── Focus Indicator ── */
+@layer utilities {
+  /* Emerald focus ring for keyboard navigation */
+  .focus-ring {
+    outline: 2px solid #047857;
+    outline-offset: 2px;
+  }
+
+  /* Focus visible (keyboard only, not mouse) */
+  .focus-visible-ring:focus-visible {
+    outline: 2px solid #047857;
+    outline-offset: 2px;
+  }
+}
+
+/* Global focus-visible styles for interactive elements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

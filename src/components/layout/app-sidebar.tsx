@@ -30,7 +30,7 @@ export function AppSidebar() {
   const pathname = usePathname()
 
   return (
-    <Sidebar collapsible="icon" className="border-r-border">
+    <Sidebar collapsible="icon" className="border-r-border" role="navigation" aria-label="Main navigation">
       {/* ── Header: Logo + Tenant ── */}
       <SidebarHeader className="px-3 py-4">
         <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
@@ -50,7 +50,7 @@ export function AppSidebar() {
       <SidebarContent className="px-2">
         {navigation.map((group) => (
           <SidebarGroup key={group.title}>
-            <SidebarGroupLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <SidebarGroupLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider" role="heading" aria-level={2}>
               {group.title}
             </SidebarGroupLabel>
             <SidebarGroupContent>
