@@ -54,3 +54,7 @@ server.log
 # Skills directory
 /skills/tool-results/
 *.png
+tool-results/
+billing-page.png
+billing-desktop.png
+cr9-accordion-sidebar.png
