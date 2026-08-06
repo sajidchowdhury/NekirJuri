@@ -802,3 +802,31 @@ Stage Summary:
 - Locale API at /api/locale for programmatic language switching
 - Verified: Bengali text renders with lang="bn" dir="ltr", Arabic with lang="ar" dir="rtl"
 - Server OOM issues in dev environment are system memory constraints, not code issues
+
+---
+Task ID: CR-8
+Agent: Main Agent
+Task: CR-8: Simplified Accounting Mode — All Phases Pushed
+
+Work Log:
+- Phase 1: Created /api/accounting-mode API route (GET/POST) with tenant settings persistence and auto-generation of simplified accounts
+- Phase 2: Created useAccountingMode hook with mode detection, loading state, and update capability
+- Phase 3: Created SimplifiedChartOfAccounts component with Income/Expense lists, balances, and edit buttons
+- Phase 4: Created SimplifiedJournalEntryForm with simple Income/Expense type selector, account, amount, date
+- Phase 5: Created SimplifiedAccountingSummary dashboard with Total Income/Expenses/Net Surplus cards + category breakdown bars + recent entries
+- Phase 6: Updated Chart of Accounts page to be mode-aware (simplified: Income/Expense lists + Summary; double-entry: original tree)
+- Phase 7: Updated Journal Entries page to be mode-aware (simplified: summary + simple form; double-entry: original table)
+- Phase 8: Added accountingMode toggle to Settings page Finance section
+- Phase 9: Added all accounting translation keys to en.json, bn.json, ar.json (55+ keys per language)
+- Phase 10: Lint passed with 0 errors (14 pre-existing warnings)
+- Database: Schema in sync, no migration needed (uses Tenant.settings JSON field)
+
+Stage Summary:
+- Full Simplified Accounting Mode implemented across all 8 phases
+- Two modes: 'double-entry' (default) and 'simplified'
+- Simplified mode: Hides debit/credit, shows Income/Expense categories only, simple entry form
+- Double-entry mode: Original full chart of accounts tree with ledger/reports
+- Settings toggle in Finance section for mode switching
+- API route auto-generates simplified accounts when switching modes
+- All components i18n-aware with en/bn/ar translations
+- Mode-aware pages: Chart of Accounts, Journal Entries both render different UIs based on mode

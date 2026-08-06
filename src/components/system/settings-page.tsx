@@ -44,6 +44,7 @@ export interface SettingsState {
   feeReminderDays: number;
   autoGenerateInvoice: boolean;
   lateFeeAmount: number;
+  accountingMode: 'simplified' | 'double-entry';
   // Appearance
   theme: string;
   primaryColor: string;
@@ -77,6 +78,7 @@ export const defaultSettings: SettingsState = {
   feeReminderDays: 7,
   autoGenerateInvoice: false,
   lateFeeAmount: 0,
+  accountingMode: 'double-entry',
   theme: 'System',
   primaryColor: 'Emerald',
   showBismillahOnReports: true,
@@ -288,6 +290,21 @@ export default function SettingsPage({ settings, onSettingsChange }: SettingsPag
                 value={settings.lateFeeAmount}
                 onChange={(e) => update('lateFeeAmount', Number(e.target.value))}
               />
+            </div>
+            <div className="flex items-center justify-between rounded-md border px-4 py-3">
+              <div>
+                <Label className="text-sm">Accounting Mode</Label>
+                <p className="text-xs text-muted-foreground">Simplified mode hides double-entry debit/credit, showing only Income & Expense tracking</p>
+              </div>
+              <Select value={settings.accountingMode} onValueChange={(val) => update('accountingMode', val as 'simplified' | 'double-entry')}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="double-entry">Double-Entry</SelectItem>
+                  <SelectItem value="simplified">Simplified</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </AccordionContent>
         </AccordionItem>

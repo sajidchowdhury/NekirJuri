@@ -1,25 +1,21 @@
 'use client';
 
 // ============================================================
-// Journal Entries Page
-// DataTable of journal entries, New/Edit in Dialog,
-// View detail, Post confirmation
+// Journal Entries Page — Mode-aware
+// CR-8: Simplified Accounting Mode
+// Double-entry: Full journal entry table + debit/credit
+// Simplified: Simple income/expense entry form
 // ============================================================
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import {
-  Plus,
-  Eye,
-  FileText,
-  CheckCircle2,
-  XCircle,
-  Send,
+  Plus, Eye, FileText, CheckCircle2, XCircle, Send, Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -58,6 +54,9 @@ import PageHeader from '@/components/atoms/page-header';
 import ExportButton from '@/components/molecules/export-button';
 import JournalEntryList from '@/components/accounting/journal-entry-list';
 import JournalEntryForm from '@/components/accounting/journal-entry-form';
+import SimplifiedJournalEntryForm from '@/components/accounting/simplified-journal-entry-form';
+import SimplifiedAccountingSummary from '@/components/accounting/simplified-accounting-summary';
+import { useAccountingMode } from '@/hooks/use-accounting-mode';
 import {
   journalEntries,
   formatTaka,
@@ -67,6 +66,9 @@ import {
 import { slideUp } from '@/lib/animations';
 
 export default function JournalEntriesPage() {
+  const t = useTranslations('accounting');
+  const { isSimplified, loading } = useAccountingMode();
+
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'draft' | 'posted'>('all');
   const [newEntryDialogOpen, setNewEntryDialogOpen] = React.useState(false);
   const [viewEntry, setViewEntry] = React.useState<JournalEntry | null>(null);
@@ -75,14 +77,9 @@ export default function JournalEntriesPage() {
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  // Handlers
   const handleView = (entry: JournalEntry) => setViewEntry(entry);
   const handleEdit = (entry: JournalEntry) => setEditEntry(entry);
   const handlePost = (entry: JournalEntry) => setPostEntry(entry);
@@ -104,6 +101,62 @@ export default function JournalEntriesPage() {
     setPostEntry(null);
   };
 
+  if (loading) {
+    return <div className="flex items-center justify-center py-20"><p className="text-muted-foreground">Loading...</p></div>;
+  }
+
+  // ── Simplified Mode ──
+  if (isSimplified) {
+    return (
+      <motion.div
+        initial={slideUp.initial}
+        animate={slideUp.animate}
+        transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+        className="space-y-6"
+      >
+        <PageHeader
+          title={t('journalEntries')}
+          description={t('simplifiedJournalDescription')}
+          actions={
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs">
+                <Settings2 className="h-3 w-3 mr-1" />
+                {t('simplifiedMode')}
+              </Badge>
+              <ExportButton />
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                size="sm"
+                onClick={() => setNewEntryDialogOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+                {t('newEntry')}
+              </Button>
+            </div>
+          }
+        />
+
+        {/* Summary Dashboard */}
+        <SimplifiedAccountingSummary />
+
+        {/* New Simplified Entry Dialog */}
+        <Dialog open={newEntryDialogOpen} onOpenChange={setNewEntryDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t('newSimplifiedEntry')}</DialogTitle>
+              <DialogDescription>{t('newSimplifiedEntryDescription')}</DialogDescription>
+            </DialogHeader>
+            <SimplifiedJournalEntryForm
+              onSave={() => setNewEntryDialogOpen(false)}
+              onCancel={() => setNewEntryDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      </motion.div>
+    );
+  }
+
+  // ── Double-Entry Mode (Original) ──
   return (
     <motion.div
       initial={slideUp.initial}
@@ -112,9 +165,8 @@ export default function JournalEntriesPage() {
       className="space-y-6"
     >
       <PageHeader
-        title="Journal Entries"
-        description="Record and manage double-entry journal transactions"
-
+        title={t('journalEntries')}
+        description={t('doubleEntryDescription')}
         actions={
           <div className="flex items-center gap-2">
             <ExportButton />
@@ -124,74 +176,47 @@ export default function JournalEntriesPage() {
               onClick={() => setNewEntryDialogOpen(true)}
             >
               <Plus className="h-4 w-4" />
-              New Entry
+              {t('newEntry')}
             </Button>
           </div>
         }
       />
 
-      {/* Status filter */}
       <div className="flex items-center gap-2">
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v as 'all' | 'draft' | 'posted')}
-        >
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'draft' | 'posted')}>
           <SelectTrigger className="w-32 h-8 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Entries</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="posted">Posted</SelectItem>
+            <SelectItem value="all">{t('allEntries')}</SelectItem>
+            <SelectItem value="draft">{t('draft')}</SelectItem>
+            <SelectItem value="posted">{t('posted')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Journal Entry List */}
-      <JournalEntryList
-        statusFilter={statusFilter}
-        onView={handleView}
-        onEdit={handleEdit}
-        onPost={handlePost}
-      />
+      <JournalEntryList statusFilter={statusFilter} onView={handleView} onEdit={handleEdit} onPost={handlePost} />
 
-      {/* New Entry Dialog */}
       <Dialog open={newEntryDialogOpen} onOpenChange={setNewEntryDialogOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New Journal Entry</DialogTitle>
-            <DialogDescription>
-              Create a new double-entry journal transaction
-            </DialogDescription>
+            <DialogTitle>{t('newJournalEntry')}</DialogTitle>
+            <DialogDescription>{t('newJournalEntryDescription')}</DialogDescription>
           </DialogHeader>
-          <JournalEntryForm
-            onSaveDraft={handleSaveDraft}
-            onPostEntry={handlePostEntry}
-            onCancel={() => setNewEntryDialogOpen(false)}
-          />
+          <JournalEntryForm onSaveDraft={handleSaveDraft} onPostEntry={handlePostEntry} onCancel={() => setNewEntryDialogOpen(false)} />
         </DialogContent>
       </Dialog>
 
-      {/* Edit Entry Dialog */}
       <Dialog open={!!editEntry} onOpenChange={(open) => !open && setEditEntry(null)}>
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Journal Entry</DialogTitle>
-            <DialogDescription>
-              {editEntry?.entryNo} — {editEntry?.description}
-            </DialogDescription>
+            <DialogTitle>{t('editJournalEntry')}</DialogTitle>
+            <DialogDescription>{editEntry?.entryNo} — {editEntry?.description}</DialogDescription>
           </DialogHeader>
-          <JournalEntryForm
-            defaultValues={editEntry ?? undefined}
-            isEditing
-            onSaveDraft={handleSaveDraft}
-            onPostEntry={handlePostEntry}
-            onCancel={() => setEditEntry(null)}
-          />
+          <JournalEntryForm defaultValues={editEntry ?? undefined} isEditing onSaveDraft={handleSaveDraft} onPostEntry={handlePostEntry} onCancel={() => setEditEntry(null)} />
         </DialogContent>
       </Dialog>
 
-      {/* View Entry Detail Dialog */}
       <Dialog open={!!viewEntry} onOpenChange={(open) => !open && setViewEntry(null)}>
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -203,45 +228,33 @@ export default function JournalEntriesPage() {
           </DialogHeader>
           {viewEntry && (
             <div className="space-y-4">
-              {/* Entry info */}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Date:</span>{' '}
+                  <span className="text-muted-foreground">{t('date')}:</span>{' '}
                   <span className="font-medium">{formatDate(viewEntry.date)}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Status:</span>{' '}
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      'h-5 text-[10px] px-1.5',
-                      viewEntry.status === 'posted'
-                        ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-stone-100 dark:bg-stone-800/30 text-stone-600 dark:text-stone-400'
-                    )}
-                  >
-                    {viewEntry.status === 'posted' ? 'Posted' : 'Draft'}
+                  <span className="text-muted-foreground">{t('status')}:</span>{' '}
+                  <Badge variant="secondary" className={cn('h-5 text-[10px] px-1.5', viewEntry.status === 'posted' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'bg-stone-100 dark:bg-stone-800/30 text-stone-600 dark:text-stone-400')}>
+                    {viewEntry.status === 'posted' ? t('posted') : t('draft')}
                   </Badge>
                 </div>
                 {viewEntry.reference && (
                   <div>
-                    <span className="text-muted-foreground">Reference:</span>{' '}
+                    <span className="text-muted-foreground">{t('reference')}:</span>{' '}
                     <span className="font-mono text-xs">{viewEntry.reference}</span>
                   </div>
                 )}
               </div>
-
               <Separator />
-
-              {/* Line items */}
               <div className="rounded-lg border border-border overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
-                      <TableHead className="w-16">Code</TableHead>
-                      <TableHead>Account</TableHead>
-                      <TableHead className="text-right w-28">Debit (৳)</TableHead>
-                      <TableHead className="text-right w-28">Credit (৳)</TableHead>
+                      <TableHead className="w-16">{t('code')}</TableHead>
+                      <TableHead>{t('account')}</TableHead>
+                      <TableHead className="text-right w-28">{t('debit')}</TableHead>
+                      <TableHead className="text-right w-28">{t('credit')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -249,19 +262,13 @@ export default function JournalEntriesPage() {
                       <TableRow key={idx}>
                         <TableCell className="font-mono text-xs">{line.accountCode}</TableCell>
                         <TableCell className="text-xs">{line.accountName}</TableCell>
-                        <TableCell className="text-right font-mono text-xs">
-                          {line.debit > 0 ? formatTaka(line.debit) : '—'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400">
-                          {line.credit > 0 ? formatTaka(line.credit) : '—'}
-                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs">{line.debit > 0 ? formatTaka(line.debit) : '—'}</TableCell>
+                        <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400">{line.credit > 0 ? formatTaka(line.credit) : '—'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
-
-              {/* Totals */}
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
                 {(() => {
                   const totalD = viewEntry.lineItems.reduce((s, l) => s + l.debit, 0);
@@ -271,23 +278,21 @@ export default function JournalEntriesPage() {
                     <>
                       <div className="flex items-center gap-4">
                         <div>
-                          <p className="text-xs text-muted-foreground">Total Debit</p>
+                          <p className="text-xs text-muted-foreground">{t('totalDebit')}</p>
                           <p className="text-sm font-bold font-mono">{formatTaka(totalD)}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Total Credit</p>
-                          <p className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                            {formatTaka(totalC)}
-                          </p>
+                          <p className="text-xs text-muted-foreground">{t('totalCredit')}</p>
+                          <p className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">{formatTaka(totalC)}</p>
                         </div>
                       </div>
                       {balanced ? (
                         <span className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="h-4 w-4" /> Balanced
+                          <CheckCircle2 className="h-4 w-4" /> {t('balanced')}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-sm font-medium text-rose-600 dark:text-rose-400">
-                          <XCircle className="h-4 w-4" /> Unbalanced
+                          <XCircle className="h-4 w-4" /> {t('unbalanced')}
                         </span>
                       )}
                     </>
@@ -299,24 +304,20 @@ export default function JournalEntriesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Post Confirmation Dialog */}
       <AlertDialog open={!!postEntry} onOpenChange={(open) => !open && setPostEntry(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Post Journal Entry?</AlertDialogTitle>
+            <AlertDialogTitle>{t('postJournalEntry')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to post <span className="font-mono font-medium">{postEntry?.entryNo}</span>?
-              This action will make the entry permanent and cannot be undone.
+              {t('postConfirmation')} <span className="font-mono font-medium">{postEntry?.entryNo}</span>?
+              {t('postCannotUndo')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={confirmPost}
-            >
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogAction className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={confirmPost}>
               <Send className="h-4 w-4 mr-2" />
-              Post Entry
+              {t('postEntry')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
