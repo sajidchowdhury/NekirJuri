@@ -78,6 +78,10 @@ export async function POST(request: NextRequest) {
     if (!body.maxStudents || !body.maxEmployees || !body.maxStorageMb) {
       return error('maxStudents, maxEmployees, and maxStorageMb are required')
     }
+    // CR-11: Gallery limit fields (with sensible defaults)
+    const maxAlbums = body.maxAlbums ? Number(body.maxAlbums) : 5
+    const maxImagesPerAlbum = body.maxImagesPerAlbum ? Number(body.maxImagesPerAlbum) : 20
+    const maxImageSizeMb = body.maxImageSizeMb ? Number(body.maxImageSizeMb) : 2
 
     // Check slug uniqueness
     const existing = await db.subscriptionPlan.findUnique({ where: { slug: body.slug } })
@@ -91,10 +95,15 @@ export async function POST(request: NextRequest) {
         slug: body.slug,
         description: body.description || null,
         priceMonthly: Number(body.priceMonthly),
+        price6Monthly: body.price6Monthly ? Number(body.price6Monthly) : null,
         priceYearly: body.priceYearly ? Number(body.priceYearly) : null,
         maxStudents: Number(body.maxStudents),
         maxEmployees: Number(body.maxEmployees),
         maxStorageMb: Number(body.maxStorageMb),
+        // CR-11: Gallery limits
+        maxAlbums,
+        maxImagesPerAlbum,
+        maxImageSizeMb,
         features: body.features || null,
         isActive: body.isActive !== undefined ? body.isActive : true,
       },

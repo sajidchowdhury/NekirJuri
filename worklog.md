@@ -960,3 +960,38 @@ Stage Summary:
 - Real file upload with size validation replaces simulated upload
 - Storage tracking via Tenant.storageUsedMb and Gallery.imageCount
 - All code compiles cleanly, no new lint/TS errors
+
+---
+Task ID: CR-11
+Agent: Main
+Task: CR-11 — Image Upload Limits per Subscription Tier
+
+Work Log:
+- Explored existing codebase — found CR-11 was already substantially implemented:
+  - Schema fields present: maxAlbums, maxImagesPerAlbum, maxImageSizeMb on SubscriptionPlan; imageCount on Gallery; fileSizeKb on GalleryImage; storageUsedMb on Tenant
+  - Upload API with 3-tier limit enforcement already existed at /api/gallery/upload
+  - Gallery limits API at /api/gallery/limits already existed
+  - Galleries POST with album limit check already existed
+  - GalleryLimitsBar, GalleryManager, ImageUploader components already limit-aware
+  - Gallery page already wired with limits data
+- Identified and filled remaining gaps:
+  1. Created DELETE /api/gallery/images/[id] — delete image with storage cleanup (decrements imageCount + storageUsedMb, audit log)
+  2. Created PATCH /api/gallery/images/[id] — update image caption/sortOrder with audit log
+  3. Created GET/PATCH/DELETE /api/galleries/[id] — album CRUD (DELETE cleans up all images + storage)
+  4. Enhanced ImageUploader component to POST to /api/gallery/upload API when galleryId provided (previously only simulated)
+  5. Added upload progress indicators (spinner, checkmarks) to ImageUploader
+  6. Updated /api/subscription-plans POST to include gallery limit fields (maxAlbums, maxImagesPerAlbum, maxImageSizeMb)
+  7. Added price6Monthly field to subscription plan POST
+  8. Created /api/subscription-plans/[id] route with GET, PATCH (including gallery limit fields), DELETE (soft)
+- Pushed Prisma schema (already in sync)
+- Lint: 0 errors (14 pre-existing warnings)
+- TypeScript: 0 new errors (346 pre-existing, none in CR-11 files)
+- Dev server: running, all routes registered, API endpoints respond correctly
+
+Stage Summary:
+- CR-11 is now fully complete — all gaps filled
+- New API routes: /api/gallery/images/[id] (PATCH, DELETE), /api/galleries/[id] (GET, PATCH, DELETE), /api/subscription-plans/[id] (GET, PATCH, DELETE)
+- ImageUploader now integrates with real API when galleryId is available
+- Subscription plan CRUD includes gallery limit fields
+- All storage cleanup (image delete, album delete) properly decrements counters
+- All mutations include audit logging

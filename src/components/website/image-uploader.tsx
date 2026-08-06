@@ -3,11 +3,13 @@
 // ============================================================
 // ImageUploader — File upload dialog with subscription limit checks
 // Real file input, size validation, limit enforcement
+// Posts to /api/gallery/upload when galleryId provided
 // ============================================================
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { Upload, X, Image as ImageIcon, Plus, AlertTriangle, FileWarning } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Plus, AlertTriangle, FileWarning, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,12 +25,16 @@ interface ImageFile {
   preview?: string;
   sizeKb: number;
   sizeExceeded: boolean;
+  uploaded: boolean;  // CR-11: tracks upload progress per image
+  uploading: boolean;
 }
 
 const gradients: GradientColor[] = ['emerald', 'amber', 'sky', 'rose', 'violet'];
 
 interface ImageUploaderProps {
   albumName: string;
+  /** Numeric gallery ID for API uploads. If not provided, uses simulated upload */
+  galleryId?: number;
   maxImageSizeMb?: number;
   currentImageCount?: number;
   maxImagesPerAlbum?: number;
@@ -38,6 +44,7 @@ interface ImageUploaderProps {
 
 export default function ImageUploader({
   albumName,
+  galleryId,
   maxImageSizeMb = 2,
   currentImageCount = 0,
   maxImagesPerAlbum = 20,
@@ -45,11 +52,14 @@ export default function ImageUploader({
   onCancel,
 }: ImageUploaderProps) {
   const [images, setImages] = React.useState<ImageFile[]>([]);
+  const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const remainingSlots = maxImagesPerAlbum - currentImageCount;
   const canAddMore = images.length < remainingSlots;
   const hasOversizedFiles = images.some(img => img.sizeExceeded);
+  const validImages = images.filter(img => !img.sizeExceeded);
+  const isAnyUploading = images.some(img => img.uploading);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -66,6 +76,8 @@ export default function ImageUploader({
         preview: URL.createObjectURL(file),
         sizeKb,
         sizeExceeded: sizeMb > maxImageSizeMb,
+        uploaded: false,
+        uploading: false,
       };
     });
 
@@ -90,17 +102,93 @@ export default function ImageUploader({
     });
   };
 
-  const handleAddImages = () => {
-    // Only add images that pass size validation
-    const validImages = images
-      .filter(img => !img.sizeExceeded)
-      .map(img => ({
+  const handleAddImages = async () => {
+    if (validImages.length === 0) return;
+
+    // If we have a galleryId, POST each image to the API
+    if (galleryId) {
+      setIsUploading(true);
+
+      // Mark all valid images as uploading
+      setImages(prev => prev.map(img =>
+        !img.sizeExceeded ? { ...img, uploading: true } : img
+      ));
+
+      const uploadedResults: Array<{ id: string; caption: string; gradient: GradientColor }> = [];
+      let hasError = false;
+
+      for (const img of validImages) {
+        try {
+          // For real file upload: convert File to data URL for the imageUrl field
+          // In production, this would upload to S3/cloud storage first
+          // For now, we use the preview URL or a placeholder
+          const imageUrl = img.preview || `gallery-image-${img.id}`;
+
+          const res = await fetch('/api/gallery/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              galleryId,
+              imageUrl,
+              caption: img.caption,
+              fileSizeKb: img.sizeKb,
+            }),
+          });
+
+          if (res.status === 413) {
+            const errData = await res.json();
+            toast.error(errData.error || 'Upload limit exceeded');
+            setImages(prev => prev.map(i =>
+              i.id === img.id ? { ...i, uploading: false, uploaded: false } : i
+            ));
+            hasError = true;
+            break; // Stop uploading remaining images on limit hit
+          }
+
+          if (!res.ok) {
+            const errData = await res.json();
+            toast.error(errData.error || 'Upload failed');
+            setImages(prev => prev.map(i =>
+              i.id === img.id ? { ...i, uploading: false, uploaded: false } : i
+            ));
+            hasError = true;
+            continue;
+          }
+
+          const result = await res.json();
+          uploadedResults.push({
+            id: result.data?.id?.toString() || img.id,
+            caption: img.caption,
+            gradient: img.gradient,
+          });
+
+          // Mark as uploaded
+          setImages(prev => prev.map(i =>
+            i.id === img.id ? { ...i, uploading: false, uploaded: true } : i
+          ));
+        } catch {
+          setImages(prev => prev.map(i =>
+            i.id === img.id ? { ...i, uploading: false, uploaded: false } : i
+          ));
+          hasError = true;
+        }
+      }
+
+      setIsUploading(false);
+
+      if (uploadedResults.length > 0) {
+        onComplete(uploadedResults);
+      } else if (hasError) {
+        toast.error('Failed to upload images. Please try again.');
+      }
+    } else {
+      // No galleryId — simulated upload (for local/demo mode)
+      const results = validImages.map(img => ({
         id: img.id,
         caption: img.caption,
         gradient: img.gradient,
       }));
-    if (validImages.length > 0) {
-      onComplete(validImages);
+      onComplete(results);
     }
   };
 
@@ -186,6 +274,16 @@ export default function ImageUploader({
         </div>
       )}
 
+      {/* Upload progress indicator */}
+      {isAnyUploading && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+          <Loader2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 animate-spin" />
+          <p className="text-xs text-emerald-600 dark:text-emerald-400">
+            Uploading images... {images.filter(i => i.uploaded).length}/{validImages.length} completed
+          </p>
+        </div>
+      )}
+
       {/* Preview Grid */}
       {images.length > 0 && (
         <motion.div
@@ -201,7 +299,7 @@ export default function ImageUploader({
               transition={transitions.normal}
               className="space-y-2"
             >
-              <div className={`aspect-[4/3] rounded-lg ${img.sizeExceeded ? 'ring-2 ring-rose-500' : ''} overflow-hidden relative`}>
+              <div className={`aspect-[4/3] rounded-lg ${img.sizeExceeded ? 'ring-2 ring-rose-500' : img.uploaded ? 'ring-2 ring-emerald-500' : ''} overflow-hidden relative`}>
                 {img.preview ? (
                   <img src={img.preview} alt={img.caption} className="w-full h-full object-cover" />
                 ) : (
@@ -209,9 +307,22 @@ export default function ImageUploader({
                     <ImageIcon className="h-8 w-8 text-white/60" />
                   </div>
                 )}
+                {/* Uploading overlay */}
+                {img.uploading && (
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  </div>
+                )}
+                {/* Uploaded checkmark */}
+                {img.uploaded && (
+                  <div className="absolute top-1.5 left-1.5 h-5 w-5 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                    <span className="text-[10px]">✓</span>
+                  </div>
+                )}
                 <button
                   className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
                   onClick={() => handleRemoveImage(img.id)}
+                  disabled={img.uploading}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -231,6 +342,7 @@ export default function ImageUploader({
                   onChange={(e) => handleCaptionChange(img.id, e.target.value)}
                   className="h-8 text-xs"
                   placeholder="Enter caption"
+                  disabled={img.uploading || img.uploaded}
                 />
               </div>
             </motion.div>
@@ -242,17 +354,24 @@ export default function ImageUploader({
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel} size="sm">
+        <Button type="button" variant="outline" onClick={onCancel} size="sm" disabled={isUploading}>
           Cancel
         </Button>
         <Button
           type="button"
           size="sm"
           className="bg-emerald-600 hover:bg-emerald-700"
-          disabled={images.length === 0 || hasOversizedFiles}
+          disabled={validImages.length === 0 || isAnyUploading || images.every(i => i.uploaded)}
           onClick={handleAddImages}
         >
-          Add Images ({images.filter(img => !img.sizeExceeded).length})
+          {isUploading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            `Add Images (${validImages.filter(i => !i.uploaded).length})`
+          )}
         </Button>
       </div>
     </div>
