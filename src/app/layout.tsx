@@ -5,6 +5,7 @@ import { Noto_Naskh_Arabic } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import QueryProvider from "@/components/providers/query-provider";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -58,17 +59,19 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="min-h-screen flex flex-col bg-background text-foreground">
-            {children}
-          </div>
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              classNames: {
-                toast: "bg-card text-card-foreground border-border",
-              },
-            }}
-          />
+          <QueryProvider>
+            <div className="min-h-screen flex flex-col bg-background text-foreground">
+              {children}
+            </div>
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                classNames: {
+                  toast: "bg-card text-card-foreground border-border",
+                },
+              }}
+            />
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>
