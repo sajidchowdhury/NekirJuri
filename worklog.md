@@ -830,3 +830,28 @@ Stage Summary:
 - API route auto-generates simplified accounts when switching modes
 - All components i18n-aware with en/bn/ar translations
 - Mode-aware pages: Chart of Accounts, Journal Entries both render different UIs based on mode
+---
+Task ID: 1
+Agent: main
+Task: CR-4: Product Sale to Student with Monthly Fee Payment
+
+Work Log:
+- Pushed 9 previously unpushed commits to remote (origin/main)
+- Explored codebase: Found 49 Prisma models, existing SalesInvoice.studentId relation, identified all CR-4 gaps
+- Schema changes: Added addToFee (Boolean), feeInvoiceId (Int?) to SalesInvoice; salesInvoiceId (Int?) to FeeInvoiceItem; reverse relations on FeeInvoice and SalesInvoice
+- Ran db:push — schema synced successfully
+- Backend: Enhanced POST /api/sales with addToFee logic — finds/creates student's current month fee invoice, adds FeeInvoiceItem with 'product-purchase' category, recalculates invoice totals, auto-creates Product Purchase fee category
+- Backend: Enhanced GET /api/sales to include feeInvoice relation
+- Backend: Enhanced GET/POST /api/fee-invoices to include salesInvoice on invoice items
+- Frontend: SalesForm — Added Sell-to-Student toggle with student search/selector, Add-to-Monthly-Fee toggle, info banner when addToFee enabled
+- Frontend: SalesList — Student badge with GraduationCap icon, Fee Invoice payment badge, addToFee indicators
+- Frontend: Sales page — Updated submit handler to pass studentId/addToFee, success toast for fee-added scenario, fee invoice link in detail view
+- Frontend: FeeInvoiceDetail — Product Purchase items highlighted with ShoppingCart icon and "from Sale" badge
+- Lint: 0 errors, 14 pre-existing warnings
+- Git committed and pushed to remote
+
+Stage Summary:
+- CR-4 fully implemented across schema, backend, and frontend
+- All 8 files changed, 561 insertions, 91 deletions
+- Commit: e4f71e7 pushed to origin/main
+- Key feature: When selling to a student with "Add to Monthly Fee" enabled, sale amount is automatically added to student's current month fee invoice as a "Product Purchase" line item
