@@ -1,5 +1,6 @@
 // ============================================================
 // Sales API — GET (list sales invoices, filter by studentId/status), POST (create sale with items, reduce stock, create movements)
+// CR-4: Enhanced POST to handle addToFee — adds sale amount to student's fee invoice as a line item
 // ============================================================
 
 import { NextRequest } from 'next/server'
@@ -43,6 +44,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           student: { select: { id: true, name: true, registrationNo: true } },
+          feeInvoice: { select: { id: true, invoiceNo: true, status: true } },
           salesItems: {
             include: {
               product: { select: { id: true, name: true, code: true, unit: true } },
@@ -73,6 +75,51 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/** Find or create a "Product Purchase" FeeCategory for the tenant */
+async function getOrCreateProductPurchaseCategory(tenantId: number): Promise<number> {
+  // Try to find existing category with code 'product-purchase'
+  let category = await db.feeCategory.findFirst({
+    where: { tenantId, code: 'product-purchase' },
+  })
+
+  if (!category) {
+    // Create the system category
+    category = await db.feeCategory.create({
+      data: {
+        tenantId,
+        name: 'Product Purchase',
+        code: 'product-purchase',
+        description: 'Products sold to student — added from sales invoice',
+        amount: 0,
+        isRecurring: false,
+        isActive: true,
+      },
+    })
+  }
+
+  return category.id
+}
+
+/** Generate the next fee invoice number for a tenant in a given year */
+async function generateFeeInvoiceNo(tenantId: number, year: number, tx: unknown): Promise<string> {
+  const prisma = tx as Parameters<Parameters<typeof db.$transaction>[0]>['0']
+  const prefix = `INV-${year}-`
+  const last = await prisma.feeInvoice.findFirst({
+    where: {
+      tenantId,
+      invoiceNo: { startsWith: prefix },
+    },
+    orderBy: { invoiceNo: 'desc' },
+    select: { invoiceNo: true },
+  })
+  let seq = 1
+  if (last) {
+    const parts = last.invoiceNo.split('-')
+    seq = (Number(parts[parts.length - 1]) || 0) + 1
+  }
+  return `${prefix}${String(seq).padStart(5, '0')}`
+}
+
 export async function POST(request: NextRequest) {
   try {
     const tenantId = getTenantId(request)
@@ -91,6 +138,7 @@ export async function POST(request: NextRequest) {
       paymentStatus = 'paid',
       status = 'completed',
       remarks,
+      addToFee = false,
     } = body
 
     // Validate required fields
@@ -102,6 +150,11 @@ export async function POST(request: NextRequest) {
     }
     if (!items || !Array.isArray(items) || items.length === 0) {
       return error('At least one sale item is required')
+    }
+
+    // CR-4: addToFee requires a studentId
+    if (addToFee && !studentId) {
+      return error('addToFee can only be used when a studentId is provided')
     }
 
     // Validate each item
@@ -120,11 +173,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate student if provided
+    let studentRecord: { id: number; classId: number; academicSessionId: number } | null = null
     if (studentId) {
-      const student = await db.student.findFirst({
+      studentRecord = await db.student.findFirst({
         where: { id: Number(studentId), tenantId, deletedAt: null },
+        select: { id: true, classId: true, academicSessionId: true },
       })
-      if (!student) {
+      if (!studentRecord) {
         return error('Student not found', 404)
       }
     }
@@ -153,7 +208,14 @@ export async function POST(request: NextRequest) {
     }, 0)
     const netAmount = totalAmount - Number(discountAmount)
 
+    // CR-4: If addToFee, get or create the product-purchase fee category
+    let productPurchaseCategoryId: number | null = null
+    if (addToFee && studentId) {
+      productPurchaseCategoryId = await getOrCreateProductPurchaseCategory(tenantId)
+    }
+
     // Create sales invoice with items, reduce stock, create stock movements — all in a transaction
+    // CR-4: Also handles addToFee logic within the same transaction
     const salesInvoice = await db.$transaction(async (tx) => {
       // Create the sales invoice
       const invoice = await tx.salesInvoice.create({
@@ -166,8 +228,9 @@ export async function POST(request: NextRequest) {
           totalAmount,
           discountAmount: Number(discountAmount),
           netAmount,
-          paymentMethod,
-          paymentStatus,
+          paymentMethod: addToFee ? 'fee-invoice' : paymentMethod,
+          paymentStatus: addToFee ? 'unpaid' : paymentStatus,
+          addToFee: addToFee ? true : false,
           remarks: remarks || null,
           status,
           createdBy: userId,
@@ -230,7 +293,106 @@ export async function POST(request: NextRequest) {
         })
       )
 
-      return { ...invoice, salesItems }
+      // CR-4: If addToFee is true, find or create fee invoice and add product purchase item
+      let feeInvoiceId: number | null = null
+      if (addToFee && studentId && studentRecord && productPurchaseCategoryId) {
+        const now = new Date()
+        const currentMonth = now.getMonth() + 1
+        const currentYear = now.getFullYear()
+
+        // Find the student's current month fee invoice
+        let feeInvoice = await tx.feeInvoice.findFirst({
+          where: {
+            tenantId,
+            studentId: Number(studentId),
+            feeMonth: currentMonth,
+            feeYear: currentYear,
+            deletedAt: null,
+            status: { in: ['unpaid', 'partial'] },
+          },
+        })
+
+        if (feeInvoice) {
+          // Add product purchase item to existing invoice and update totals
+          await tx.feeInvoiceItem.create({
+            data: {
+              tenantId,
+              invoiceId: feeInvoice.id,
+              feeCategoryId: productPurchaseCategoryId,
+              salesInvoiceId: invoice.id,
+              amount: netAmount,
+              discountAmount: 0,
+              netAmount: netAmount,
+              description: `Product Sale #${invoiceNo} — ${products.map(p => p.name).join(', ')}`,
+            },
+          })
+
+          // Recalculate invoice totals
+          const allItems = await tx.feeInvoiceItem.findMany({
+            where: { invoiceId: feeInvoice.id },
+          })
+          const newTotalAmount = allItems.reduce((sum, i) => sum + Number(i.netAmount), 0)
+          const newBalance = newTotalAmount - Number(feeInvoice.paidAmount) - Number(feeInvoice.discountAmount) + Number(feeInvoice.fineAmount)
+
+          await tx.feeInvoice.update({
+            where: { id: feeInvoice.id },
+            data: {
+              totalAmount: newTotalAmount,
+              balance: newBalance,
+              status: newBalance <= 0 ? 'paid' : Number(feeInvoice.paidAmount) > 0 ? 'partial' : 'unpaid',
+            },
+          })
+
+          feeInvoiceId = feeInvoice.id
+        } else {
+          // Create a new fee invoice for this month with the product purchase item
+          const newInvoiceNo = await generateFeeInvoiceNo(tenantId, currentYear, tx)
+          const dueDate = new Date(currentYear, currentMonth, 10) // 10th of next month
+
+          feeInvoice = await tx.feeInvoice.create({
+            data: {
+              tenantId,
+              invoiceNo: newInvoiceNo,
+              studentId: Number(studentId),
+              academicSessionId: studentRecord.academicSessionId,
+              classId: studentRecord.classId,
+              issueDate: now,
+              dueDate,
+              totalAmount: netAmount,
+              paidAmount: 0,
+              discountAmount: 0,
+              fineAmount: 0,
+              balance: netAmount,
+              status: 'unpaid',
+              feeMonth: currentMonth,
+              feeYear: currentYear,
+              remarks: `Product purchase invoice — Sale #${invoiceNo}`,
+              createdBy: userId,
+              invoiceItems: {
+                create: {
+                  tenantId,
+                  feeCategoryId: productPurchaseCategoryId,
+                  salesInvoiceId: invoice.id,
+                  amount: netAmount,
+                  discountAmount: 0,
+                  netAmount: netAmount,
+                  description: `Product Sale #${invoiceNo} — ${products.map(p => p.name).join(', ')}`,
+                },
+              },
+            },
+          })
+
+          feeInvoiceId = feeInvoice.id
+        }
+
+        // Link the sales invoice to the fee invoice
+        await tx.salesInvoice.update({
+          where: { id: invoice.id },
+          data: { feeInvoiceId },
+        })
+      }
+
+      return { ...invoice, salesItems, feeInvoiceId }
     })
 
     // Fetch full result with includes
@@ -238,6 +400,7 @@ export async function POST(request: NextRequest) {
       where: { id: salesInvoice.id },
       include: {
         student: { select: { id: true, name: true, registrationNo: true } },
+        feeInvoice: { select: { id: true, invoiceNo: true, status: true } },
         salesItems: {
           include: {
             product: { select: { id: true, name: true, code: true, unit: true, currentStock: true } },
@@ -259,7 +422,11 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return created(result, 'Sale invoice created successfully with stock updated')
+    const message = addToFee
+      ? 'Sale created and added to student\'s monthly fee invoice'
+      : 'Sale invoice created successfully with stock updated'
+
+    return created(result, message)
   } catch (err) {
     console.error('[Sales][POST]', err)
     return error('Failed to create sales invoice', 500)

@@ -6,7 +6,7 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { Printer, User, Calendar, CreditCard, Receipt } from 'lucide-react';
+import { Printer, User, Calendar, CreditCard, Receipt, ShoppingCart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -114,16 +114,31 @@ export default function FeeInvoiceDetail({ invoice, onClose }: FeeInvoiceDetailP
                   </tr>
                 </thead>
                 <tbody>
-                  {invoice.lineItems.map((item, idx) => (
-                    <tr key={idx} className="border-b border-border last:border-b-0">
-                      <td className="px-4 py-2 font-medium">{item.categoryName}</td>
-                      <td className="px-4 py-2 text-right text-amber-600 dark:text-amber-400">{formatTaka(item.amount)}</td>
-                      <td className="px-4 py-2 text-right text-rose-500">
-                        {item.discount > 0 ? `- ${formatTaka(item.discount)}` : '—'}
-                      </td>
-                      <td className="px-4 py-2 text-right font-semibold">{formatTaka(item.netAmount)}</td>
-                    </tr>
-                  ))}
+                  {invoice.lineItems.map((item, idx) => {
+                    const isProductPurchase = item.categoryName?.toLowerCase().includes('product purchase');
+                    return (
+                      <tr key={idx} className={`border-b border-border last:border-b-0 ${isProductPurchase ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''}`}>
+                        <td className="px-4 py-2 font-medium">
+                          <div className="flex items-center gap-1.5">
+                            {isProductPurchase && (
+                              <ShoppingCart className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                            )}
+                            <span>{item.categoryName}</span>
+                            {isProductPurchase && (
+                              <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300 dark:border-amber-700 ml-1">
+                                from Sale
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2 text-right text-amber-600 dark:text-amber-400">{formatTaka(item.amount)}</td>
+                        <td className="px-4 py-2 text-right text-rose-500">
+                          {item.discount > 0 ? `- ${formatTaka(item.discount)}` : '—'}
+                        </td>
+                        <td className="px-4 py-2 text-right font-semibold">{formatTaka(item.netAmount)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

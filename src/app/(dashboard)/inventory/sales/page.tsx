@@ -32,10 +32,14 @@ import type { ApiSale } from '@/components/inventory/sales-list';
 interface SaleFormData {
   invoiceNo: string;
   saleDate: string;
-  customerName: string;
+  sellToStudent: boolean;
+  studentId?: string;
+  studentName?: string;
+  customerName?: string;
   customerPhone?: string;
   discount: number;
   paymentMethod: string;
+  addToFee: boolean;
   items: {
     productId: string;
     productName: string;
@@ -62,11 +66,10 @@ export default function SalesPage() {
     toast.info('Print feature coming soon');
   };
 
-  // Submit sale to API
+  // Submit sale to API (CR-4: handles studentId + addToFee)
   const handleSubmitSale = async (data: SaleFormData) => {
-    const payload = {
+    const payload: Record<string, unknown> = {
       invoiceNo: data.invoiceNo,
-      customerName: data.customerName,
       saleDate: data.saleDate,
       discountAmount: data.discount,
       paymentMethod: data.paymentMethod,
@@ -78,6 +81,18 @@ export default function SalesPage() {
         unitPrice: item.unitPrice,
       })),
     };
+
+    // CR-4: Student sale handling
+    if (data.sellToStudent && data.studentId) {
+      payload.studentId = Number(data.studentId);
+      payload.addToFee = data.addToFee;
+      if (data.addToFee) {
+        payload.paymentMethod = 'fee-invoice';
+        payload.paymentStatus = 'unpaid';
+      }
+    } else {
+      payload.customerName = data.customerName || 'Walk-in Customer';
+    }
 
     const res = await fetch('/api/sales', {
       method: 'POST',
@@ -92,9 +107,16 @@ export default function SalesPage() {
     }
 
     // Success
-    toast.success('Sale created successfully', {
-      description: `Invoice ${data.invoiceNo} — ${formatTaka(data.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0) - data.discount)}`,
-    });
+    const totalAmount = data.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0) - data.discount;
+    if (data.addToFee && data.sellToStudent) {
+      toast.success('Sale added to student fee invoice', {
+        description: `Invoice ${data.invoiceNo} — ${formatTaka(totalAmount)} added to ${data.studentName || 'student'}'s monthly fee`,
+      });
+    } else {
+      toast.success('Sale created successfully', {
+        description: `Invoice ${data.invoiceNo} — ${formatTaka(totalAmount)}`,
+      });
+    }
 
     setAddDialogOpen(false);
     setRefreshKey(prev => prev + 1); // Refresh the list
@@ -168,7 +190,12 @@ export default function SalesPage() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">Customer:</span>
-                  <p className="font-medium">{selectedSale.customerName || selectedSale.student?.name || '—'}</p>
+                  <p className="font-medium">
+                    {selectedSale.student?.name || selectedSale.customerName || '—'}
+                    {selectedSale.student && (
+                      <Badge variant="outline" className="ml-1.5 text-[10px] text-emerald-600 border-emerald-300">Student</Badge>
+                    )}
+                  </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Date:</span>
@@ -186,12 +213,29 @@ export default function SalesPage() {
                 <div>
                   <span className="text-muted-foreground">Payment:</span>
                   <div className="mt-0.5">
-                    <Badge variant="secondary" className={`${paymentMethodClasses[selectedSale.paymentMethod as PaymentMethod]?.bg || ''} ${paymentMethodClasses[selectedSale.paymentMethod as PaymentMethod]?.text || ''} gap-1`}>
-                      {selectedSale.paymentMethod}
-                    </Badge>
+                    {selectedSale.paymentMethod === 'fee-invoice' ? (
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 gap-1">
+                        Added to Fee Invoice
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className={`${paymentMethodClasses[selectedSale.paymentMethod as PaymentMethod]?.bg || ''} ${paymentMethodClasses[selectedSale.paymentMethod as PaymentMethod]?.text || ''} gap-1`}>
+                        {selectedSale.paymentMethod}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {/* CR-4: Fee Invoice Link */}
+              {(selectedSale as Record<string, unknown>).addToFee && (selectedSale as Record<string, unknown>).feeInvoice && (
+                <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Added to Fee Invoice: </span>
+                  <span className="font-medium font-mono">{((selectedSale as Record<string, unknown>).feeInvoice as Record<string, unknown>)?.invoiceNo as string}</span>
+                  <Badge variant="outline" className="ml-2 text-[10px]">
+                    {(((selectedSale as Record<string, unknown>).feeInvoice as Record<string, unknown>)?.status as string) || 'unknown'}
+                  </Badge>
+                </div>
+              )}
 
               <Separator />
 

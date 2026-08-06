@@ -632,6 +632,7 @@ model FeeInvoice {
   invoiceItems    FeeInvoiceItem[]
   feeCollections  FeeCollection[]
   feeDiscounts    FeeDiscount[]
+  salesInvoices   SalesInvoice[]
 
   @@unique([tenantId, invoiceNo])
   @@index([tenantId])
@@ -643,23 +644,26 @@ model FeeInvoice {
 }
 
 model FeeInvoiceItem {
-  id             Int      @id @default(autoincrement())
-  tenantId       Int      @map("tenant_id")
-  invoiceId      Int      @map("invoice_id")
-  feeCategoryId  Int      @map("fee_category_id")
-  amount         Decimal
-  discountAmount Decimal    @default(0) @map("discount_amount")
-  netAmount      Decimal    @map("net_amount")
-  description    String?
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  tenantId        Int      @map("tenant_id")
+  invoiceId       Int      @map("invoice_id")
+  feeCategoryId   Int      @map("fee_category_id")
+  salesInvoiceId  Int?     @map("sales_invoice_id")
+  amount          Decimal
+  discountAmount  Decimal    @default(0) @map("discount_amount")
+  netAmount       Decimal    @map("net_amount")
+  description     String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoice     FeeInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  feeCategory FeeCategory @relation(fields: [feeCategoryId], references: [id])
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice      FeeInvoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  feeCategory  FeeCategory  @relation(fields: [feeCategoryId], references: [id])
+  salesInvoice SalesInvoice? @relation(fields: [salesInvoiceId], references: [id])
 
   @@index([tenantId])
   @@index([invoiceId])
+  @@index([salesInvoiceId])
   @@map("fee_invoice_items")
 }
 
@@ -1142,20 +1146,25 @@ model SalesInvoice {
   netAmount      Decimal    @map("net_amount")
   paymentMethod  String   @map("payment_method")
   paymentStatus  String   @map("payment_status")
+  addToFee       Boolean  @default(false) @map("add_to_fee")
+  feeInvoiceId   Int?     @map("fee_invoice_id")
   remarks        String?
   status         String
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
   createdBy      Int?     @map("created_by")
 
-  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  student     Student?    @relation(fields: [studentId], references: [id])
-  salesItems  SalesItem[]
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student         Student?    @relation(fields: [studentId], references: [id])
+  feeInvoice      FeeInvoice? @relation(fields: [feeInvoiceId], references: [id])
+  salesItems      SalesItem[]
+  feeInvoiceItems FeeInvoiceItem[]
 
   @@unique([tenantId, invoiceNo])
   @@index([tenantId])
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
+  @@index([tenantId, studentId])
   @@map("sales_invoices")
 }
 

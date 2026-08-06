@@ -2,18 +2,20 @@
 
 // ============================================================
 // SalesForm — Create a sale with line items, react-hook-form + zod
-// Fetches real products from API, submits real sale to API
+// CR-4: Sell-to-Student toggle, student search/selector, Add-to-Monthly-Fee option
 // ============================================================
 
 import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Loader2, AlertTriangle, GraduationCap, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -35,6 +37,13 @@ interface ApiProduct {
   category?: { id: number; name: string; code: string };
 }
 
+interface ApiStudent {
+  id: number;
+  name: string;
+  registrationNo?: string | null;
+  class?: { id: number; name: string } | null;
+}
+
 // ==================== Schema ====================
 
 const saleLineItemSchema = z.object({
@@ -49,11 +58,24 @@ const saleLineItemSchema = z.object({
 const saleSchema = z.object({
   invoiceNo: z.string().min(1, 'Invoice number is required'),
   saleDate: z.string().min(1, 'Sale date is required'),
-  customerName: z.string().min(1, 'Customer name is required'),
+  sellToStudent: z.boolean().default(false),
+  studentId: z.string().optional(),
+  studentName: z.string().optional(),
+  customerName: z.string().optional(),
   customerPhone: z.string().optional(),
   discount: z.coerce.number().min(0, 'Must be >= 0'),
   paymentMethod: z.string().min(1, 'Payment method is required'),
+  addToFee: z.boolean().default(false),
   items: z.array(saleLineItemSchema).min(1, 'At least one item is required'),
+}).refine((data) => {
+  // If sellToStudent is true, studentId is required
+  if (data.sellToStudent && !data.studentId) return false;
+  // If sellToStudent is false, customerName is required
+  if (!data.sellToStudent && !data.customerName) return false;
+  return true;
+}, {
+  message: 'Either a student or customer name is required',
+  path: ['sellToStudent'],
 });
 
 type SaleFormData = z.infer<typeof saleSchema>;
@@ -86,6 +108,12 @@ export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
   const [productsError, setProductsError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
+  // Student search state
+  const [students, setStudents] = React.useState<ApiStudent[]>([]);
+  const [studentSearch, setStudentSearch] = React.useState('');
+  const [studentsLoading, setStudentsLoading] = React.useState(false);
+  const [studentSearchOpen, setStudentSearchOpen] = React.useState(false);
+
   // Fetch products from API on mount
   React.useEffect(() => {
     async function fetchProducts() {
@@ -94,7 +122,6 @@ export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
         const res = await fetch('/api/products?isActive=true&limit=200');
         if (!res.ok) throw new Error('Failed to load products');
         const json = await res.json();
-        // Handle both paginated and direct array responses
         const items = Array.isArray(json) ? json : (json.data || []);
         setProducts(items);
       } catch (err) {
@@ -107,15 +134,45 @@ export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
     fetchProducts();
   }, []);
 
+  // Search students with debounce
+  React.useEffect(() => {
+    if (!studentSearch || studentSearch.length < 2) {
+      setStudents([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setStudentsLoading(true);
+        const res = await fetch(`/api/students?search=${encodeURIComponent(studentSearch)}&limit=20`);
+        if (!res.ok) throw new Error('Failed');
+        const json = await res.json();
+        const items = Array.isArray(json) ? json : (json.data || []);
+        setStudents(items);
+        setStudentSearchOpen(true);
+      } catch (err) {
+        console.error('[SalesForm] Student search failed:', err);
+      } finally {
+        setStudentsLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [studentSearch]);
+
   const form = useForm<SaleFormData>({
     resolver: zodResolver(saleSchema),
     defaultValues: {
       invoiceNo: generateInvoiceNo(),
       saleDate: getTodayDate(),
+      sellToStudent: false,
+      studentId: '',
+      studentName: '',
       customerName: 'Walk-in Customer',
       customerPhone: '',
       discount: 0,
       paymentMethod: 'Cash',
+      addToFee: false,
       items: [{ productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0, maxStock: 0 }],
     },
   });
@@ -124,6 +181,8 @@ export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
 
   const watchedItems = form.watch('items');
   const watchedDiscount = form.watch('discount');
+  const sellToStudent = form.watch('sellToStudent');
+  const addToFee = form.watch('addToFee');
 
   const subtotal = React.useMemo(
     () => watchedItems.reduce((sum, i) => sum + (i.quantity * i.unitPrice), 0),
@@ -149,10 +208,8 @@ export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
       form.setValue(`items.${index}.productName`, product.name);
       form.setValue(`items.${index}.unitPrice`, Number(product.salePrice));
       form.setValue(`items.${index}.maxStock`, Number(product.currentStock));
-      // Recalculate total
       const qty = form.getValues(`items.${index}.quantity`) || 1;
       form.setValue(`items.${index}.total`, qty * Number(product.salePrice));
-      // Reset quantity to 1 if it exceeds stock
       if (qty > Number(product.currentStock) && Number(product.currentStock) > 0) {
         form.setValue(`items.${index}.quantity`, 1);
       }
@@ -167,6 +224,25 @@ export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
   const handlePriceChange = (index: number, price: number) => {
     const qty = form.getValues(`items.${index}.quantity`);
     form.setValue(`items.${index}.total`, qty * price);
+  };
+
+  const handleStudentSelect = (student: ApiStudent) => {
+    form.setValue('studentId', String(student.id));
+    form.setValue('studentName', student.name);
+    setStudentSearch(student.name);
+    setStudentSearchOpen(false);
+  };
+
+  const handleSellToStudentToggle = (checked: boolean) => {
+    form.setValue('sellToStudent', checked);
+    if (!checked) {
+      form.setValue('studentId', '');
+      form.setValue('studentName', '');
+      form.setValue('addToFee', false);
+      setStudentSearch('');
+    } else {
+      form.setValue('customerName', '');
+    }
   };
 
   const handleSubmitForm = async (data: SaleFormData) => {
@@ -202,20 +278,127 @@ export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
         </div>
       </div>
 
-      {/* Customer Info */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label>Customer Name</Label>
-          <Input {...form.register('customerName')} placeholder="Walk-in Customer" disabled={isDisabled} />
-          {form.formState.errors.customerName && (
-            <p className="text-xs text-rose-500">{form.formState.errors.customerName.message}</p>
-          )}
+      {/* CR-4: Sell to Student Toggle */}
+      <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <GraduationCap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <Label className="text-sm font-medium cursor-pointer" onClick={() => handleSellToStudentToggle(!sellToStudent)}>
+              Sell to Student
+            </Label>
+          </div>
+          <Switch
+            checked={sellToStudent}
+            onCheckedChange={handleSellToStudentToggle}
+            disabled={isDisabled}
+          />
         </div>
-        <div className="space-y-1.5">
-          <Label>Phone (optional)</Label>
-          <Input {...form.register('customerPhone')} placeholder="01XXXXXXXXX" disabled={isDisabled} />
-        </div>
+
+        {sellToStudent && (
+          <div className="space-y-2">
+            {/* Student Search */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Search Student (name or registration #)</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={studentSearch}
+                  onChange={(e) => {
+                    setStudentSearch(e.target.value);
+                    if (!e.target.value) {
+                      form.setValue('studentId', '');
+                      form.setValue('studentName', '');
+                    }
+                  }}
+                  placeholder="Type student name or reg #..."
+                  className="pl-8 h-9 text-sm"
+                  disabled={isDisabled}
+                />
+                {studentsLoading && (
+                  <Loader2 className="absolute right-2.5 top-2.5 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                )}
+              </div>
+              {/* Student dropdown results */}
+              {studentSearchOpen && students.length > 0 && !form.watch('studentId') && (
+                <div className="rounded-lg border border-border bg-background shadow-md max-h-40 overflow-y-auto z-50">
+                  {students.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 transition-colors text-left"
+                      onClick={() => handleStudentSelect(s)}
+                    >
+                      <GraduationCap className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span className="font-medium">{s.name}</span>
+                      {s.registrationNo && (
+                        <span className="text-xs text-muted-foreground font-mono">({s.registrationNo})</span>
+                      )}
+                      {s.class && (
+                        <Badge variant="outline" className="text-[10px] ml-auto">{s.class.name}</Badge>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Selected student display */}
+            {form.watch('studentId') && form.watch('studentName') && (
+              <div className="flex items-center gap-2 rounded-md bg-emerald-100 dark:bg-emerald-900/30 px-3 py-2">
+                <GraduationCap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <span className="text-sm font-medium">{form.watch('studentName')}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 ml-auto text-rose-500"
+                  onClick={() => {
+                    form.setValue('studentId', '');
+                    form.setValue('studentName', '');
+                    setStudentSearch('');
+                  }}
+                >
+                  ✕
+                </Button>
+              </div>
+            )}
+
+            {/* CR-4: Add to Monthly Fee Toggle */}
+            {form.watch('studentId') && (
+              <div className="flex items-center justify-between rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2">
+                <div>
+                  <Label className="text-xs font-medium">Add to Monthly Fee</Label>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Sale amount will be added to student&apos;s fee invoice as &quot;Product Purchase&quot;
+                  </p>
+                </div>
+                <Switch
+                  checked={addToFee}
+                  onCheckedChange={(v) => form.setValue('addToFee', v)}
+                  disabled={isDisabled}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Customer Info (only shown when NOT selling to student) */}
+      {!sellToStudent && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label>Customer Name</Label>
+            <Input {...form.register('customerName')} placeholder="Walk-in Customer" disabled={isDisabled} />
+            {form.formState.errors.customerName && (
+              <p className="text-xs text-rose-500">{form.formState.errors.customerName.message}</p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label>Phone (optional)</Label>
+            <Input {...form.register('customerPhone')} placeholder="01XXXXXXXXX" disabled={isDisabled} />
+          </div>
+        </div>
+      )}
 
       <Separator />
 
@@ -376,27 +559,36 @@ export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
           <span>Grand Total</span>
           <span className="text-amber-600 dark:text-amber-400">{formatTaka(grandTotal)}</span>
         </div>
+        {/* CR-4: Show info when addToFee is enabled */}
+        {addToFee && (
+          <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            💡 {formatTaka(grandTotal)} will be added to the student&apos;s monthly fee invoice as &quot;Product Purchase&quot;.
+            Payment will be collected through the fee collection process.
+          </div>
+        )}
       </div>
 
-      {/* Payment Method */}
-      <div className="space-y-1.5">
-        <Label>Payment Method</Label>
-        <Select
-          value={form.watch('paymentMethod')}
-          onValueChange={(v) => form.setValue('paymentMethod', v)}
-          disabled={isDisabled}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Cash">Cash</SelectItem>
-            <SelectItem value="bKash">bKash</SelectItem>
-            <SelectItem value="Bank">Bank</SelectItem>
-            <SelectItem value="Credit">Credit</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Payment Method — hidden when addToFee is true */}
+      {!addToFee && (
+        <div className="space-y-1.5">
+          <Label>Payment Method</Label>
+          <Select
+            value={form.watch('paymentMethod')}
+            onValueChange={(v) => form.setValue('paymentMethod', v)}
+            disabled={isDisabled}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Cash">Cash</SelectItem>
+              <SelectItem value="bKash">bKash</SelectItem>
+              <SelectItem value="Bank">Bank</SelectItem>
+              <SelectItem value="Credit">Credit</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-2 pt-2">
@@ -407,7 +599,7 @@ export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
           type="button"
           className="bg-emerald-600 hover:bg-emerald-700"
           size="sm"
-          disabled={isDisabled || Object.keys(stockWarnings).length > 0 || watchedDiscount > subtotal}
+          disabled={isDisabled || Object.keys(stockWarnings).length > 0 || watchedDiscount > subtotal || (sellToStudent && !form.watch('studentId'))}
           onClick={() => form.handleSubmit(handleSubmitForm)()}
         >
           {submitting ? (
@@ -415,6 +607,8 @@ export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
               <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
               Processing...
             </>
+          ) : addToFee ? (
+            'Add to Fee Invoice'
           ) : (
             'Complete Sale'
           )}

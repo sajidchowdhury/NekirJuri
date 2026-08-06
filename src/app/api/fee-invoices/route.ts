@@ -81,6 +81,9 @@ export async function GET(request: NextRequest) {
           invoiceItems: {
             include: {
               feeCategory: { select: { id: true, name: true, code: true } },
+              salesInvoice: {
+                select: { id: true, invoiceNo: true, netAmount: true, saleDate: true },
+              },
             },
           },
         },
@@ -183,6 +186,9 @@ export async function POST(request: NextRequest) {
           invoiceItems: {
             include: {
               feeCategory: { select: { id: true, name: true, code: true } },
+              salesInvoice: {
+                select: { id: true, invoiceNo: true, netAmount: true, saleDate: true },
+              },
             },
           },
         },

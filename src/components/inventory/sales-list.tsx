@@ -2,12 +2,13 @@
 
 // ============================================================
 // SalesList — DataTable of sales fetched from API
+// CR-4: Shows student badge, addToFee indicator, fee invoice link
 // ============================================================
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { type ColumnDef } from '@tanstack/react-table';
-import { Eye, Printer, Loader2 } from 'lucide-react';
+import { Eye, Printer, Loader2, GraduationCap, Receipt } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/organisms/data-table';
@@ -32,7 +33,9 @@ export interface ApiSale {
   paymentMethod: string;
   paymentStatus: string;
   status: string;
+  addToFee?: boolean;
   student?: { id: number; name: string; registrationNo?: string | null } | null;
+  feeInvoice?: { id: number; invoiceNo: string; status: string } | null;
   salesItems: {
     id: number;
     productId: number;
@@ -101,9 +104,21 @@ export default function SalesList({ onView, onPrint, refreshKey }: SalesListProp
     {
       accessorKey: 'customerName',
       header: 'Customer',
-      cell: ({ row }) => (
-        <span className="text-sm">{row.original.customerName || row.original.student?.name || '—'}</span>
-      ),
+      cell: ({ row }) => {
+        const sale = row.original;
+        const isStudent = !!sale.student;
+        return (
+          <div className="flex items-center gap-1.5">
+            {isStudent && <GraduationCap className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />}
+            <span className="text-sm">{sale.student?.name || sale.customerName || '—'}</span>
+            {isStudent && (
+              <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-300 dark:border-emerald-700">
+                Student
+              </Badge>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: 'itemsCount',
@@ -125,7 +140,17 @@ export default function SalesList({ onView, onPrint, refreshKey }: SalesListProp
       accessorKey: 'paymentMethod',
       header: 'Payment',
       cell: ({ row }) => {
-        const method = row.original.paymentMethod as PaymentMethod;
+        const sale = row.original;
+        // CR-4: Show "Fee Invoice" badge for addToFee sales
+        if (sale.paymentMethod === 'fee-invoice' || sale.addToFee) {
+          return (
+            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 gap-1">
+              <Receipt className="h-3 w-3" />
+              Fee Invoice
+            </Badge>
+          );
+        }
+        const method = sale.paymentMethod as PaymentMethod;
         const mc = paymentMethodClasses[method];
         if (!mc) return <span className="text-sm">{method}</span>;
         return (
@@ -169,7 +194,7 @@ export default function SalesList({ onView, onPrint, refreshKey }: SalesListProp
 
   const renderCard = React.useCallback((sale: ApiSale) => {
     const sc = saleStatusClasses[sale.status as SaleStatus];
-    const mc = paymentMethodClasses[sale.paymentMethod as PaymentMethod];
+    const isStudent = !!sale.student;
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
         <div className="flex items-start justify-between">
@@ -181,10 +206,20 @@ export default function SalesList({ onView, onPrint, refreshKey }: SalesListProp
             </Badge>
           )}
         </div>
-        <p className="text-sm">{sale.customerName || sale.student?.name || '—'}</p>
+        <div className="flex items-center gap-1.5">
+          {isStudent && <GraduationCap className="h-3 w-3 text-emerald-600" />}
+          <p className="text-sm">{sale.student?.name || sale.customerName || '—'}</p>
+          {isStudent && (
+            <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-300">S</Badge>
+          )}
+        </div>
         <div className="flex items-center justify-between">
-          {mc && (
-            <Badge variant="secondary" className={`${mc.bg} ${mc.text} text-[10px]`}>
+          {sale.addToFee ? (
+            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px]">
+              Fee Invoice
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className={`${paymentMethodClasses[sale.paymentMethod as PaymentMethod]?.bg || ''} ${paymentMethodClasses[sale.paymentMethod as PaymentMethod]?.text || ''} text-[10px]`}>
               {sale.paymentMethod}
             </Badge>
           )}
