@@ -275,3 +275,36 @@ Stage Summary:
 - Budget vs Actual bars with over-budget indicators (rose color)
 - Responsive: mobile card view for tables, stacked layout on small screens
 - Phase 5B complete: Donations + Expenses fully functional
+
+---
+Task ID: 6
+Agent: Full-Stack Developer
+Task: Phase 6 — HR & Payroll
+
+Work Log:
+- Created comprehensive payroll sample data at src/lib/payroll/sample-data.ts with 12 employees (7 teachers + 5 employees), 12 salary structures, 22 salary payments (18 paid, 4 pending), 6-month payroll trend, 5 department breakdowns, formatTaka helper, getPayrollSummary helper, getMonthName helper
+- Created payroll-dashboard.tsx — 4 StatCards (Total Payroll, Paid vs Pending ratio, Average Salary, Departments), Recharts LineChart for 6-month payroll trend (emerald total line, rose deductions line), Department breakdown cards (Teaching, Admin, Library, Hostel, Maintenance) with colored left borders, employee counts, and total net amounts
+- Created salary-structure-list.tsx — DataTable with columns: Employee name+avatar, Type badge (Teacher=emerald, Employee=amber), Basic Salary, Total Allowances, Total Deductions (rose), Net Salary (gold/bold), Actions (View/Edit); Mobile card view with name, type badge, net salary prominent; Filter tabs: All/Teachers/Employees
+- Created salary-structure-form.tsx — react-hook-form + zod validation, Employee selector with type badge, Basic Salary input with auto-calc defaults (40% house rent, 10% PF), Expandable Allowances section (House Rent, Medical, Transport, Special), Expandable Deductions section (Provident Fund, Tax, Other), Auto-calculated read-only summary (Gross, Total Deductions, Net in gold), Real-time recalculation on any field change
+- Created payroll-processor.tsx — Month/Year selector, 4 summary stat cards (Total Employees, Total Gross, Total Deductions, Total Net), Employee table with checkbox select, Name, Type, Basic, Gross, Deductions, Absent Days input, Net, Status (paid/pending badges), Select All, Process Payroll button (emerald), Generate Payslips button, View Payslip for single selection, Mobile card view with same functionality
+- Created payslip-view.tsx — Print-optimized payslip with BismillahHeader, Institution info (Al-Huda Islamic Academy), Salary Slip title with Month/Year, Employee info section (Name, ID, Department, Designation, Type), Earnings table with right-aligned ৳ amounts, Total Earnings (emerald), Deductions table, Total Deductions (rose), Net Pay (large gold), Footer with signature/date/stamp lines, Emerald top border (3px), Gold accent lines, Print button (window.print())
+- Created salary-payment-list.tsx — DataTable with columns: Employee+avatar, Month/Year, Gross Salary, Deductions (rose), Net Salary (gold/bold), Payment Date, Status (paid/pending badges), Actions (View Payslip, Print); Mobile card view; Filter by month and status Select dropdowns
+- Built /finance/payroll page — 4-tab layout (Dashboard, Salary Structures, Process Payroll, Payment History) with shadcn Tabs, PageHeader with Bismillah, ExportButton on Structures/History tabs, "Add Structure" emerald button on Structures tab, Add/Edit Structure Dialog with SalaryStructureForm, Payslip View Dialog with PayslipView, slideUp entrance animation
+- All amounts in ৳ (Bengali Taka) using formatTaka helper
+- All components use 'use client', Framer Motion animations, emerald primary buttons, gold accent for amounts
+- Reused existing components: DataTable, StatCard, PageHeader, BismillahHeader, ExportButton, Badge, Avatar, Dialog, Select, Tabs, Card, Checkbox, Input, Table
+- Fixed lint errors: replaced require() with top-level import, fixed String wrapper type to primitive string
+- Lint: 0 errors (4 pre-existing warnings — TanStack Table + React Hook Form incompatible-library)
+- Page verified: HTTP 200
+
+Stage Summary:
+- 1 sample data file in src/lib/payroll/ (sample-data.ts) with 12 employees, 12 salary structures, 22+ payments
+- 6 payroll components in src/components/payroll/ (payroll-dashboard, salary-structure-list, salary-structure-form, payroll-processor, payslip-view, salary-payment-list)
+- 1 page fully built: /finance/payroll (4 tabs)
+- All amounts in ৳ format, Islamic styling with Bismillah on payslip
+- Emerald/gold/rose/amber color coding for paid/pending/teacher/employee statuses
+- Recharts LineChart for payroll trend, department breakdown cards
+- Salary form with auto-calculation (40% house rent, 10% PF, real-time gross/net)
+- Payslip with print optimization, Bismillah, institutional branding
+- Responsive: mobile card view for tables, stacked layout on small screens
+- Phase 6 complete: HR & Payroll fully functional

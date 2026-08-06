@@ -1,0 +1,615 @@
+     1→// ============================================================
+     2→// Finance Sample Data — Realistic Bangladeshi Islamic school context
+     3→// ============================================================
+     4→
+     5→/** Format amount in Bengali Taka */
+     6→export function formatTaka(amount: number): string {
+     7→  return `৳${amount.toLocaleString('en-IN')}`;
+     8→}
+     9→
+    10→/** Fee frequency type */
+    11→export type FeeFrequency = 'monthly' | 'quarterly' | 'annual' | 'one-time';
+    12→
+    13→/** Fee category */
+    14→export interface FeeCategory {
+    15→  id: string;
+    16→  nameBn: string;
+    17→  nameEn: string;
+    18→  amount: number;
+    19→  frequency: FeeFrequency;
+    20→  studentCount: number;
+    21→  icon: string;
+    22→  isRecurring: boolean;
+    23→}
+    24→
+    25→/** Fee structure cell (class × category) */
+    26→export interface FeeStructureCell {
+    27→  classId: string;
+    28→  className: string;
+    29→  categoryId: string;
+    30→  amount: number;
+    31→  isSet: boolean; // green if set, amber if default, gray if N/A
+    32→}
+    33→
+    34→/** Invoice status */
+    35→export type InvoiceStatus = 'paid' | 'partial' | 'overdue';
+    36→
+    37→/** Fee invoice */
+    38→export interface FeeInvoice {
+    39→  id: string;
+    40→  invoiceNo: string;
+    41→  studentId: string;
+    42→  studentName: string;
+    43→  studentNameBn: string;
+    44→  className: string;
+    45→  academicSession: string;
+    46→  totalAmount: number;
+    47→  paidAmount: number;
+    48→  discountAmount: number;
+    49→  balanceAmount: number;
+    50→  status: InvoiceStatus;
+    51→  dueDate: string;
+    52→  generatedDate: string;
+    53→  lineItems: InvoiceLineItem[];
+    54→  payments: PaymentRecord[];
+    55→}
+    56→
+    57→/** Invoice line item */
+    58→export interface InvoiceLineItem {
+    59→  categoryId: string;
+    60→  categoryName: string;
+    61→  amount: number;
+    62→  discount: number;
+    63→  netAmount: number;
+    64→}
+    65→
+    66→/** Payment method */
+    67→export type PaymentMethod = 'cash' | 'bkash' | 'bank' | 'cheque';
+    68→
+    69→/** Payment record */
+    70→export interface PaymentRecord {
+    71→  id: string;
+    72→  invoiceId: string;
+    73→  amount: number;
+    74→  method: PaymentMethod;
+    75→  date: string;
+    76→  note: string;
+    77→  receivedBy: string;
+    78→}
+    79→
+    80→/** Recent collection record */
+    81→export interface CollectionRecord {
+    82→  id: string;
+    83→  receiptNo: string;
+    84→  studentName: string;
+    85→  studentNameBn: string;
+    86→  className: string;
+    87→  amount: number;
+    88→  method: PaymentMethod;
+    89→  date: string;
+    90→  invoiceNo: string;
+    91→}
+    92→
+    93→/** Academic session */
+    94→export interface AcademicSession {
+    95→  id: string;
+    96→  name: string;
+    97→  isCurrent: boolean;
+    98→}
+    99→
+   100→/** Class/Group for fee structure */
+   101→export interface ClassGroup {
+   102→  id: string;
+   103→  name: string;
+   104→  nameBn: string;
+   105→  sections: string[];
+   106→}
+   107→
+   108→// ---- Sample Data ----
+   109→
+   110→export const sampleSessions: AcademicSession[] = [
+   111→  { id: 's1', name: '2025 Academic Session', isCurrent: true },
+   112→  { id: 's2', name: '2024 Academic Session', isCurrent: false },
+   113→  { id: 's3', name: '2023 Academic Session', isCurrent: false },
+   114→];
+   115→
+   116→export const sampleClasses: ClassGroup[] = [
+   117→  { id: 'hifz', name: 'Hifz', nameBn: 'হিফয', sections: ['A'] },
+   118→  { id: 'c1', name: 'Class 1', nameBn: '১ম শ্রেণি', sections: ['A', 'B'] },
+   119→  { id: 'c2', name: 'Class 2', nameBn: '২য় শ্রেণি', sections: ['A', 'B'] },
+   120→  { id: 'c3', name: 'Class 3', nameBn: '৩য় শ্রেণি', sections: ['A'] },
+   121→  { id: 'c4', name: 'Class 4', nameBn: '৪র্থ শ্রেণি', sections: ['A'] },
+   122→  { id: 'c5', name: 'Class 5', nameBn: '৫ম শ্রেণি', sections: ['A', 'B'] },
+   123→  { id: 'c6', name: 'Class 6', nameBn: '৬ষ্ঠ শ্রেণি', sections: ['A'] },
+   124→  { id: 'c7', name: 'Class 7', nameBn: '৭ম শ্রেণি', sections: ['A'] },
+   125→  { id: 'c8', name: 'Class 8', nameBn: '৮ম শ্রেণি', sections: ['A'] },
+   126→  { id: 'c9', name: 'Class 9', nameBn: '৯ম শ্রেণি', sections: ['A', 'B'] },
+   127→  { id: 'c10', name: 'Class 10', nameBn: '১০ম শ্রেণি', sections: ['A'] },
+   128→];
+   129→
+   130→export const sampleFeeCategories: FeeCategory[] = [
+   131→  { id: 'fc1', nameBn: 'ভর্তি ফি', nameEn: 'Admission Fee', amount: 5000, frequency: 'one-time', studentCount: 120, icon: 'GraduationCap', isRecurring: false },
+   132→  { id: 'fc2', nameBn: 'টিউশন ফি', nameEn: 'Tuition Fee', amount: 1500, frequency: 'monthly', studentCount: 450, icon: 'BookOpen', isRecurring: true },
+   133→  { id: 'fc3', nameBn: 'পরীক্ষা ফি', nameEn: 'Exam Fee', amount: 500, frequency: 'quarterly', studentCount: 380, icon: 'FileText', isRecurring: true },
+   134→  { id: 'fc4', nameBn: 'যাতায়াত ফি', nameEn: 'Transport Fee', amount: 800, frequency: 'monthly', studentCount: 180, icon: 'Bus', isRecurring: true },
+   135→  { id: 'fc5', nameBn: 'হোস্টেল ফি', nameEn: 'Hostel Fee', amount: 2000, frequency: 'monthly', studentCount: 95, icon: 'Home', isRecurring: true },
+   136→  { id: 'fc6', nameBn: 'লাইব্রেরি ফি', nameEn: 'Library Fee', amount: 200, frequency: 'annual', studentCount: 300, icon: 'Library', isRecurring: true },
+   137→  { id: 'fc7', nameBn: 'কম্পিউটার ফি', nameEn: 'Computer Fee', amount: 300, frequency: 'monthly', studentCount: 200, icon: 'Monitor', isRecurring: true },
+   138→  { id: 'fc8', nameBn: 'স্পোর্টস ফি', nameEn: 'Sports Fee', amount: 150, frequency: 'annual', studentCount: 350, icon: 'Trophy', isRecurring: true },
+   139→];
+   140→
+   141→// Fee structure matrix: class × category = amount
+   142→export const sampleFeeStructure: FeeStructureCell[] = [
+   143→  // Hifz
+   144→  { classId: 'hifz', className: 'Hifz', categoryId: 'fc1', amount: 3000, isSet: true },
+   145→  { classId: 'hifz', className: 'Hifz', categoryId: 'fc2', amount: 1200, isSet: true },
+   146→  { classId: 'hifz', className: 'Hifz', categoryId: 'fc3', amount: 400, isSet: true },
+   147→  { classId: 'hifz', className: 'Hifz', categoryId: 'fc4', amount: 600, isSet: true },
+   148→  { classId: 'hifz', className: 'Hifz', categoryId: 'fc5', amount: 1800, isSet: true },
+   149→  { classId: 'hifz', className: 'Hifz', categoryId: 'fc6', amount: 150, isSet: true },
+   150→  { classId: 'hifz', className: 'Hifz', categoryId: 'fc7', amount: 0, isSet: false },
+   151→  { classId: 'hifz', className: 'Hifz', categoryId: 'fc8', amount: 100, isSet: true },
+   152→
+   153→  // Class 1
+   154→  { classId: 'c1', className: 'Class 1', categoryId: 'fc1', amount: 4000, isSet: true },
+   155→  { classId: 'c1', className: 'Class 1', categoryId: 'fc2', amount: 1000, isSet: true },
+   156→  { classId: 'c1', className: 'Class 1', categoryId: 'fc3', amount: 300, isSet: true },
+   157→  { classId: 'c1', className: 'Class 1', categoryId: 'fc4', amount: 600, isSet: true },
+   158→  { classId: 'c1', className: 'Class 1', categoryId: 'fc5', amount: 0, isSet: false },
+   159→  { classId: 'c1', className: 'Class 1', categoryId: 'fc6', amount: 150, isSet: true },
+   160→  { classId: 'c1', className: 'Class 1', categoryId: 'fc7', amount: 0, isSet: false },
+   161→  { classId: 'c1', className: 'Class 1', categoryId: 'fc8', amount: 100, isSet: true },
+   162→
+   163→  // Class 2
+   164→  { classId: 'c2', className: 'Class 2', categoryId: 'fc1', amount: 4000, isSet: true },
+   165→  { classId: 'c2', className: 'Class 2', categoryId: 'fc2', amount: 1100, isSet: true },
+   166→  { classId: 'c2', className: 'Class 2', categoryId: 'fc3', amount: 350, isSet: true },
+   167→  { classId: 'c2', className: 'Class 2', categoryId: 'fc4', amount: 600, isSet: true },
+   168→  { classId: 'c2', className: 'Class 2', categoryId: 'fc5', amount: 0, isSet: false },
+   169→  { classId: 'c2', className: 'Class 2', categoryId: 'fc6', amount: 150, isSet: true },
+   170→  { classId: 'c2', className: 'Class 2', categoryId: 'fc7', amount: 0, isSet: false },
+   171→  { classId: 'c2', className: 'Class 2', categoryId: 'fc8', amount: 100, isSet: true },
+   172→
+   173→  // Class 5
+   174→  { classId: 'c5', className: 'Class 5', categoryId: 'fc1', amount: 5000, isSet: true },
+   175→  { classId: 'c5', className: 'Class 5', categoryId: 'fc2', amount: 1500, isSet: true },
+   176→  { classId: 'c5', className: 'Class 5', categoryId: 'fc3', amount: 500, isSet: true },
+   177→  { classId: 'c5', className: 'Class 5', categoryId: 'fc4', amount: 800, isSet: true },
+   178→  { classId: 'c5', className: 'Class 5', categoryId: 'fc5', amount: 2000, isSet: true },
+   179→  { classId: 'c5', className: 'Class 5', categoryId: 'fc6', amount: 200, isSet: true },
+   180→  { classId: 'c5', className: 'Class 5', categoryId: 'fc7', amount: 300, isSet: true },
+   181→  { classId: 'c5', className: 'Class 5', categoryId: 'fc8', amount: 150, isSet: true },
+   182→
+   183→  // Class 8
+   184→  { classId: 'c8', className: 'Class 8', categoryId: 'fc1', amount: 5000, isSet: true },
+   185→  { classId: 'c8', className: 'Class 8', categoryId: 'fc2', amount: 1800, isSet: true },
+   186→  { classId: 'c8', className: 'Class 8', categoryId: 'fc3', amount: 600, isSet: true },
+   187→  { classId: 'c8', className: 'Class 8', categoryId: 'fc4', amount: 800, isSet: true },
+   188→  { classId: 'c8', className: 'Class 8', categoryId: 'fc5', amount: 2000, isSet: true },
+   189→  { classId: 'c8', className: 'Class 8', categoryId: 'fc6', amount: 200, isSet: true },
+   190→  { classId: 'c8', className: 'Class 8', categoryId: 'fc7', amount: 400, isSet: true },
+   191→  { classId: 'c8', className: 'Class 8', categoryId: 'fc8', amount: 150, isSet: true },
+   192→
+   193→  // Class 9
+   194→  { classId: 'c9', className: 'Class 9', categoryId: 'fc1', amount: 6000, isSet: true },
+   195→  { classId: 'c9', className: 'Class 9', categoryId: 'fc2', amount: 2000, isSet: true },
+   196→  { classId: 'c9', className: 'Class 9', categoryId: 'fc3', amount: 700, isSet: true },
+   197→  { classId: 'c9', className: 'Class 9', categoryId: 'fc4', amount: 900, isSet: true },
+   198→  { classId: 'c9', className: 'Class 9', categoryId: 'fc5', amount: 2500, isSet: true },
+   199→  { classId: 'c9', className: 'Class 9', categoryId: 'fc6', amount: 250, isSet: true },
+   200→  { classId: 'c9', className: 'Class 9', categoryId: 'fc7', amount: 500, isSet: true },
+   201→  { classId: 'c9', className: 'Class 9', categoryId: 'fc8', amount: 200, isSet: true },
+   202→
+   203→  // Class 10
+   204→  { classId: 'c10', className: 'Class 10', categoryId: 'fc1', amount: 6000, isSet: true },
+   205→  { classId: 'c10', className: 'Class 10', categoryId: 'fc2', amount: 2200, isSet: true },
+   206→  { classId: 'c10', className: 'Class 10', categoryId: 'fc3', amount: 800, isSet: true },
+   207→  { classId: 'c10', className: 'Class 10', categoryId: 'fc4', amount: 900, isSet: true },
+   208→  { classId: 'c10', className: 'Class 10', categoryId: 'fc5', amount: 2500, isSet: true },
+   209→  { classId: 'c10', className: 'Class 10', categoryId: 'fc6', amount: 250, isSet: true },
+   210→  { classId: 'c10', className: 'Class 10', categoryId: 'fc7', amount: 500, isSet: true },
+   211→  { classId: 'c10', className: 'Class 10', categoryId: 'fc8', amount: 200, isSet: true },
+   212→];
+   213→
+   214→export const sampleInvoices: FeeInvoice[] = [
+   215→  {
+   216→    id: 'inv1',
+   217→    invoiceNo: 'INV-2025-001',
+   218→    studentId: 'stu1',
+   219→    studentName: 'Abdur Rahman',
+   220→    studentNameBn: 'আব্দুর রহমান',
+   221→    className: 'Class 5 - A',
+   222→    academicSession: '2025',
+   223→    totalAmount: 3650,
+   224→    paidAmount: 3650,
+   225→    discountAmount: 0,
+   226→    balanceAmount: 0,
+   227→    status: 'paid',
+   228→    dueDate: '2025-02-15',
+   229→    generatedDate: '2025-01-15',
+   230→    lineItems: [
+   231→      { categoryId: 'fc2', categoryName: 'Tuition Fee', amount: 1500, discount: 0, netAmount: 1500 },
+   232→      { categoryId: 'fc3', categoryName: 'Exam Fee', amount: 500, discount: 0, netAmount: 500 },
+   233→      { categoryId: 'fc4', categoryName: 'Transport Fee', amount: 800, discount: 0, netAmount: 800 },
+   234→      { categoryId: 'fc7', categoryName: 'Computer Fee', amount: 300, discount: 0, netAmount: 300 },
+   235→      { categoryId: 'fc8', categoryName: 'Sports Fee', amount: 150, discount: 150, netAmount: 0 },
+   236→      { categoryId: 'fc6', categoryName: 'Library Fee', amount: 200, discount: 0, netAmount: 200 },
+   237→      { categoryId: 'fc8', categoryName: 'Sports Fee', amount: 200, discount: 0, netAmount: 200 },
+   238→    ],
+   239→    payments: [
+   240→      { id: 'pay1', invoiceId: 'inv1', amount: 2000, method: 'bkash', date: '2025-01-20', note: 'Bkash payment', receivedBy: 'Ustad Karim' },
+   241→      { id: 'pay2', invoiceId: 'inv1', amount: 1650, method: 'cash', date: '2025-01-25', note: 'Cash payment', receivedBy: 'Ustad Karim' },
+   242→    ],
+   243→  },
+   244→  {
+   245→    id: 'inv2',
+   246→    invoiceNo: 'INV-2025-002',
+   247→    studentId: 'stu2',
+   248→    studentName: 'Fatima Begum',
+   249→    studentNameBn: 'ফাতিমা বেগম',
+   250→    className: 'Class 8 - A',
+   251→    academicSession: '2025',
+   252→    totalAmount: 4350,
+   253→    paidAmount: 2500,
+   254→    discountAmount: 200,
+   255→    balanceAmount: 1650,
+   256→    status: 'partial',
+   257→    dueDate: '2025-02-15',
+   258→    generatedDate: '2025-01-15',
+   259→    lineItems: [
+   260→      { categoryId: 'fc2', categoryName: 'Tuition Fee', amount: 1800, discount: 200, netAmount: 1600 },
+   261→      { categoryId: 'fc3', categoryName: 'Exam Fee', amount: 600, discount: 0, netAmount: 600 },
+   262→      { categoryId: 'fc4', categoryName: 'Transport Fee', amount: 800, discount: 0, netAmount: 800 },
+   263→      { categoryId: 'fc7', categoryName: 'Computer Fee', amount: 400, discount: 0, netAmount: 400 },
+   264→      { categoryId: 'fc8', categoryName: 'Sports Fee', amount: 150, discount: 0, netAmount: 150 },
+   265→      { categoryId: 'fc6', categoryName: 'Library Fee', amount: 200, discount: 0, netAmount: 200 },
+   266→    ],
+   267→    payments: [
+   268→      { id: 'pay3', invoiceId: 'inv2', amount: 2500, method: 'bank', date: '2025-01-18', note: 'Bank transfer', receivedBy: 'Ustad Ahmed' },
+   269→    ],
+   270→  },
+   271→  {
+   272→    id: 'inv3',
+   273→    invoiceNo: 'INV-2025-003',
+   274→    studentId: 'stu3',
+   275→    studentName: 'Mohammad Ali',
+   276→    studentNameBn: 'মোহাম্মদ আলী',
+   277→    className: 'Class 10 - A',
+   278→    academicSession: '2025',
+   279→    totalAmount: 4950,
+   280→    paidAmount: 0,
+   281→    discountAmount: 0,
+   282→    balanceAmount: 4950,
+   283→    status: 'overdue',
+   284→    dueDate: '2025-01-31',
+   285→    generatedDate: '2025-01-01',
+   286→    lineItems: [
+   287→      { categoryId: 'fc2', categoryName: 'Tuition Fee', amount: 2200, discount: 0, netAmount: 2200 },
+   288→      { categoryId: 'fc3', categoryName: 'Exam Fee', amount: 800, discount: 0, netAmount: 800 },
+   289→      { categoryId: 'fc4', categoryName: 'Transport Fee', amount: 900, discount: 0, netAmount: 900 },
+   290→      { categoryId: 'fc7', categoryName: 'Computer Fee', amount: 500, discount: 0, netAmount: 500 },
+   291→      { categoryId: 'fc8', categoryName: 'Sports Fee', amount: 200, discount: 0, netAmount: 200 },
+   292→      { categoryId: 'fc6', categoryName: 'Library Fee', amount: 250, discount: 0, netAmount: 250 },
+   293→    ],
+   294→    payments: [],
+   295→  },
+   296→  {
+   297→    id: 'inv4',
+   298→    invoiceNo: 'INV-2025-004',
+   299→    studentId: 'stu4',
+   300→    studentName: 'Ayesha Siddika',
+   301→    studentNameBn: 'আয়েশা সিদ্দিকা',
+   302→    className: 'Hifz - A',
+   303→    academicSession: '2025',
+   304→    totalAmount: 2650,
+   305→    paidAmount: 2650,
+   306→    discountAmount: 100,
+   307→    balanceAmount: 0,
+   308→    status: 'paid',
+   309→    dueDate: '2025-02-15',
+   310→    generatedDate: '2025-01-15',
+   311→    lineItems: [
+   312→      { categoryId: 'fc2', categoryName: 'Tuition Fee', amount: 1200, discount: 100, netAmount: 1100 },
+   313→      { categoryId: 'fc3', categoryName: 'Exam Fee', amount: 400, discount: 0, netAmount: 400 },
+   314→      { categoryId: 'fc4', categoryName: 'Transport Fee', amount: 600, discount: 0, netAmount: 600 },
+   315→      { categoryId: 'fc8', categoryName: 'Sports Fee', amount: 100, discount: 0, netAmount: 100 },
+   316→      { categoryId: 'fc6', categoryName: 'Library Fee', amount: 150, discount: 0, netAmount: 150 },
+   317→    ],
+   318→    payments: [
+   319→      { id: 'pay4', invoiceId: 'inv4', amount: 2650, method: 'cash', date: '2025-01-16', note: 'Full cash payment', receivedBy: 'Ustad Karim' },
+   320→    ],
+   321→  },
+   322→  {
+   323→    id: 'inv5',
+   324→    invoiceNo: 'INV-2025-005',
+   325→    studentId: 'stu5',
+   326→    studentName: 'Ibrahim Hossain',
+   327→    studentNameBn: 'ইব্রাহিম হোসেন',
+   328→    className: 'Class 9 - A',
+   329→    academicSession: '2025',
+   330→    totalAmount: 4650,
+   331→    paidAmount: 3000,
+   332→    discountAmount: 0,
+   333→    balanceAmount: 1650,
+   334→    status: 'partial',
+   335→    dueDate: '2025-02-15',
+   336→    generatedDate: '2025-01-15',
+   337→    lineItems: [
+   338→      { categoryId: 'fc2', categoryName: 'Tuition Fee', amount: 2000, discount: 0, netAmount: 2000 },
+   339→      { categoryId: 'fc3', categoryName: 'Exam Fee', amount: 700, discount: 0, netAmount: 700 },
+   340→      { categoryId: 'fc4', categoryName: 'Transport Fee', amount: 900, discount: 0, netAmount: 900 },
+   341→      { categoryId: 'fc7', categoryName: 'Computer Fee', amount: 500, discount: 0, netAmount: 500 },
+   342→      { categoryId: 'fc8', categoryName: 'Sports Fee', amount: 200, discount: 0, netAmount: 200 },
+   343→      { categoryId: 'fc6', categoryName: 'Library Fee', amount: 250, discount: 0, netAmount: 250 },
+   344→    ],
+   345→    payments: [
+   346→      { id: 'pay5', invoiceId: 'inv5', amount: 2000, method: 'bkash', date: '2025-01-20', note: 'Bkash', receivedBy: 'Ustad Rahim' },
+   347→      { id: 'pay6', invoiceId: 'inv5', amount: 1000, method: 'cash', date: '2025-01-28', note: 'Cash', receivedBy: 'Ustad Rahim' },
+   348→    ],
+   349→  },
+   350→  {
+   351→    id: 'inv6',
+   352→    invoiceNo: 'INV-2025-006',
+   353→    studentId: 'stu6',
+   354→    studentName: 'Zainab Khatun',
+   355→    studentNameBn: 'জয়নাব খাতুন',
+   356→    className: 'Class 5 - B',
+   357→    academicSession: '2025',
+   358→    totalAmount: 3650,
+   359→    paidAmount: 0,
+   360→    discountAmount: 0,
+   361→    balanceAmount: 3650,
+   362→    status: 'overdue',
+   363→    dueDate: '2025-01-15',
+   364→    generatedDate: '2024-12-15',
+   365→    lineItems: [
+   366→      { categoryId: 'fc2', categoryName: 'Tuition Fee', amount: 1500, discount: 0, netAmount: 1500 },
+   367→      { categoryId: 'fc3', categoryName: 'Exam Fee', amount: 500, discount: 0, netAmount: 500 },
+   368→      { categoryId: 'fc4', categoryName: 'Transport Fee', amount: 800, discount: 0, netAmount: 800 },
+   369→      { categoryId: 'fc7', categoryName: 'Computer Fee', amount: 300, discount: 0, netAmount: 300 },
+   370→      { categoryId: 'fc8', categoryName: 'Sports Fee', amount: 150, discount: 0, netAmount: 150 },
+   371→      { categoryId: 'fc6', categoryName: 'Library Fee', amount: 200, discount: 0, netAmount: 200 },
+   372→    ],
+   373→    payments: [],
+   374→  },
+   375→  {
+   376→    id: 'inv7',
+   377→    invoiceNo: 'INV-2025-007',
+   378→    studentId: 'stu7',
+   379→    studentName: 'Tariq Mahmud',
+   380→    studentNameBn: 'তারিক মাহমুদ',
+   381→    className: 'Class 2 - A',
+   382→    academicSession: '2025',
+   383→    totalAmount: 2300,
+   384→    paidAmount: 2300,
+   385→    discountAmount: 50,
+   386→    balanceAmount: 0,
+   387→    status: 'paid',
+   388→    dueDate: '2025-02-15',
+   389→    generatedDate: '2025-01-15',
+   390→    lineItems: [
+   391→      { categoryId: 'fc2', categoryName: 'Tuition Fee', amount: 1100, discount: 50, netAmount: 1050 },
+   392→      { categoryId: 'fc3', categoryName: 'Exam Fee', amount: 350, discount: 0, netAmount: 350 },
+   393→      { categoryId: 'fc4', categoryName: 'Transport Fee', amount: 600, discount: 0, netAmount: 600 },
+   394→      { categoryId: 'fc8', categoryName: 'Sports Fee', amount: 100, discount: 0, netAmount: 100 },
+   395→      { categoryId: 'fc6', categoryName: 'Library Fee', amount: 150, discount: 0, netAmount: 150 },
+   396→    ],
+   397→    payments: [
+   398→      { id: 'pay7', invoiceId: 'inv7', amount: 2300, method: 'cash', date: '2025-01-22', note: 'Cash', receivedBy: 'Ustad Karim' },
+   399→    ],
+   400→  },
+   401→  {
+   402→    id: 'inv8',
+   403→    invoiceNo: 'INV-2025-008',
+   404→    studentId: 'stu8',
+   405→    studentName: 'Sadia Akter',
+   406→    studentNameBn: 'সাদিয়া আক্তার',
+   407→    className: 'Class 9 - B',
+   408→    academicSession: '2025',
+   409→    totalAmount: 4150,
+   410→    paidAmount: 0,
+   411→    discountAmount: 0,
+   412→    balanceAmount: 4150,
+   413→    status: 'overdue',
+   414→    dueDate: '2025-01-20',
+   415→    generatedDate: '2024-12-20',
+   416→    lineItems: [
+   417→      { categoryId: 'fc2', categoryName: 'Tuition Fee', amount: 2000, discount: 0, netAmount: 2000 },
+   418→      { categoryId: 'fc3', categoryName: 'Exam Fee', amount: 700, discount: 0, netAmount: 700 },
+   419→      { categoryId: 'fc5', categoryName: 'Hostel Fee', amount: 2500, discount: 0, netAmount: 2500 },
+   420→      { categoryId: 'fc6', categoryName: 'Library Fee', amount: 250, discount: 0, netAmount: 250 },
+   421→    ],
+   422→    payments: [],
+   423→  },
+   424→];
+   425→
+   426→export const sampleCollections: CollectionRecord[] = [
+   427→  { id: 'col1', receiptNo: 'RCT-2025-001', studentName: 'Abdur Rahman', studentNameBn: 'আব্দুর রহমান', className: 'Class 5 - A', amount: 2000, method: 'bkash', date: '2025-01-20', invoiceNo: 'INV-2025-001' },
+   428→  { id: 'col2', receiptNo: 'RCT-2025-002', studentName: 'Abdur Rahman', studentNameBn: 'আব্দুর রহমান', className: 'Class 5 - A', amount: 1650, method: 'cash', date: '2025-01-25', invoiceNo: 'INV-2025-001' },
+   429→  { id: 'col3', receiptNo: 'RCT-2025-003', studentName: 'Fatima Begum', studentNameBn: 'ফাতিমা বেগম', className: 'Class 8 - A', amount: 2500, method: 'bank', date: '2025-01-18', invoiceNo: 'INV-2025-002' },
+   430→  { id: 'col4', receiptNo: 'RCT-2025-004', studentName: 'Ayesha Siddika', studentNameBn: 'আয়েশা সিদ্দিকা', className: 'Hifz - A', amount: 2650, method: 'cash', date: '2025-01-16', invoiceNo: 'INV-2025-004' },
+   431→  { id: 'col5', receiptNo: 'RCT-2025-005', studentName: 'Ibrahim Hossain', studentNameBn: 'ইব্রাহিম হোসেন', className: 'Class 9 - A', amount: 2000, method: 'bkash', date: '2025-01-20', invoiceNo: 'INV-2025-005' },
+   432→  { id: 'col6', receiptNo: 'RCT-2025-006', studentName: 'Ibrahim Hossain', studentNameBn: 'ইব্রাহিম হোসেন', className: 'Class 9 - A', amount: 1000, method: 'cash', date: '2025-01-28', invoiceNo: 'INV-2025-005' },
+   433→  { id: 'col7', receiptNo: 'RCT-2025-007', studentName: 'Tariq Mahmud', studentNameBn: 'তারিক মাহমুদ', className: 'Class 2 - A', amount: 2300, method: 'cash', date: '2025-01-22', invoiceNo: 'INV-2025-007' },
+   434→  { id: 'col8', receiptNo: 'RCT-2025-008', studentName: 'Hamid Uddin', studentNameBn: 'হামিদ উদ্দীন', className: 'Class 8 - A', amount: 1800, method: 'bkash', date: '2025-02-01', invoiceNo: 'INV-2025-009' },
+   435→  { id: 'col9', receiptNo: 'RCT-2025-009', studentName: 'Nusrat Jahan', studentNameBn: 'নুসরাত জাহান', className: 'Class 5 - B', amount: 1500, method: 'cheque', date: '2025-02-03', invoiceNo: 'INV-2025-010' },
+   436→  { id: 'col10', receiptNo: 'RCT-2025-010', studentName: 'Rafiq Islam', studentNameBn: 'রফিক ইসলাম', className: 'Class 10 - A', amount: 2200, method: 'bkash', date: '2025-02-05', invoiceNo: 'INV-2025-011' },
+   437→];
+   438→
+   439→/** Collection summary stats */
+   440→export const collectionSummary = {
+   441→  todayCollection: 15800,
+   442→  thisMonthCollection: 245000,
+   443→  thisYearCollection: 1850000,
+   444→  byMethod: {
+   445→    cash: { amount: 62500, count: 28, percentage: 25.5 },
+   446→    bkash: { amount: 122500, count: 52, percentage: 50.0 },
+   447→    bank: { amount: 49000, count: 12, percentage: 20.0 },
+   448→    cheque: { amount: 11000, count: 4, percentage: 4.5 },
+   449→  },
+   450→};
+   451→
+   452→/** Students for wizard selection */
+   453→export const sampleStudentsForInvoice = [
+   454→  { id: 'stu1', name: 'Abdur Rahman', nameBn: 'আব্দুর রহমান', className: 'Class 5 - A', roll: '01' },
+   455→  { id: 'stu2', name: 'Fatima Begum', nameBn: 'ফাতিমা বেগম', className: 'Class 5 - A', roll: '02' },
+   456→  { id: 'stu3', name: 'Mohammad Ali', nameBn: 'মোহাম্মদ আলী', className: 'Class 5 - A', roll: '03' },
+   457→  { id: 'stu4', name: 'Ayesha Siddika', nameBn: 'আয়েশা সিদ্দিকা', className: 'Class 5 - B', roll: '04' },
+   458→  { id: 'stu5', name: 'Ibrahim Hossain', nameBn: 'ইব্রাহিম হোসেন', className: 'Class 5 - A', roll: '05' },
+   459→  { id: 'stu6', name: 'Zainab Khatun', nameBn: 'জয়নাব খাতুন', className: 'Class 5 - B', roll: '06' },
+   460→  { id: 'stu7', name: 'Tariq Mahmud', nameBn: 'তারিক মাহমুদ', className: 'Class 5 - A', roll: '07' },
+   461→  { id: 'stu8', name: 'Sadia Akter', nameBn: 'সাদিয়া আক্তার', className: 'Class 5 - B', roll: '08' },
+   462→  { id: 'stu9', name: 'Hamid Uddin', nameBn: 'হামিদ উদ্দীন', className: 'Class 5 - A', roll: '09' },
+   463→  { id: 'stu10', name: 'Nusrat Jahan', nameBn: 'নুসরাত জাহান', className: 'Class 5 - B', roll: '10' },
+   464→];
+   465→
+   466→// ============================================================
+   467→// Donation & Expense Sample Data
+   468→// Phase 5B — Donations + Expenses
+   469→// ============================================================
+   470→
+   471→/** Donation category */
+   472→export type DonationCategory = 'zakat' | 'sadaqah' | 'general' | 'construction' | 'education';
+   473→
+   474→/** Donor record */
+   475→export interface Donor {
+   476→  id: string;
+   477→  name: string;
+   478→  nameBn: string;
+   479→  phone: string;
+   480→  category: DonationCategory;
+   481→  totalDonated: number;
+   482→  lastDonationDate: string;
+   483→  donationsCount: number;
+   484→}
+   485→
+   486→/** Donation record */
+   487→export interface DonationRecord {
+   488→  id: string;
+   489→  donorId: string;
+   490→  donorName: string;
+   491→  category: DonationCategory;
+   492→  amount: number;
+   493→  date: string;
+   494→  method: PaymentMethod;
+   495→  note: string;
+   496→}
+   497→
+   498→/** Donation monthly trend data */
+   499→export interface DonationTrendPoint {
+   500→  month: string;
+   501→  amount: number;
+   502→}
+   503→
+   504→/** Donation category breakdown */
+   505→export interface DonationCategoryBreakdown {
+   506→  category: DonationCategory;
+   507→  amount: number;
+   508→  count: number;
+   509→}
+   510→
+   511→/** Expense category */
+   512→export type ExpenseCategory = 'utilities' | 'maintenance' | 'stationery' | 'food' | 'transport' | 'salary' | 'misc';
+   513→
+   514→/** Expense record */
+   515→export interface ExpenseRecord {
+   516→  id: string;
+   517→  category: ExpenseCategory;
+   518→  description: string;
+   519→  amount: number;
+   520→  date: string;
+   521→  method: PaymentMethod;
+   522→  receiptRef: string;
+   523→  note: string;
+   524→}
+   525→
+   526→/** Budget allocation per category */
+   527→export interface BudgetAllocation {
+   528→  category: ExpenseCategory;
+   529→  budget: number;
+   530→  spent: number;
+   531→}
+   532→
+   533→// ---- Donation Sample Data ----
+   534→
+   535→export const sampleDonors: Donor[] = [
+   536→  { id: 'd1', name: 'Hafez Maulana Abdul Karim', nameBn: 'হাফেজ মাওলানা আব্দুল করিম', phone: '01711-123456', category: 'zakat', totalDonated: 250000, lastDonationDate: '2025-02-15', donationsCount: 5 },
+   537→  { id: 'd2', name: 'Alhaj Mohammad Yusuf', nameBn: 'আলহাজ মোহাম্মদ ইউসুফ', phone: '01812-234567', category: 'sadaqah', totalDonated: 180000, lastDonationDate: '2025-02-10', donationsCount: 4 },
+   538→  { id: 'd3', name: 'Dr. Amina Begum', nameBn: 'ডাঃ আমিনা বেগম', phone: '01913-345678', category: 'education', totalDonated: 150000, lastDonationDate: '2025-01-28', donationsCount: 3 },
+   539→  { id: 'd4', name: 'Haji Rafiq Ahmed', nameBn: 'হাজী রফিক আহমেদ', phone: '01614-456789', category: 'construction', totalDonated: 320000, lastDonationDate: '2025-02-08', donationsCount: 6 },
+   540→  { id: 'd5', name: 'Maulana Shahidul Islam', nameBn: 'মাওলানা শহিদুল ইসলাম', phone: '01515-567890', category: 'zakat', totalDonated: 95000, lastDonationDate: '2025-01-20', donationsCount: 2 },
+   541→  { id: 'd6', name: 'Advocate Nurul Islam', nameBn: 'অ্যাডভোকেট নুরুল ইসলাম', phone: '01416-678901', category: 'general', totalDonated: 75000, lastDonationDate: '2025-02-01', donationsCount: 3 },
+   542→  { id: 'd7', name: 'Prof. Hasina Akhter', nameBn: 'অধ্যাপক হাসিনা আখতার', phone: '01317-789012', category: 'sadaqah', totalDonated: 60000, lastDonationDate: '2025-01-15', donationsCount: 2 },
+   543→  { id: 'd8', name: 'Hafez Maulana Obaidullah', nameBn: 'হাফেজ মাওলানা �ওবাইদুল্লাহ', phone: '01218-890123', category: 'education', totalDonated: 45000, lastDonationDate: '2025-02-12', donationsCount: 2 },
+   544→];
+   545→
+   546→export const sampleDonations: DonationRecord[] = [
+   547→  { id: 'don1', donorId: 'd1', donorName: 'Hafez Maulana Abdul Karim', category: 'zakat', amount: 100000, date: '2025-02-15', method: 'bank', note: 'Zakat al-Fitr distribution' },
+   548→  { id: 'don2', donorId: 'd1', donorName: 'Hafez Maulana Abdul Karim', category: 'zakat', amount: 50000, date: '2025-01-10', method: 'cash', note: 'Annual Zakat' },
+   549→  { id: 'don3', donorId: 'd2', donorName: 'Alhaj Mohammad Yusuf', category: 'sadaqah', amount: 60000, date: '2025-02-10', method: 'bkash', note: 'Sadaqah for student meals' },
+   550→  { id: 'don4', donorId: 'd2', donorName: 'Alhaj Mohammad Yusuf', category: 'sadaqah', amount: 40000, date: '2025-01-05', method: 'cash', note: 'Monthly Sadaqah' },
+   551→  { id: 'don5', donorId: 'd3', donorName: 'Dr. Amina Begum', category: 'education', amount: 50000, date: '2025-01-28', method: 'bank', note: 'Scholarship fund' },
+   552→  { id: 'don6', donorId: 'd3', donorName: 'Dr. Amina Begum', category: 'education', amount: 50000, date: '2024-12-15', method: 'cheque', note: 'Books and supplies' },
+   553→  { id: 'don7', donorId: 'd4', donorName: 'Haji Rafiq Ahmed', category: 'construction', amount: 100000, date: '2025-02-08', method: 'bank', note: 'New classroom construction' },
+   554→  { id: 'don8', donorId: 'd4', donorName: 'Haji Rafiq Ahmed', category: 'construction', amount: 80000, date: '2025-01-12', method: 'bank', note: 'Mosque extension' },
+   555→  { id: 'don9', donorId: 'd5', donorName: 'Maulana Shahidul Islam', category: 'zakat', amount: 50000, date: '2025-01-20', method: 'cash', note: 'Zakat contribution' },
+   556→  { id: 'don10', donorId: 'd5', donorName: 'Maulana Shahidul Islam', category: 'zakat', amount: 45000, date: '2024-12-20', method: 'bkash', note: 'Zakat mal' },
+   557→  { id: 'don11', donorId: 'd6', donorName: 'Advocate Nurul Islam', category: 'general', amount: 30000, date: '2025-02-01', method: 'cash', note: 'General fund support' },
+   558→  { id: 'don12', donorId: 'd6', donorName: 'Advocate Nurul Islam', category: 'general', amount: 25000, date: '2025-01-08', method: 'bkash', note: 'Operational support' },
+   559→  { id: 'don13', donorId: 'd7', donorName: 'Prof. Hasina Akhter', category: 'sadaqah', amount: 30000, date: '2025-01-15', method: 'bkash', note: 'Sadaqah jariyah' },
+   560→  { id: 'don14', donorId: 'd8', donorName: 'Hafez Maulana Obaidullah', category: 'education', amount: 25000, date: '2025-02-12', method: 'cash', note: 'Quran distribution' },
+   561→  { id: 'don15', donorId: 'd4', donorName: 'Haji Rafiq Ahmed', category: 'construction', amount: 70000, date: '2024-12-10', method: 'bank', note: 'Boundary wall construction' },
+   562→];
+   563→
+   564→export const sampleDonationTrend: DonationTrendPoint[] = [
+   565→  { month: 'Sep', amount: 180000 },
+   566→  { month: 'Oct', amount: 220000 },
+   567→  { month: 'Nov', amount: 195000 },
+   568→  { month: 'Dec', amount: 310000 },
+   569→  { month: 'Jan', amount: 340000 },
+   570→  { month: 'Feb', amount: 285000 },
+   571→];
+   572→
+   573→export const sampleDonationCategoryBreakdown: DonationCategoryBreakdown[] = [
+   574→  { category: 'zakat', amount: 245000, count: 4 },
+   575→  { category: 'sadaqah', amount: 130000, count: 3 },
+   576→  { category: 'general', amount: 55000, count: 2 },
+   577→  { category: 'construction', amount: 250000, count: 3 },
+   578→  { category: 'education', amount: 125000, count: 3 },
+   579→];
+   580→
+   581→// ---- Expense Sample Data ----
+   582→
+   583→export const sampleExpenses: ExpenseRecord[] = [
+   584→  { id: 'exp1', category: 'salary', description: 'Teaching staff salary - February', amount: 80000, date: '2025-02-01', method: 'bank', receiptRef: 'SAL-2025-02-01', note: '12 teachers' },
+   585→  { id: 'exp2', category: 'salary', description: 'Admin staff salary - February', amount: 35000, date: '2025-02-01', method: 'bank', receiptRef: 'SAL-2025-02-02', note: '4 admin staff' },
+   586→  { id: 'exp3', category: 'utilities', description: 'Electricity bill - January', amount: 12000, date: '2025-02-05', method: 'bkash', receiptRef: 'ELEC-2025-01', note: 'DESCO bill' },
+   587→  { id: 'exp4', category: 'utilities', description: 'Water bill - January', amount: 3500, date: '2025-02-05', method: 'bkash', receiptRef: 'WATER-2025-01', note: 'WASA bill' },
+   588→  { id: 'exp5', category: 'utilities', description: 'Gas bill - January', amount: 2800, date: '2025-02-05', method: 'cash', receiptRef: 'GAS-2025-01', note: 'Titas Gas' },
+   589→  { id: 'exp6', category: 'food', description: 'Student meals - Week 1 Feb', amount: 15000, date: '2025-02-03', method: 'cash', receiptRef: 'FOOD-2025-02W1', note: 'Hostel students' },
+   590→  { id: 'exp7', category: 'food', description: 'Student meals - Week 2 Feb', amount: 14500, date: '2025-02-10', method: 'cash', receiptRef: 'FOOD-2025-02W2', note: 'Hostel students' },
+   591→  { id: 'exp8', category: 'maintenance', description: 'Building repair - roof leakage', amount: 8000, date: '2025-02-07', method: 'cash', receiptRef: 'MNT-2025-02-01', note: 'Class 5 block' },
+   592→  { id: 'exp9', category: 'maintenance', description: 'Plumbing repair - washroom', amount: 3500, date: '2025-02-12', method: 'cash', receiptRef: 'MNT-2025-02-02', note: 'Ground floor' },
+   593→  { id: 'exp10', category: 'stationery', description: 'Exam papers & printing', amount: 5000, date: '2025-02-08', method: 'cash', receiptRef: 'STN-2025-02-01', note: 'Mid-term exam' },
+   594→  { id: 'exp11', category: 'stationery', description: 'Office supplies', amount: 2000, date: '2025-02-15', method: 'cash', receiptRef: 'STN-2025-02-02', note: 'Files, registers' },
+   595→  { id: 'exp12', category: 'transport', description: 'Staff transport - February', amount: 6000, date: '2025-02-01', method: 'cash', receiptRef: 'TRN-2025-02', note: 'Monthly transport' },
+   596→  { id: 'exp13', category: 'misc', description: 'Internet bill - February', amount: 2000, date: '2025-02-01', method: 'bkash', receiptRef: 'NET-2025-02', note: 'ISP monthly' },
+   597→  { id: 'exp14', category: 'misc', description: 'Mosque cleaning supplies', amount: 1500, date: '2025-02-10', method: 'cash', receiptRef: 'MSC-2025-02-01', note: 'Detergents, brooms' },
+   598→  { id: 'exp15', category: 'salary', description: 'Teaching staff salary - January', amount: 80000, date: '2025-01-01', method: 'bank', receiptRef: 'SAL-2025-01-01', note: '12 teachers' },
+   599→  { id: 'exp16', category: 'salary', description: 'Admin staff salary - January', amount: 35000, date: '2025-01-01', method: 'bank', receiptRef: 'SAL-2025-01-02', note: '4 admin staff' },
+   600→  { id: 'exp17', category: 'utilities', description: 'Electricity bill - December', amount: 11500, date: '2025-01-05', method: 'bkash', receiptRef: 'ELEC-2024-12', note: 'DESCO bill' },
+   601→  { id: 'exp18', category: 'food', description: 'Student meals - January total', amount: 55000, date: '2025-01-31', method: 'cash', receiptRef: 'FOOD-2025-01', note: 'Hostel students' },
+   602→  { id: 'exp19', category: 'maintenance', description: 'White-wash & painting', amount: 12000, date: '2025-01-15', method: 'cash', receiptRef: 'MNT-2025-01-01', note: 'Exam hall' },
+   603→  { id: 'exp20', category: 'transport', description: 'Staff transport - January', amount: 5500, date: '2025-01-01', method: 'cash', receiptRef: 'TRN-2025-01', note: 'Monthly transport' },
+   604→];
+   605→
+   606→export const sampleBudgetAllocations: BudgetAllocation[] = [
+   607→  { category: 'salary', budget: 120000, spent: 115000 },
+   608→  { category: 'utilities', budget: 20000, spent: 18300 },
+   609→  { category: 'food', budget: 70000, spent: 84500 },
+   610→  { category: 'maintenance', budget: 15000, spent: 23500 },
+   611→  { category: 'stationery', budget: 10000, spent: 7000 },
+   612→  { category: 'transport', budget: 8000, spent: 11500 },
+   613→  { category: 'misc', budget: 5000, spent: 3500 },
+   614→];
+   615→
