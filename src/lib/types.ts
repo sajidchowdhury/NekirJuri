@@ -220,7 +220,26 @@ export interface DonationCreateInput {
   paymentDate: string
   transactionRef?: string
   isAnonymous?: boolean
+  isRecurring?: boolean
+  recurringFrequency?: 'monthly' | 'yearly'
+  recurringAmount?: number
   remarks?: string
+  status?: string
+}
+
+/** CR-5: Recurring donation payment input */
+export interface RecurringPaymentInput {
+  id: number
+  amount: number
+  paymentDate: string
+  paymentMethod?: string
+  transactionRef?: string
+}
+
+/** CR-5: Donor reminder settings */
+export interface DonorReminderSettings {
+  reminderConsent: boolean
+  reminderMethod: 'email' | 'sms'
 }
 
 // --- Expense ---

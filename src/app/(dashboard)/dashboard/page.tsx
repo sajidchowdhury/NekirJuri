@@ -23,6 +23,7 @@ import UpcomingEvents from '@/components/dashboard/upcoming-events';
 import QuickActions from '@/components/dashboard/quick-actions';
 import DashboardOverviewChart from '@/components/dashboard/dashboard-overview-chart';
 import DateRangeFilter, { type DateRangeOption } from '@/components/dashboard/date-range-filter';
+import DashboardRecurringDonations from '@/components/dashboard/dashboard-recurring-donations';
 
 /** Dashboard API response shape */
 interface DashboardData {
@@ -210,9 +211,12 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Upcoming Events — full width */}
+      {/* CR-5: Upcoming Recurring Donations + Events */}
       <motion.div variants={sectionFade}>
-        <UpcomingEvents loading={isLoading} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DashboardRecurringDonations />
+          <UpcomingEvents loading={isLoading} />
+        </div>
       </motion.div>
     </motion.div>
   );

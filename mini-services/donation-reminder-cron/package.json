@@ -1,0 +1,11 @@
+{
+  "name": "donation-reminder-cron",
+  "version": "1.0.0",
+  "description": "CR-5: Daily cron job for recurring donation reminders",
+  "scripts": {
+    "dev": "bun --hot index.ts"
+  },
+  "dependencies": {
+    "node-cron": "^3.0.3"
+  }
+}

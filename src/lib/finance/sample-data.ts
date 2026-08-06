@@ -481,6 +481,10 @@ export interface Donor {
   totalDonated: number;
   lastDonationDate: string;
   donationsCount: number;
+  isRegular?: boolean;
+  reminderConsent?: boolean;
+  reminderMethod?: 'email' | 'sms';
+  totalPledged?: number;
 }
 
 /** Donation record */
@@ -533,14 +537,14 @@ export interface BudgetAllocation {
 // ---- Donation Sample Data ----
 
 export const sampleDonors: Donor[] = [
-  { id: 'd1', name: 'Hafez Maulana Abdul Karim', nameBn: 'হাফেজ মাওলানা আব্দুল করিম', phone: '01711-123456', category: 'zakat', totalDonated: 250000, lastDonationDate: '2025-02-15', donationsCount: 5 },
-  { id: 'd2', name: 'Alhaj Mohammad Yusuf', nameBn: 'আলহাজ মোহাম্মদ ইউসুফ', phone: '01812-234567', category: 'sadaqah', totalDonated: 180000, lastDonationDate: '2025-02-10', donationsCount: 4 },
-  { id: 'd3', name: 'Dr. Amina Begum', nameBn: 'ডাঃ আমিনা বেগম', phone: '01913-345678', category: 'education', totalDonated: 150000, lastDonationDate: '2025-01-28', donationsCount: 3 },
-  { id: 'd4', name: 'Haji Rafiq Ahmed', nameBn: 'হাজী রফিক আহমেদ', phone: '01614-456789', category: 'construction', totalDonated: 320000, lastDonationDate: '2025-02-08', donationsCount: 6 },
-  { id: 'd5', name: 'Maulana Shahidul Islam', nameBn: 'মাওলানা শহিদুল ইসলাম', phone: '01515-567890', category: 'zakat', totalDonated: 95000, lastDonationDate: '2025-01-20', donationsCount: 2 },
-  { id: 'd6', name: 'Advocate Nurul Islam', nameBn: 'অ্যাডভোকেট নুরুল ইসলাম', phone: '01416-678901', category: 'general', totalDonated: 75000, lastDonationDate: '2025-02-01', donationsCount: 3 },
-  { id: 'd7', name: 'Prof. Hasina Akhter', nameBn: 'অধ্যাপক হাসিনা আখতার', phone: '01317-789012', category: 'sadaqah', totalDonated: 60000, lastDonationDate: '2025-01-15', donationsCount: 2 },
-  { id: 'd8', name: 'Hafez Maulana Obaidullah', nameBn: 'হাফেজ মাওলানা �ওবাইদুল্লাহ', phone: '01218-890123', category: 'education', totalDonated: 45000, lastDonationDate: '2025-02-12', donationsCount: 2 },
+  { id: 'd1', name: 'Hafez Maulana Abdul Karim', nameBn: 'হাফেজ মাওলানা আব্দুল করিম', phone: '01711-123456', category: 'zakat', totalDonated: 250000, lastDonationDate: '2025-02-15', donationsCount: 5, isRegular: true, reminderConsent: true, reminderMethod: 'sms', totalPledged: 50000 },
+  { id: 'd2', name: 'Alhaj Mohammad Yusuf', nameBn: 'আলহাজ মোহাম্মদ ইউসুফ', phone: '01812-234567', category: 'sadaqah', totalDonated: 180000, lastDonationDate: '2025-02-10', donationsCount: 4, isRegular: true, reminderConsent: true, reminderMethod: 'email', totalPledged: 40000 },
+  { id: 'd3', name: 'Dr. Amina Begum', nameBn: 'ডাঃ আমিনা বেগম', phone: '01913-345678', category: 'education', totalDonated: 150000, lastDonationDate: '2025-01-28', donationsCount: 3, isRegular: true, reminderConsent: true, reminderMethod: 'email', totalPledged: 50000 },
+  { id: 'd4', name: 'Haji Rafiq Ahmed', nameBn: 'হাজী রফিক আহমেদ', phone: '01614-456789', category: 'construction', totalDonated: 320000, lastDonationDate: '2025-02-08', donationsCount: 6, isRegular: false, reminderConsent: false },
+  { id: 'd5', name: 'Maulana Shahidul Islam', nameBn: 'মাওলানা শহিদুল ইসলাম', phone: '01515-567890', category: 'zakat', totalDonated: 95000, lastDonationDate: '2025-01-20', donationsCount: 2, isRegular: false, reminderConsent: true, reminderMethod: 'sms' },
+  { id: 'd6', name: 'Advocate Nurul Islam', nameBn: 'অ্যাডভোকেট নুরুল ইসলাম', phone: '01416-678901', category: 'general', totalDonated: 75000, lastDonationDate: '2025-02-01', donationsCount: 3, isRegular: true, reminderConsent: true, reminderMethod: 'sms', totalPledged: 25000 },
+  { id: 'd7', name: 'Prof. Hasina Akhter', nameBn: 'অধ্যাপক হাসিনা আখতার', phone: '01317-789012', category: 'sadaqah', totalDonated: 60000, lastDonationDate: '2025-01-15', donationsCount: 2, isRegular: false, reminderConsent: false },
+  { id: 'd8', name: 'Hafez Maulana Obaidullah', nameBn: 'হাফেজ মাওলানা ওবাইদুল্লাহ', phone: '01218-890123', category: 'education', totalDonated: 45000, lastDonationDate: '2025-02-12', donationsCount: 2, isRegular: true, reminderConsent: true, reminderMethod: 'email', totalPledged: 25000 },
 ];
 
 export const sampleDonations: DonationRecord[] = [

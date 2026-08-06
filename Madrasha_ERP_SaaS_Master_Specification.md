@@ -1,10 +1,10 @@
 # Madrasha ERP & Accounting Management System (SaaS)
 ## Master Software Specification
-### Version: 3.0 — Post CR Implementation Update
+### Version: 3.1 — All CR Implementation Complete
 
 > This document is the **single source of truth** for all team members.  
 > Last updated: August 2025  
-> Build status: **UI/UX Phases 0-12 COMPLETE** | **CR-1,2,4,6,7,8,9,10,11 COMPLETE** | **CR-5 REMAINING**
+> Build status: **UI/UX Phases 0-12 COMPLETE** | **ALL CRs (1,2,4,5,6,7,8,9,10,11) COMPLETE**
 
 ---
 
@@ -46,12 +46,11 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 | CR-9 | Sidebar Collapsible Submenus | ✅ Done | Accordion behavior, active group auto-expanded, smooth animations |
 | CR-10 | Fee Category Form | ✅ Done | Full CRUD with react-hook-form + zod, edit/delete dialogs, audit logging, soft delete |
 | CR-11 | Image Upload Limits | ✅ Done | Tier-based limits (albums, images/album, size, storage), usage bar, 413 enforcement, upgrade prompts, image/album delete with storage cleanup |
+| CR-5 | Recurring Donations | ✅ Done | Recurring frequency (monthly/yearly), nextDueDate auto-calculate, daily reminder cron, dashboard widget, payment recording dialog, donor reminder preferences |
 
-## ❌ REMAINING — Change Requests
+## ✅ ALL CHANGE REQUESTS COMPLETE
 
-| CR | Title | Status | Dependencies | Priority |
-|----|-------|--------|--------------|----------|
-| CR-5 | Recurring Donations with Reminders | ❌ Not started | CR-7 ✅ (subscription infra) | High |
+No remaining change requests. All CRs (1,2,4,5,6,7,8,9,10,11) have been implemented.
 
 ### Build Stats
 - **156+ components** (atoms, molecules, organisms, domain-specific)
@@ -96,7 +95,7 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 | 13 | Staff Management | ✅ Done | ✅ Done | ✅ Done |
 | 14 | User Management | ✅ Done | ✅ Done | ✅ Done |
 | 15 | Student Fees | ✅ Done | ✅ Done | ✅ Done |
-| 16 | Donation Management | ✅ Done | ⚠️ Partial (CR-5 pending) | ✅ Done |
+| 16 | Donation Management | ✅ Done | ✅ Done (CR-5 complete) | ✅ Done |
 | 17 | Expense Management | ✅ Done | ✅ Done | ✅ Done |
 | 18 | Salary & Payroll | ✅ Done | ✅ Done | ✅ Done |
 | 19 | Inventory & Stock | ✅ Done | ✅ Done | ✅ Done |
@@ -125,14 +124,17 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 ## ✅ CR-4: Product Sale to Student with Monthly Fee — COMPLETE
 - **Done**: Student selector in SalesForm. "Add to Monthly Fee" toggle. Auto-creates FeeInvoiceItem with "Product Purchase" category. Fee invoice link shown in sale detail view. Backend: `addToFee`, `feeInvoiceId` fields on Sale.
 
-## ❌ CR-5: Recurring Donations with Reminders — NOT STARTED
-- **Current**: Donations are one-time only
-- **Required**: 
-  - `isRecurring` + `recurringFrequency` (monthly/yearly) on Donation
-  - `nextDueDate` — auto-calculated from last payment + frequency
-  - Reminder cron job (DAILY) — checks donations due within 7 days
-  - Dashboard widget: Upcoming recurring donations (next 30 days)
-  - When donor pays, `nextDueDate` auto-advances
+## ✅ CR-5: Recurring Donations with Reminders — COMPLETE
+- **Done**: `isRecurring` + `recurringFrequency` (monthly/yearly) on Donation model
+- **Done**: `nextDueDate` — auto-calculated from last payment + frequency
+- **Done**: Reminder cron job (DAILY at 9:00 AM Asia/Dhaka) — checks donations due within 7 days, creates admin notifications
+- **Done**: Dashboard widget: Upcoming recurring donations (next 30 days) on main dashboard + donations page
+- **Done**: When donor pays, `nextDueDate` auto-advances via PATCH /api/donations
+- **Done**: DonationsDataTable with recurring status, overdue indicators, payment recording actions
+- **Done**: RecurringPaymentDialog for recording payments with nextDueDate auto-advance preview
+- **Done**: Donor reminder preferences (reminderConsent, reminderMethod) with UI toggle and settings dialog
+- **Done**: Cron mini-service (port 3031) with node-cron + manual trigger endpoint
+- **Done**: Fixed recurring-reminders API — Notification model userId requirement resolved with findTenantAdminUserId()
 - **Dependencies**: ~~CR-7~~ ✅ (subscription infra complete)
 - **Category**: DB + Backend + Frontend
 
@@ -163,7 +165,7 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 - [x] Fee categories, discounts, waivers
 - [x] Fee category CRUD form (CR-10)
 - [x] Donation categories & donor database
-- [ ] **Recurring donations with reminders (CR-5)**
+- [x] **Recurring donations with reminders (CR-5)**
 - [x] Expense categories & vouchers
 - [x] Salary history & deductions
 - [x] Inventory, suppliers, purchases, stock movement
@@ -215,7 +217,7 @@ New fields for CR-5 still needed — see `Database_Design_Specification_Madrasha
 - [x] Service layer (API routes implemented)
 - [x] Validation (react-hook-form + zod on all forms)
 - [x] REST API ready (60+ routes)
-- [ ] Queue ready (cron jobs needed for CR-5)
+- [x] Queue ready (cron job for CR-5 recurring donation reminders)
 - [ ] Unit-test friendly (no tests yet)
 - [x] Secure authentication (NextAuth v4)
 - [x] Soft deletes where appropriate (deleted_at on transactional tables)
@@ -231,19 +233,16 @@ New fields for CR-5 still needed — see `Database_Design_Specification_Madrasha
 CR-7 (Subscription) ✅ ──→ CR-11 (Upload Limits) ✅  [limits tied to subscription tier]
 CR-2 (i18n) ✅         ──→ CR-1 (Bismillah) ✅       [Bismillah text needs Arabic rendering]
 CR-8 (Simple Acct) ✅  ──→ CR-4 (Sale-to-Fee) ✅     [simple mode needs income recording]
-CR-7 (Subscription) ✅ ──→ CR-5 (Recurring Donations) ❌  [reminder cron needs infra]
+CR-7 (Subscription) ✅ ──→ CR-5 (Recurring Donations) ✅  [reminder cron needs infra]
 ```
 
-All dependencies for **CR-5** are now satisfied (CR-7 ✅ complete). CR-5 is unblocked and ready to implement.
+All dependencies satisfied. All CRs implemented.
 
 ---
 
 # Recommended Build Order (Next Phase)
 
-## Immediate — Only 1 CR Remaining
-1. **CR-5** — Recurring Donations with Reminders (all dependencies met)
-
-## Post CR-5 — Future Enhancements
+## All CRs Complete — Future Enhancements
 - Backup & Restore (Module 28)
 - QR/Barcode support
 - SMS/Email sending backend
@@ -253,9 +252,8 @@ All dependencies for **CR-5** are now satisfied (CR-7 ✅ complete). CR-5 is unb
 ---
 
 # Handover Notes
-- **9 of 10 change requests are COMPLETE** (CR-1,2,4,6,7,8,9,10,11)
-- **Only CR-5 remains** — Recurring Donations with Reminders
-- CR-5 is **unblocked** — its only dependency (CR-7 Subscription infra) is complete
+- **All 10 change requests are COMPLETE** (CR-1,2,4,5,6,7,8,9,10,11)
+- **CR-5 fully implemented** — Recurring Donations with Reminders with cron job, dashboard widget, payment recording UI, donor reminder preferences
 - All Prisma schema changes are pushed and in sync
 - API routes are fully implemented (not just scaffolded)
 - The `computeEnforcement` bug (string vs Date in subscription.ts) is a pre-existing issue that should be fixed alongside CR-5

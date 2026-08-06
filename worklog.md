@@ -1013,3 +1013,32 @@ Stage Summary:
 - SalesForm now works with sample data when API is unavailable (401/no auth)
 - SalesList no longer shows harsh error on auth failure
 - Both components gracefully degrade instead of blocking the UI
+
+---
+Task ID: CR-5
+Agent: Main
+Task: CR-5 — Recurring Donations with Reminders
+
+Work Log:
+- Fixed recurring-reminders API: Notification model requires userId — added findTenantAdminUserId() helper with caching
+- Created DonationsDataTable component with full recurring donation status, nextDueDate, overdue indicators, payment recording actions
+- Created RecurringPaymentDialog component for recording recurring payments with nextDueDate auto-advance
+- Updated Donations page with tab switcher (Dashboard/All Donations), recurring stats, filter controls, API data fetching with React Query
+- Updated DonorList with reminder preferences (reminderConsent, reminderMethod), SMS/Email toggle, Recurring donor indicator, Reminder Settings dialog
+- Created DashboardRecurringDonations widget for main dashboard showing upcoming recurring donations (next 30 days)
+- Integrated DashboardRecurringDonations into main dashboard page alongside UpcomingEvents
+- Created donation-reminder-cron mini service (port 3031) with node-cron, daily schedule at 9:00 AM Asia/Dhaka, manual trigger endpoint
+- Updated DonationCreateInput type with isRecurring, recurringFrequency, recurringAmount fields
+- Added RecurringPaymentInput and DonorReminderSettings types
+- Updated Donor interface in sample-data.ts with isRegular, reminderConsent, reminderMethod, totalPledged fields
+- Updated sample donors with CR-5" reminder fields
+- All new files pass lint with zero errors
+- TypeScript compilation successful for all CR-5 files
+
+Stage Summary:
+- CR-5 implementation complete: Recurring Donations with Reminders
+- Backend: Fixed recurring-reminders API (userId requirement), existing POST/PATCH API already supported recurring
+- Frontend: New DonationsDataTable, RecurringPaymentDialog, DashboardRecurringDonations widget, DonorList with reminder settings
+- Cron: Daily reminder job running on port 3031, scheduled at 9:00 AM Asia/Dhaka
+- Types: Updated DonationCreateInput, added RecurringPaymentInput and DonorReminderSettings
+- Sample data: Updated donors with reminder preferences and recurring status
