@@ -83,6 +83,9 @@ export function useSubscription(tenantId?: string): UseSubscriptionReturn {
         maxStudents: 0,
         maxEmployees: 0,
         maxStorageMb: 0,
+        maxAlbums: 0,
+        maxImagesPerAlbum: 0,
+        maxImageSizeMb: 0,
       })
       setPlanName('')
       setPlanSlug('')
@@ -135,6 +138,9 @@ export function useSubscription(tenantId?: string): UseSubscriptionReturn {
         maxStudents: 0,
         maxEmployees: 0,
         maxStorageMb: 0,
+        maxAlbums: 0,
+        maxImagesPerAlbum: 0,
+        maxImageSizeMb: 0,
       })
     } finally {
       setLoading(false)

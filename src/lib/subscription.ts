@@ -31,6 +31,9 @@ export interface EnforcementResult {
   maxStudents: number
   maxEmployees: number
   maxStorageMb: number
+  maxAlbums: number
+  maxImagesPerAlbum: number
+  maxImageSizeMb: number
 }
 
 /** Valid billing durations in months */
@@ -138,6 +141,9 @@ export function computeEnforcement(params: {
   maxStudents?: number
   maxEmployees?: number
   maxStorageMb?: number
+  maxAlbums?: number
+  maxImagesPerAlbum?: number
+  maxImageSizeMb?: number
 }): EnforcementResult {
   const now = params.now ?? new Date()
   const { status, startDate, endDate, trialEnd } = params
@@ -221,5 +227,8 @@ export function computeEnforcement(params: {
     maxStudents: params.maxStudents ?? 0,
     maxEmployees: params.maxEmployees ?? 0,
     maxStorageMb: params.maxStorageMb ?? 0,
+    maxAlbums: params.maxAlbums ?? 5,
+    maxImagesPerAlbum: params.maxImagesPerAlbum ?? 20,
+    maxImageSizeMb: params.maxImageSizeMb ?? 2,
   }
 }

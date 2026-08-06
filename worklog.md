@@ -888,3 +888,75 @@ Stage Summary:
 - Placeholder "available in next update" replaced with functional CRUD form
 - Delete confirmation dialog added to fee category card grid
 - All code compiles cleanly, no new lint/TS errors introduced
+
+---
+Task ID: 11
+Agent: Main
+Task: CR-11 — Image Upload Limits per Subscription Tier
+
+Work Log:
+- Explored CR-11 spec from CORRECTION-WORK.md and master specification
+- Analyzed existing subscription system (CR-7 complete), gallery components, and schema
+- **Schema changes** (prisma/schema.prisma):
+  - SubscriptionPlan: Added maxAlbums (default 5), maxImagesPerAlbum (default 20), maxImageSizeMb (default 2)
+  - Gallery: Added imageCount (default 0) for cached count
+  - Tenant: Added storageUsedMb (Decimal, default 0) for total storage tracking
+  - GalleryImage: Added fileSizeKb (default 0) for per-image size tracking
+  - Pushed schema with `bun run db:push`
+- **Seed data updated** (prisma/seed.ts):
+  - Free: 5 albums, 20 images/album, 2MB max image
+  - Basic: 15 albums, 50 images/album, 5MB max image
+  - Professional: 50 albums, 100 images/album, 10MB max image
+  - Enterprise: 99999 albums, 99999 images/album, 50MB max image
+  -(Updated existing DB plans with new fields
+- **Subscription library updated** (src/lib/subscription.ts):
+  - Added maxAlbums, maxImagesPerAlbum, maxImage'izeMb to EnforcementResult interface
+  - Updated computeEnforcement() to accept and pass through new limit fields
+  - Updated auth.ts and use-subscription.ts to pass new fields
+  - Updated /api/subscriptions/check to return gallery limits
+- **Backend: Gallery upload API** (src/app/api/gallery8upload/route.ts):
+  - POST endpoint with pre-upload limit enforcement
+  - Checks: images per album, image size, total storage
+  - Returns 413 with specific limit info when exceeded
+  - Updates gallery.imageCount and tenant.storageUsedMb on successful upload
+  - Audit logging for uploads
+- **Backend: Album creation limit** (src/app/api/galleries/route.ts):
+  - Added maxAlbums check before creating new gallery/album
+  - Returns 413 with upgrade prompt when limit reached
+- **Backend: Gallery limits API** (src/app/api/gallery/limits/route.ts):
+  - GET endpoint returning current usage vs limits
+  - Returns per-album image counts, storage usage, canCreateAlbum flag
+- **Frontend: GalleryLimitsBar** (src/components/website/gallery-limits-bar.tsx):
+  - New component showing albums, images/album, storage usage progress bars
+  - Color-coded: green (<80%), amber (80-99%), red (100%)
+  - Upgrade prompt with "Upgrade Plan" button when near/at limits
+  - Max image size info line
+- **Frontend: GalleryManager** updated:
+  - Album badge shows image count with limit (e.g., "3/20")
+  - Badge turns red when at limit
+  - Upload button disabled when album image limit reached
+  - Limit message shown when can't upload more
+  - Accepts limits and canCreateAlbum props
+- **Frontend: ImageUploader** rewritten:
+  - Real file input (hidden input + click handler) instead of simulated
+  - File size validation per image (marks oversized with red ring)
+  - Remaining slots indicator
+  - Oversized files warning banner
+  - File preview with size label
+  - Only submits files that pass size validation
+- **Frontend: Gallery page** updated:
+  - Fetches gallery limits on mount from /api/gallery/limits
+  - GalleryLimitsBar displayed between header and gallery
+  - Create Album button disabled when at album limit
+  - Passes limit props to GalleryManager and ImageUploader
+  - Toast notifications for limit violations
+- Verified: lint passes (0 errors, 14 pre-existing warnings), gallery page compiles (HTTP 200)
+
+Stage Summary:
+- Full tier-based gallery upload limit system implemented
+- 4 limit types enforced: maxAlbums, maxImagesPerAlbum, maxImageSizeMb, maxStorageMb
+- Backend APIs with 413 responses for limit violations
+- Frontend with progress bars, limit messages, upgrade prompts
+- Real file upload with size validation replaces simulated upload
+- Storage tracking via Tenant.storageUsedMb and Gallery.imageCount
+- All code compiles cleanly, no new lint/TS errors

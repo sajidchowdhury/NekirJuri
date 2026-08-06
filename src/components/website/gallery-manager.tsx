@@ -50,6 +50,14 @@ interface GalleryManagerProps {
   onDeleteAlbum: (albumId: string) => void;
   onDeleteImage: (albumId: string, imageId: string) => void;
   onEditImage: (albumId: string, image: GalleryImage) => void;
+  /** Gallery subscription limits for showing usage indicators */
+  limits?: {
+    maxAlbums?: number;
+    maxImagesPerAlbum?: number;
+    maxImageSizeMb?: number;
+  } | null;
+  /** Whether album creation is blocked by subscription limit */
+  canCreateAlbum?: boolean;
 }
 
 export default function GalleryManager({
@@ -59,8 +67,12 @@ export default function GalleryManager({
   onDeleteAlbum,
   onDeleteImage,
   onEditImage,
+  limits,
+  canCreateAlbum = true,
 }: GalleryManagerProps) {
   const [selectedAlbum, setSelectedAlbum] = React.useState<GalleryAlbum | null>(null);
+
+  const maxImagesPerAlbum = limits?.maxImagesPerAlbum ?? 20;
 
   const handleBackToAlbums = () => {
     setSelectedAlbum(null);
@@ -113,9 +125,9 @@ export default function GalleryManager({
                     <CardContent className="p-4 space-y-2">
                       <div className="flex items-start justify-between">
                         <h3 className="font-semibold text-foreground">{album.title}</h3>
-                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0 shrink-0 ml-2">
+                        <Badge className={`${album.images.length >= maxImagesPerAlbum ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'} border-0 shrink-0 ml-2`}>
                           <Camera className="h-3 w-3 mr-1" />
-                          {album.images.length}
+                          {album.images.length}/{maxImagesPerAlbum}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-2">
@@ -187,11 +199,17 @@ export default function GalleryManager({
       </div>
 
       {/* Upload button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end items-center gap-3">
+        {selectedAlbum.images.length >= maxImagesPerAlbum && (
+          <p className="text-xs text-rose-600 dark:text-rose-400">
+            Image limit reached for this album ({selectedAlbum.images.length}/{maxImagesPerAlbum})
+          </p>
+        )}
         <Button
           size="sm"
           className="bg-emerald-600 hover:bg-emerald-700 gap-1.5"
           onClick={() => onUploadImages(selectedAlbum.id)}
+          disabled={selectedAlbum.images.length >= maxImagesPerAlbum}
         >
           <Upload className="h-4 w-4" />
           Upload Images

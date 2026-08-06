@@ -64,6 +64,9 @@ export async function GET(request: NextRequest) {
         maxStudents: 0,
         maxEmployees: 0,
         maxStorageMb: 0,
+        maxAlbums: 0,
+        maxImagesPerAlbum: 0,
+        maxImageSizeMb: 0,
       })
     }
 
@@ -77,6 +80,9 @@ export async function GET(request: NextRequest) {
       maxStudents: subscription.plan.maxStudents,
       maxEmployees: subscription.plan.maxEmployees,
       maxStorageMb: subscription.plan.maxStorageMb,
+      maxAlbums: subscription.plan.maxAlbums,
+      maxImagesPerAlbum: subscription.plan.maxImagesPerAlbum,
+      maxImageSizeMb: subscription.plan.maxImageSizeMb,
     })
 
     return success(enforcement)

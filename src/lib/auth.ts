@@ -93,6 +93,9 @@ export const authOptions: NextAuthOptions = {
               maxStudents: subscription.plan.maxStudents,
               maxEmployees: subscription.plan.maxEmployees,
               maxStorageMb: subscription.plan.maxStorageMb,
+              maxAlbums: subscription.plan.maxAlbums,
+              maxImagesPerAlbum: subscription.plan.maxImagesPerAlbum,
+              maxImageSizeMb: subscription.plan.maxImageSizeMb,
             })
             enforcementLevel = enforcement.level
           }

@@ -4,7 +4,7 @@
 // POST /api/galleries     — Create gallery
 // ============================================================
 
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import {
   success,
@@ -66,6 +66,27 @@ export async function POST(request: NextRequest) {
 
     if (!title) {
       return error('title is required')
+    }
+
+    // CR-11: Check maxAlbums limit before creating
+    const subscription = await db.subscription.findFirst({
+      where: { tenantId, status: { notIn: ['cancelled', 'terminated'] } },
+      include: { plan: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    const maxAlbums = subscription?.plan.maxAlbums ?? 5
+    const currentAlbumCount = await db.gallery.count({ where: { tenantId } })
+    if (currentAlbumCount >= maxAlbums) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Album limit reached (${currentAlbumCount}/${maxAlbums}). Upgrade your plan to create more albums.`,
+          limitType: 'maxAlbums',
+          current: currentAlbumCount,
+          max: maxAlbums,
+        },
+        { status: 413 }
+      )
     }
 
     const gallery = await db.gallery.create({
