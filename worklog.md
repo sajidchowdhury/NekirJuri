@@ -345,3 +345,39 @@ Stage Summary:
 - Dynamic line items in PO and Sales forms with auto-calculation
 - Responsive: mobile card view for tables, stacked layout on small screens
 - Phase 7 complete: Inventory & Procurement fully functional
+
+---
+Task ID: 8
+Agent: Full-Stack Developer
+Task: Phase 8 — Accounting & Reports
+
+Work Log:
+- Created comprehensive accounting sample data at src/lib/accounting/sample-data.ts with 28 accounts (5 types: Asset/Liability/Income/Expense/Equity), 8 journal entries (7 posted + 1 draft), helper functions (formatTaka, getAccountById, getChildAccounts, getAccountsByType, getTopLevelAccounts, calculateAccountBalance, generateLedger, getAccountTotals, getLeafAccounts), type color maps, type labels
+- Created financial-report-shell.tsx — Print-optimized layout wrapper with BismillahHeader, institution info (Al-Huda Islamic Academy, Char Kazirhat), customizable title/date, GeometricDivider, page footer, emerald 3px top border, print CSS
+- Created chart-of-accounts-tree.tsx — Hierarchical tree view using shadcn Accordion for type sections (Assets/Liabilities/Income/Expenses/Equity), collapsible parent/child with expand arrows, account code monospace, type color badges (Asset=sky, Liability=amber, Income=emerald, Expense=rose, Equity=violet), opening balance + current balance columns, eye icon to view ledger, Add Account button per type, Framer Motion animations
+- Created account-form.tsx — react-hook-form + zod validation, Account Code (4-digit monospace), Name, Type select, Parent Account select (filtered by type), Opening Balance, Description textarea, Cancel + emerald Create Account buttons
+- Created ledger-view.tsx — Account ledger with header (code, name, type badge, current balance in gold), date range filter (This Month/Quarter/Year/All), transaction table (Date, Description, Debit, Credit, running Balance), opening balance row, totals footer (Total Debit, Total Credit, Closing Balance), print button
+- Created journal-entry-list.tsx — DataTable with columns: Entry # (monospace), Date, Description, Total Debit, Total Credit, Balanced indicator (emerald ✓/rose ✗), Status badge (Draft=slate, Posted=emerald), Actions dropdown (View, Edit if Draft, Post if Draft), mobile card view, status filter support
+- Created journal-entry-form.tsx — react-hook-form + zod, Date + Reference fields, Description textarea, dynamic line items (Account select, Debit, Credit with mutual exclusion), Add Line button, auto-calculated footer (Total Debit, Total Credit, Balance indicator), Save as Draft + Post Entry buttons (Post only if balanced)
+- Created trial-balance.tsx — As-of date selector, account code/name/debit/credit table (only non-zero), Total Debit/Credit with Balanced badge (emerald if equal), FinancialReportShell wrapper, print button
+- Created income-statement.tsx — Date range selector (Month/Quarter/Year/All), Income section with emerald amounts + subtotal, Expenses section with rose amounts + subtotal, Net Income = Income - Expenses (gold if positive, rose if negative), FinancialReportShell wrapper, print button
+- Created balance-sheet.tsx — As-of date selector, Assets section (Current Assets + Fixed Assets + Total Assets in sky), Liabilities section (Current + Long-term + Total in amber), Equity section (Retained Earnings + Surplus Fund in violet), Total L+E = Total Assets check with Balanced badge, FinancialReportShell wrapper, print button
+- Built /accounting/chart-of-accounts page — 3-tab layout (Chart of Accounts, Ledger, Reports), PageHeader with Bismillah + Add Account + Export, Add Account Dialog with AccountForm, Ledger View Dialog when clicking account, Reports tab with Accordion (Trial Balance, Income Statement, Balance Sheet), Framer Motion slideUp entrance
+- Built /accounting/journal-entries page — PageHeader with Bismillah + New Entry + Export, status filter (All/Draft/Posted), JournalEntryList DataTable, New Entry Dialog with JournalEntryForm, Edit Entry Dialog, View Entry Detail Dialog (read-only with line items table + totals + balance indicator), Post Entry confirmation AlertDialog, Framer Motion slideUp entrance
+- All amounts in ৳ (Bengali Taka) using formatTaka helper
+- All pages use 'use client', Framer Motion entrance animations, emerald primary buttons, gold accent for amounts
+- Reused existing components: DataTable, PageHeader, BismillahHeader, GeometricDivider, ExportButton, Badge, Dialog, AlertDialog, Tabs, Accordion, Card, Button, Select, Input, Label, Textarea, Table, Separator, Form
+- Fixed lint: moved Section component outside render in balance-sheet.tsx, fixed LedView reference in chart-of-accounts page, removed duplicate header row in tree
+- Lint: 0 errors (9 pre-existing warnings — React Hook Form incompatible-library)
+- Both pages verified: HTTP 200
+
+Stage Summary:
+- 1 sample data file in src/lib/accounting/ (sample-data.ts) with 28 accounts, 8 journal entries, 9 helper functions
+- 9 accounting components in src/components/accounting/ (chart-of-accounts-tree, account-form, ledger-view, journal-entry-list, journal-entry-form, trial-balance, income-statement, balance-sheet, financial-report-shell)
+- 2 pages fully built: /accounting/chart-of-accounts (3 tabs: tree, ledger, reports) and /accounting/journal-entries (list + new/edit/view/post)
+- All amounts in ৳ format, Islamic styling with Bismillah on all reports
+- Type color coding: Asset=sky, Liability=amber, Income=emerald, Expense=rose, Equity=violet
+- Double-entry validation: balanced indicator on journal entries and financial reports
+- FinancialReportShell provides print-optimized layout with institution branding
+- Responsive: mobile card view for tables, stacked layout on small screens
+- Phase 8 complete: Accounting & Reports fully functional
