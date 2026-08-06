@@ -24,6 +24,7 @@ import { ThemeToggle } from '@/components/atoms/theme-toggle'
 import { CommandPalette } from '@/components/layout/command-palette'
 import { NotificationDropdown } from '@/components/layout/notification-dropdown'
 import { UserMenu } from '@/components/layout/user-menu'
+import { SubscriptionBanner } from '@/components/subscription/subscription-banner'
 
 /** Human-readable labels for breadcrumb segments */
 const segmentLabels: Record<string, string> = {
@@ -58,6 +59,7 @@ const segmentLabels: Record<string, string> = {
   notifications: 'Notifications',
   'activity-logs': 'Activity Log',
   settings: 'Settings',
+  billing: 'Billing',
 }
 
 export function AppHeader() {

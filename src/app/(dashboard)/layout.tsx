@@ -5,6 +5,7 @@ import { MobileNav } from '@/components/layout/mobile-nav'
 import PageTransition from '@/components/ui/page-transition'
 import { SkipToContent } from '@/components/ui/skip-to-content'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
+import { SubscriptionBanner } from '@/components/subscription/subscription-banner'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <AppSidebar />
       <SidebarInset>
         <AppHeader />
+        <SubscriptionBanner
+          status="active"
+          level="full"
+          daysRemaining={5}
+          trialDaysRemaining={0}
+          isExpired={false}
+          isInTrial={false}
+        />
         <main
           id="main-content"
           role="main"

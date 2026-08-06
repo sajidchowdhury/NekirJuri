@@ -64,6 +64,40 @@ export const authOptions: NextAuthOptions = {
           ur.role.rolePermissions.map(rp => rp.permission.slug)
         )
 
+        // Fetch active subscription for enforcement
+        let subscriptionStatus = 'none'
+        let subscriptionPlanSlug = ''
+        let subscriptionPlanName = ''
+        let enforcementLevel = 'blocked'
+
+        if (user.tenantId) {
+          const subscription = await db.subscription.findFirst({
+            where: { tenantId: user.tenantId, status: { notIn: ['cancelled', 'terminated'] } },
+            include: { plan: true },
+            orderBy: { createdAt: 'desc' },
+          })
+
+          if (subscription) {
+            subscriptionStatus = subscription.status
+            subscriptionPlanSlug = subscription.plan.slug
+            subscriptionPlanName = subscription.plan.name
+
+            // Compute enforcement level
+            const { computeEnforcement } = await import('./subscription')
+            const enforcement = computeEnforcement({
+              status: subscription.status as any,
+              startDate: subscription.startDate,
+              endDate: subscription.endDate,
+              trialEnd: subscription.trialEnd,
+              features: (subscription.plan.features as string[]) ?? [],
+              maxStudents: subscription.plan.maxStudents,
+              maxEmployees: subscription.plan.maxEmployees,
+              maxStorageMb: subscription.plan.maxStorageMb,
+            })
+            enforcementLevel = enforcement.level
+          }
+        }
+
         await db.user.update({
           where: { id: user.id },
           data: { lastLoginAt: new Date() },
@@ -92,6 +126,10 @@ export const authOptions: NextAuthOptions = {
           isSuperAdmin: String(user.isSuperAdmin),
           roles: roles.join(','),
           permissions: permissions.join(','),
+          subscriptionStatus,
+          subscriptionPlanSlug,
+          subscriptionPlanName,
+          enforcementLevel,
         }
       },
     }),
@@ -106,6 +144,10 @@ export const authOptions: NextAuthOptions = {
         token.isSuperAdmin = u.isSuperAdmin as string
         token.roles = u.roles as string
         token.permissions = u.permissions as string
+        token.subscriptionStatus = u.subscriptionStatus as string
+        token.subscriptionPlanSlug = u.subscriptionPlanSlug as string
+        token.subscriptionPlanName = u.subscriptionPlanName as string
+        token.enforcementLevel = u.enforcementLevel as string
       }
       return token
     },
@@ -118,6 +160,10 @@ export const authOptions: NextAuthOptions = {
         session.user.isSuperAdmin = token.isSuperAdmin === 'true'
         session.user.roles = (token.roles as string || '').split(',').filter(Boolean)
         session.user.permissions = (token.permissions as string || '').split(',').filter(Boolean)
+        session.user.subscriptionStatus = token.subscriptionStatus as string
+        session.user.subscriptionPlanSlug = token.subscriptionPlanSlug as string
+        session.user.subscriptionPlanName = token.subscriptionPlanName as string
+        session.user.enforcementLevel = token.enforcementLevel as string
       }
       return session
     },
@@ -141,6 +187,10 @@ declare module 'next-auth' {
     isSuperAdmin?: string
     roles?: string
     permissions?: string
+    subscriptionStatus?: string
+    subscriptionPlanSlug?: string
+    subscriptionPlanName?: string
+    enforcementLevel?: string
   }
   interface Session {
     user: {
@@ -153,6 +203,10 @@ declare module 'next-auth' {
       isSuperAdmin: boolean
       roles: string[]
       permissions: string[]
+      subscriptionStatus: string
+      subscriptionPlanSlug: string
+      subscriptionPlanName: string
+      enforcementLevel: string
     }
   }
 }
@@ -165,5 +219,9 @@ declare module 'next-auth/jwt' {
     isSuperAdmin?: string
     roles?: string
     permissions?: string
+    subscriptionStatus?: string
+    subscriptionPlanSlug?: string
+    subscriptionPlanName?: string
+    enforcementLevel?: string
   }
 }

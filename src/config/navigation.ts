@@ -78,6 +78,7 @@ export const navigation: NavGroup[] = [
       { title: 'Users & Roles', href: '/system/users', icon: Shield },
       { title: 'Notifications', href: '/system/notifications', icon: Bell, badge: '3' },
       { title: 'Activity Log', href: '/system/activity-logs', icon: Activity },
+      { title: 'Billing', href: '/system/billing', icon: CreditCard },
       { title: 'Settings', href: '/system/settings', icon: Wrench },
     ],
   },

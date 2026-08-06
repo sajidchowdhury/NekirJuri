@@ -54,6 +54,7 @@ model Tenant {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   subscriptions      Subscription[]
+  subscriptionPayments SubscriptionPayment[]
   users              User[]
   roles              Role[]
   academicSessions   AcademicSession[]
@@ -101,19 +102,20 @@ model Tenant {
 }
 
 model SubscriptionPlan {
-  id           Int      @id @default(autoincrement())
-  name         String
-  slug         String   @unique
-  description  String?
-  priceMonthly Decimal  @map("price_monthly")
-  priceYearly  Decimal? @map("price_yearly")
-  maxStudents  Int      @map("max_students")
-  maxEmployees Int      @map("max_employees")
-  maxStorageMb Int      @map("max_storage_mb")
-  features     Json?
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id            Int      @id @default(autoincrement())
+  name          String
+  slug          String   @unique
+  description   String?
+  priceMonthly  Decimal  @map("price_monthly")
+  price6Monthly Decimal? @map("price_6_monthly")
+  priceYearly   Decimal? @map("price_yearly")
+  maxStudents   Int      @map("max_students")
+  maxEmployees  Int      @map("max_employees")
+  maxStorageMb  Int      @map("max_storage_mb")
+  features      Json?
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   subscriptions Subscription[]
 
@@ -121,23 +123,55 @@ model SubscriptionPlan {
 }
 
 model Subscription {
-  id          Int      @id @default(autoincrement())
-  tenantId    Int      @map("tenant_id")
-  planId      Int      @map("plan_id")
-  status      String
-  startDate   DateTime @map("start_date")
-  endDate     DateTime @map("end_date")
-  trialEnd    DateTime? @map("trial_end")
-  isAutoRenew Boolean  @default(false) @map("is_auto_renew")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  tenantId        Int      @map("tenant_id")
+  planId          Int      @map("plan_id")
+  status          String   // trial | active | grace_period | restricted | suspended | terminated | cancelled
+  billingDuration Int      @default(1) @map("billing_duration") // 1, 6, or 12 months
+  paymentMethod   String?  @map("payment_method") // bkash | nagad | bank | manual
+  startDate       DateTime @map("start_date")
+  endDate         DateTime @map("end_date")
+  trialEnd        DateTime? @map("trial_end")
+  isAutoRenew     Boolean  @default(false) @map("is_auto_renew")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+  tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan     SubscriptionPlan    @relation(fields: [planId], references: [id])
+  payments SubscriptionPayment[]
 
   @@index([tenantId])
   @@index([status])
   @@map("subscriptions")
+}
+
+model SubscriptionPayment {
+  id             Int      @id @default(autoincrement())
+  subscriptionId Int      @map("subscription_id")
+  tenantId       Int      @map("tenant_id")
+  amount         Decimal
+  currency       String   @default("BDT")
+  paymentMethod  String   @map("payment_method") // bkash | nagad | bank | manual
+  paymentRef     String?  @map("payment_ref") // Transaction ID from bKash/Nagad
+  paymentPhone   String?  @map("payment_phone") // Phone number used for payment
+  status         String   // pending | verified | failed | refunded
+  billingPeriod  String   @map("billing_period") // e.g. "2025-01", "2025-H1", "2025"
+  duration       Int      // 1, 6, or 12 months
+  paidAt         DateTime? @map("paid_at")
+  verifiedAt     DateTime? @map("verified_at")
+  verifiedBy     Int?     @map("verified_by") // Admin who verified manual payment
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([paymentRef])
+  @@map("subscription_payments")
 }
 
 // ============================================================
