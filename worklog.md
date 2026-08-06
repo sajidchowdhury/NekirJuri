@@ -656,3 +656,34 @@ Stage Summary:
 - Session carries subscriptionStatus, subscriptionPlanSlug, subscriptionPlanName, enforcementLevel
 - Lint: 0 errors, 13 pre-existing warnings
 - Browser verified: login flow, dashboard banner, billing page, tab navigation, mobile responsive
+
+---
+Task ID: CR-9
+Agent: Main
+Task: CR-9 — Sidebar Collapsible Submenus (Accordion Behavior)
+
+Work Log:
+- Analyzed current AppSidebar implementation: all groups always expanded via SidebarGroup/SidebarGroupLabel/SidebarGroupContent
+- Designed accordion behavior: only one group expanded at a time, click to toggle, active group auto-expanded
+- Created useAccordionGroups custom hook with version-based override system (avoids useEffect lint errors)
+- Used shadcn Collapsible + CollapsibleTrigger + CollapsibleContent for expand/collapse animation
+- Added ChevronDown icon to group labels with rotate-180 animation when expanded
+- Active group label styled with emerald-700 color to indicate current section
+- Fixed toggle handler to properly collapse the active group (using isCurrentlyExpanded flag)
+- Fixed override logic to distinguish between "no override" (undefined) and "explicitly collapsed" (null)
+- Lint: 0 errors, 14 pre-existing warnings
+- Verified with Agent Browser:
+  - Dashboard: Overview auto-expanded, others collapsed ✅
+  - Click ACADEMIC: expands it, collapses Overview ✅
+  - Click FINANCE label: collapses it (all groups collapsed) ✅
+  - Navigate to /system/billing: SYSTEM auto-expanded ✅
+  - Mobile responsive (390x844) ✅
+
+Stage Summary:
+- Sidebar now has accordion behavior per CR-9 spec
+- Only one navigation group expanded at a time
+- Click group label to expand (others collapse), click again to collapse
+- Active group (containing current route) auto-expands on navigation
+- ChevronDown indicator rotates 180° when group is expanded
+- Active group label highlighted with emerald color
+- Collapsible animation using Radix Collapsible primitive
