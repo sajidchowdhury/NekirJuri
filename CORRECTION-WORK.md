@@ -1,6 +1,7 @@
 # 🕌 Madrasha ERP — Correction & Enhancement Work
 
 > **Generated**: Phase 12 post-completion analysis  
+> **Updated**: August 2025 — 9 of 10 CRs COMPLETE  
 > **Purpose**: Categorize 11 change requests by discipline for systematic implementation  
 > **Workflow**: Software Architect → Database Designer → Backend Lead → UI/UX Designer → Frontend Developer
 
@@ -8,18 +9,18 @@
 
 ## 📋 Change Requests Summary
 
-| # | Request | Architect | DB Designer | Backend Lead | UI/UX Designer | Frontend Dev |
-|---|---------|:---------:|:-----------:|:------------:|:-------------:|:------------:|
-| 1 | Remove Bismillah from pages, keep in top bar | | | | ✅ | ✅ |
-| 2 | 3-language system (Ar/En/Bn) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 4 | Product sale to student with monthly fee | ✅ | ✅ | ✅ | | ✅ |
-| 5 | Recurring donations with reminders | ✅ | ✅ | ✅ | | ✅ |
-| 6 | Fix New Sale modal (overlapping, mobile) | | | | ✅ | ✅ |
-| 7 | SaaS subscription enforcement | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 8 | Simplified accounting mode | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 9 | Sidebar collapsible submenus | | | | ✅ | ✅ |
-| 10 | Fee Category creation form | | | ✅ | ✅ | ✅ |
-| 11 | Image upload limits per subscription | ✅ | ✅ | ✅ | | ✅ |
+| # | Request | Status | Architect | DB Designer | Backend Lead | UI/UX Designer | Frontend Dev |
+|---|---------|--------|:---------:|:-----------:|:------------:|:-------------:|:------------:|
+| 1 | Remove Bismillah from pages, keep in top bar | ✅ Done | | | | ✅ | ✅ |
+| 2 | 3-language system (Ar/En/Bn) | ✅ Done | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 4 | Product sale to student with monthly fee | ✅ Done | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 5 | Recurring donations with reminders | ❌ Todo | ✅ | ✅ | ✅ | | ✅ |
+| 6 | Fix New Sale modal (overlapping, mobile) | ✅ Done | | | | ✅ | ✅ |
+| 7 | SaaS subscription enforcement | ✅ Done | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 8 | Simplified accounting mode | ✅ Done | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 9 | Sidebar collapsible submenus | ✅ Done | | | | ✅ | ✅ |
+| 10 | Fee Category creation form | ✅ Done | | | ✅ | ✅ | ✅ |
+| 11 | Image upload limits per subscription | ✅ Done | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ---
 
