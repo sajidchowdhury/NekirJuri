@@ -2,8 +2,10 @@
 
 // ============================================================
 // UserMenu — Avatar dropdown for user profile actions
+// CR-2: Multi-Language System — All strings use useTranslations
 // ============================================================
 
+import { useTranslations } from 'next-intl'
 import { User, Settings, LogOut } from 'lucide-react'
 import {
   DropdownMenu,
@@ -18,6 +20,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 
 export function UserMenu() {
+  const t = useTranslations('userMenu')
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -27,7 +31,7 @@ export function UserMenu() {
               SA
             </AvatarFallback>
           </Avatar>
-          <span className="sr-only">User menu</span>
+          <span className="sr-only">{t('srLabel')}</span>
         </Button>
       </DropdownMenuTrigger>
 
@@ -43,11 +47,11 @@ export function UserMenu() {
         <DropdownMenuGroup>
           <DropdownMenuItem className="cursor-pointer">
             <User className="size-4" />
-            <span>Profile</span>
+            <span>{t('profile')}</span>
           </DropdownMenuItem>
           <DropdownMenuItem className="cursor-pointer">
             <Settings className="size-4" />
-            <span>Settings</span>
+            <span>{t('settings')}</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
 
@@ -55,7 +59,7 @@ export function UserMenu() {
 
         <DropdownMenuItem variant="destructive" className="cursor-pointer">
           <LogOut className="size-4" />
-          <span>Logout</span>
+          <span>{t('logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

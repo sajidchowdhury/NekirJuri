@@ -3,8 +3,10 @@
 // ============================================================
 // RecentActivity — Timeline list of recent activities
 // Each item: icon, description, relative timestamp
+// CR-2: Multi-Language System — All strings use useTranslations
 // ============================================================
 
+import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import {
   UserPlus,
@@ -16,6 +18,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { ar } from 'date-fns/locale/ar';
+import { bn } from 'date-fns/locale/bn';
+import { useLocale } from 'next-intl';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -76,13 +81,18 @@ export default function RecentActivity({
   activities,
   loading = false,
 }: RecentActivityProps) {
+  const t = useTranslations('dashboard');
+  const locale = useLocale();
   const items = activities && activities.length > 0 ? activities : sampleActivities;
+
+  // Select date-fns locale for relative time formatting
+  const dateLocale = locale === 'ar' ? ar : locale === 'bn' ? bn : undefined;
 
   if (loading) {
     return (
       <Card className="border-border">
         <CardHeader>
-          <CardTitle className="text-base">Recent Activity</CardTitle>
+          <CardTitle className="text-base">{t('recentActivity')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
@@ -109,7 +119,7 @@ export default function RecentActivity({
     >
       <Card className="border-border">
         <CardHeader>
-          <CardTitle className="text-base">Recent Activity</CardTitle>
+          <CardTitle className="text-base">{t('recentActivity')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
@@ -117,7 +127,7 @@ export default function RecentActivity({
               {items.slice(0, 10).map((activity, index) => {
                 const { icon: Icon, color } = resolveIcon(activity);
                 const timeAgo = activity.createdAt
-                  ? formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })
+                  ? formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true, ...(dateLocale ? { locale: dateLocale } : {}) })
                   : '';
 
                 return (
@@ -136,7 +146,7 @@ export default function RecentActivity({
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-foreground leading-snug truncate">
-                        {activity.description || 'Activity recorded'}
+                        {activity.description || t('activityRecorded')}
                       </p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         {timeAgo}
@@ -151,7 +161,7 @@ export default function RecentActivity({
           {/* View All link */}
           <div className="mt-3 pt-3 border-t border-border">
             <Button variant="ghost" size="sm" className="w-full text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">
-              View All Activity
+              {t('viewAllActivity')}
             </Button>
           </div>
         </CardContent>

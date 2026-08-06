@@ -5,6 +5,7 @@
 // remember me, and forgot password link
 // Uses react-hook-form + zod for validation
 // Submits via next-auth signIn
+// CR-2: Multi-Language System — All strings use useTranslations
 // ============================================================
 
 import { useState } from 'react';
@@ -17,6 +18,7 @@ import { motion } from 'framer-motion';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +36,7 @@ import GeometricDivider from '@/components/islamic/geometric-divider';
 
 /** Login form schema */
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
   password: z.string().min(1, 'Password is required'),
   tenantSlug: z.string().optional(),
   rememberMe: z.boolean().default(false),
@@ -57,6 +59,8 @@ export default function LoginForm({ className }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const t = useTranslations('auth.login');
+  const tCommon = useTranslations('common');
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -82,9 +86,9 @@ export default function LoginForm({ className }: LoginFormProps) {
 
       if (result?.error) {
         if (result.error === 'Invalid email or password') {
-          setAuthError('Invalid email or password. Please try again.');
+          setAuthError(t('invalidCredentials'));
         } else if (result.error === 'Access denied for this institution') {
-          setAuthError('Access denied for this institution. Please check your institution slug.');
+          setAuthError(t('accessDenied'));
         } else {
           setAuthError(result.error);
         }
@@ -92,15 +96,15 @@ export default function LoginForm({ className }: LoginFormProps) {
       }
 
       if (result?.ok) {
-        toast.success('Welcome back!', {
-          description: 'You have been logged in successfully.',
+        toast.success(t('welcomeBackToast'), {
+          description: t('loginSuccess'),
         });
         router.push('/dashboard');
         router.refresh();
       }
     } catch {
-      toast.error('Something went wrong', {
-        description: 'Please check your connection and try again.',
+      toast.error(t('somethingWentWrong'), {
+        description: t('connectionError'),
       });
     } finally {
       setIsLoading(false);
@@ -133,11 +137,11 @@ export default function LoginForm({ className }: LoginFormProps) {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-foreground">Email Address</FormLabel>
+                <FormLabel className="text-foreground">{t('email')}</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
-                    placeholder="admin@madrasha.com"
+                    placeholder={t('emailPlaceholder')}
                     autoComplete="email"
                     className="rounded-lg border-border focus-visible:ring-emerald-500/50 focus-visible:border-emerald-500"
                     {...field}
@@ -155,28 +159,28 @@ export default function LoginForm({ className }: LoginFormProps) {
             render={({ field }) => (
               <FormItem>
                 <div className="flex items-center justify-between">
-                  <FormLabel className="text-foreground">Password</FormLabel>
+                  <FormLabel className="text-foreground">{t('password')}</FormLabel>
                   <Link
                     href="/forgot-password"
                     className="text-xs font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
                   >
-                    Forgot password?
+                    {t('forgotPassword')}
                   </Link>
                 </div>
                 <FormControl>
                   <div className="relative">
                     <Input
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
+                      placeholder={t('passwordPlaceholder')}
                       autoComplete="current-password"
-                      className="rounded-lg border-border pr-10 focus-visible:ring-emerald-500/50 focus-visible:border-emerald-500"
+                      className="rounded-lg border-border pe-10 focus-visible:ring-emerald-500/50 focus-visible:border-emerald-500"
                       {...field}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showPassword ? t('hidePassword') : t('showPassword')}
                     >
                       {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
@@ -194,13 +198,13 @@ export default function LoginForm({ className }: LoginFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-foreground">
-                  Institution Slug
-                  <span className="ml-1 text-xs font-normal text-muted-foreground">(optional)</span>
+                  {t('tenantSlug')}
+                  <span className="ms-1 text-xs font-normal text-muted-foreground">{tCommon('optional')}</span>
                 </FormLabel>
                 <FormControl>
                   <Input
                     type="text"
-                    placeholder="e.g., al-huda-madrasha"
+                    placeholder={t('tenantSlugPlaceholder')}
                     autoComplete="off"
                     className="rounded-lg border-border focus-visible:ring-emerald-500/50 focus-visible:border-emerald-500"
                     {...field}
@@ -225,7 +229,7 @@ export default function LoginForm({ className }: LoginFormProps) {
                   />
                 </FormControl>
                 <Label className="text-sm font-normal text-muted-foreground cursor-pointer">
-                  Remember me for 30 days
+                  {t('rememberMe')}
                 </Label>
               </FormItem>
             )}
@@ -243,10 +247,10 @@ export default function LoginForm({ className }: LoginFormProps) {
             {isLoading ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Signing in...
+                {t('signingIn')}
               </>
             ) : (
-              'Sign In'
+              t('signIn')
             )}
           </Button>
         </form>

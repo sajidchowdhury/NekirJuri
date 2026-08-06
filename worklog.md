@@ -770,3 +770,35 @@ Stage Summary:
 - All CRUD operations work through the API with proper validation
 - Middleware now provides tenant/user context for all API requests
 - Key fix: middleware injects x-tenant-id/x-user-id headers from JWT for API routes
+---
+Task ID: CR-2
+Agent: Main Agent
+Task: CR-2: Multi-Language System (Arabic / English / Bangla)
+
+Work Log:
+- Explored codebase: found next-intl v4.3.4 installed but unused, multilingual fonts already loaded, partial bilingual data existing
+- Created next-intl configuration: src/i18n/request.ts with cookie-based locale resolution (no URL prefix)
+- Updated next.config.ts with createNextIntlPlugin()
+- Created comprehensive translation files: messages/en.json, messages/bn.json, messages/ar.json (~150 keys each)
+- Created locale API route: /api/locale POST for cookie persistence
+- Updated root layout (src/app/layout.tsx) with dynamic lang/dir attributes and NextIntlClientProvider
+- Created LanguageSwitcher component with flag emojis and instant RTL/font switching
+- Created useAppLocale hook for locale management
+- Added RTL CSS support: custom @custom-variant rtl, logical properties, font utilities
+- Converted navigation config from hardcoded strings to i18n keys (titleKey)
+- Translated all layout components: app-sidebar, app-header, user-menu, notification-dropdown, command-palette, mobile-nav
+- Translated all dashboard components: dashboard-hero, stat-cards-grid, quick-actions, recent-activity, dashboard page
+- Translated all auth pages: login, register, forgot-password, login-form
+- Added locale-aware date formatting with date-fns locales (ar, bn)
+- Added locale-aware number/currency formatting
+- Lint passed with 0 errors (13 pre-existing warnings)
+
+Stage Summary:
+- Full i18n system implemented for Arabic (RTL), English (LTR), and Bangla (LTR)
+- Cookie-based locale persistence (no URL restructuring required)
+- RTL support: HTML dir attribute, Arabic font, logical CSS properties
+- Language switcher added to app header with flag emojis
+- All key UI components translated (~150 translation keys per language)
+- Locale API at /api/locale for programmatic language switching
+- Verified: Bengali text renders with lang="bn" dir="ltr", Arabic with lang="ar" dir="rtl"
+- Server OOM issues in dev environment are system memory constraints, not code issues

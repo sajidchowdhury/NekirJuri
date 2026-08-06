@@ -4,14 +4,18 @@
 // Forgot Password Page — Split layout with Islamic pattern + form
 // Desktop: Left panel (pattern + branding) | Right panel (form)
 // Mobile: Full-screen form with subtle pattern
+// CR-2: Multi-Language System — All strings use useTranslations
 // ============================================================
 
 import { motion } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import CrescentLogo from '@/components/islamic/crescent-logo';
 import AuthPattern from '@/components/auth/auth-pattern';
 import ForgotPasswordForm from '@/components/auth/forgot-password-form';
 
 export default function ForgotPasswordPage() {
+  const tApp = useTranslations('app');
+
   return (
     <div className="relative min-h-screen flex">
       {/* Left panel — Islamic pattern + branding (hidden on mobile) */}
@@ -28,7 +32,7 @@ export default function ForgotPasswordPage() {
           >
             <CrescentLogo size="lg" className="mx-auto mb-6 [&_*]:!fill-white dark:[&_*]:!fill-white" />
             <h1 className="text-3xl font-bold tracking-tight mb-2">
-              Madrasha ERP
+              {tApp('name')}
             </h1>
             <p className="text-emerald-100/80 text-lg max-w-xs mx-auto">
               Secure password recovery for your account
@@ -42,7 +46,7 @@ export default function ForgotPasswordPage() {
         {/* Mobile branding */}
         <div className="lg:hidden mb-8 text-center">
           <CrescentLogo size="md" className="mx-auto mb-3" />
-          <h1 className="text-xl font-bold text-foreground">Madrasha ERP</h1>
+          <h1 className="text-xl font-bold text-foreground">{tApp('name')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Reset your password
           </p>

@@ -2,11 +2,14 @@
 
 // ============================================================
 // AppHeader — Top header bar with sidebar trigger, breadcrumbs,
-// Bismillah (subtle, centered), search, notifications, theme toggle, and user menu
+// Bismillah (subtle, centered), search, notifications, theme toggle,
+// language switcher, and user menu
 // CR-1: Bismillah shown in top bar only, not on individual pages
+// CR-2: Multi-Language System — All strings use useTranslations
 // ============================================================
 
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 import { useSidebar } from '@/components/ui/sidebar'
@@ -25,47 +28,49 @@ import { ThemeToggle } from '@/components/atoms/theme-toggle'
 import { CommandPalette } from '@/components/layout/command-palette'
 import { NotificationDropdown } from '@/components/layout/notification-dropdown'
 import { UserMenu } from '@/components/layout/user-menu'
-import { SubscriptionBanner } from '@/components/subscription/subscription-banner'
+import { LanguageSwitcher } from '@/components/layout/language-switcher'
 
-/** Human-readable labels for breadcrumb segments */
-const segmentLabels: Record<string, string> = {
-  dashboard: 'Dashboard',
-  academic: 'Academic',
-  finance: 'Finance',
-  inventory: 'Inventory',
-  accounting: 'Accounting',
-  website: 'Website',
-  system: 'System',
-  students: 'Students',
-  teachers: 'Teachers',
-  employees: 'Employees',
-  classes: 'Classes',
-  sessions: 'Sessions',
-  promotions: 'Promotions',
-  fees: 'Fee Management',
-  collections: 'Collections',
-  donations: 'Donations',
-  expenses: 'Expenses',
-  payroll: 'Payroll',
-  products: 'Products',
-  purchases: 'Purchases',
-  stock: 'Stock',
-  sales: 'Sales',
-  'chart-of-accounts': 'Chart of Accounts',
-  'journal-entries': 'Journal Entries',
-  pages: 'Pages',
-  notices: 'Notices',
-  gallery: 'Gallery',
-  users: 'Users & Roles',
-  notifications: 'Notifications',
-  'activity-logs': 'Activity Log',
-  settings: 'Settings',
-  billing: 'Billing',
+/** Breadcrumb segment key mapping to translation keys */
+const segmentKeys: Record<string, string> = {
+  dashboard: 'dashboard',
+  academic: 'academic',
+  finance: 'finance',
+  inventory: 'inventory',
+  accounting: 'accounting',
+  website: 'website',
+  system: 'system',
+  students: 'students',
+  teachers: 'teachers',
+  employees: 'employees',
+  classes: 'classes',
+  sessions: 'sessions',
+  promotions: 'promotions',
+  fees: 'fees',
+  collections: 'collections',
+  donations: 'donations',
+  expenses: 'expenses',
+  payroll: 'payroll',
+  products: 'products',
+  purchases: 'purchases',
+  stock: 'stock',
+  sales: 'sales',
+  'chart-of-accounts': 'chartOfAccounts',
+  'journal-entries': 'journalEntries',
+  pages: 'pages',
+  notices: 'notices',
+  gallery: 'gallery',
+  users: 'users',
+  notifications: 'notifications',
+  'activity-logs': 'activityLogs',
+  settings: 'settings',
+  billing: 'billing',
 }
 
 export function AppHeader() {
   const pathname = usePathname()
   const { state } = useSidebar()
+  const t = useTranslations('breadcrumbs')
+  const tHeader = useTranslations('header')
 
   // Build breadcrumb segments from pathname
   const segments = pathname
@@ -84,7 +89,8 @@ export function AppHeader() {
             {segments.map((segment, index) => {
               const href = '/' + segments.slice(0, index + 1).join('/')
               const isLast = index === segments.length - 1
-              const label = segmentLabels[segment] || segment.charAt(0).toUpperCase() + segment.slice(1)
+              const key = segmentKeys[segment]
+              const label = key ? t(key) : segment.charAt(0).toUpperCase() + segment.slice(1)
 
               return (
                 <BreadcrumbItem key={href}>
@@ -113,7 +119,7 @@ export function AppHeader() {
         بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
       </p>
 
-      {/* Right: Search + Notifications + Theme + User */}
+      {/* Right: Search + Language + Notifications + Theme + User */}
       <div className="flex items-center gap-1 shrink-0">
         {/* Search trigger */}
         <Button
@@ -127,7 +133,7 @@ export function AppHeader() {
           aria-label="Search"
         >
           <Search className="size-3.5" />
-          <span className="text-xs">Search...</span>
+          <span className="text-xs">{tHeader('search')}</span>
           <kbd className="pointer-events-none ml-1 inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
             <span className="text-xs">⌘</span>K
           </kbd>
@@ -146,6 +152,7 @@ export function AppHeader() {
 
         <Separator orientation="vertical" className="h-5 mx-1" />
 
+        <LanguageSwitcher />
         <NotificationDropdown />
         <ThemeToggle />
         <UserMenu />

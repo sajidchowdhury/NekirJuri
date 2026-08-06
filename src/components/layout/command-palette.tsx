@@ -3,10 +3,12 @@
 // ============================================================
 // CommandPalette — Searchable command palette (⌘K / Ctrl+K)
 // Navigate pages and trigger quick actions
+// CR-2: Multi-Language System — All strings use useTranslations
 // ============================================================
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import {
   GraduationCap, Receipt, ReceiptText, FileText,
 } from 'lucide-react'
@@ -21,17 +23,19 @@ import {
 } from '@/components/ui/command'
 import { navigation } from '@/config/navigation'
 
-/** Quick actions for common tasks */
-const quickActions = [
-  { title: 'Add Student', href: '/academic/students', icon: GraduationCap },
-  { title: 'Collect Fee', href: '/finance/collections', icon: Receipt },
-  { title: 'Add Expense', href: '/finance/expenses', icon: ReceiptText },
-  { title: 'Generate Invoice', href: '/finance/fees', icon: FileText },
+/** Quick actions for common tasks (keys for translation) */
+const quickActionKeys = [
+  { titleKey: 'addStudent', href: '/academic/students', icon: GraduationCap },
+  { titleKey: 'collectFee', href: '/finance/collections', icon: Receipt },
+  { titleKey: 'addExpense', href: '/finance/expenses', icon: ReceiptText },
+  { titleKey: 'generateInvoice', href: '/finance/fees', icon: FileText },
 ]
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false)
   const router = useRouter()
+  const t = useTranslations('commandPalette')
+  const tNav = useTranslations('nav')
 
   // Keyboard shortcut: ⌘K / Ctrl+K
   useEffect(() => {
@@ -52,23 +56,24 @@ export function CommandPalette() {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Search pages, students, actions..." />
+      <CommandInput placeholder={t('placeholder')} />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandEmpty>{t('noResults')}</CommandEmpty>
 
         {/* Navigation pages */}
         {navigation.map((group) => (
-          <CommandGroup key={group.title} heading={group.title}>
+          <CommandGroup key={group.titleKey} heading={tNav(group.titleKey)}>
             {group.items.map((item) => {
               const Icon = item.icon
+              const itemTitle = tNav(item.titleKey)
               return (
                 <CommandItem
                   key={item.href}
-                  value={`${item.title} ${group.title}`}
+                  value={`${itemTitle} ${tNav(group.titleKey)}`}
                   onSelect={() => runCommand(() => router.push(item.href))}
                 >
                   <Icon className="size-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>{item.title}</span>
+                  <span>{itemTitle}</span>
                 </CommandItem>
               )
             })}
@@ -78,17 +83,18 @@ export function CommandPalette() {
         <CommandSeparator />
 
         {/* Quick Actions */}
-        <CommandGroup heading="Quick Actions">
-          {quickActions.map((action) => {
+        <CommandGroup heading={t('quickActions')}>
+          {quickActionKeys.map((action) => {
             const Icon = action.icon
+            const actionTitle = t(action.titleKey)
             return (
               <CommandItem
-                key={action.title}
-                value={action.title}
+                key={action.titleKey}
+                value={actionTitle}
                 onSelect={() => runCommand(() => router.push(action.href))}
               >
                 <Icon className="size-4 text-amber-600 dark:text-amber-400" />
-                <span>{action.title}</span>
+                <span>{actionTitle}</span>
               </CommandItem>
             )
           })}

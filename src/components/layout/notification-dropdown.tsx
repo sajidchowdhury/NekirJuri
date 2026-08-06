@@ -3,8 +3,10 @@
 // ============================================================
 // NotificationDropdown — Bell icon with notification badge & dropdown
 // Shows recent notifications with timestamps
+// CR-2: Multi-Language System — All strings use useTranslations
 // ============================================================
 
+import { useTranslations } from 'next-intl'
 import { Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,25 +23,27 @@ import {
 const notifications = [
   {
     id: 1,
-    title: 'Fee payment received',
+    titleKey: 'feePaymentReceived' as const,
     description: 'Abdullah Rahim paid ৳5,000',
     time: '2 min ago',
   },
   {
     id: 2,
-    title: 'New student admitted',
+    titleKey: 'newStudentAdmitted' as const,
     description: 'Fatima Khatun admitted to Class 5',
     time: '15 min ago',
   },
   {
     id: 3,
-    title: 'Salary processed',
+    titleKey: 'salaryProcessed' as const,
     description: 'March 2025 payroll completed',
     time: '1 hour ago',
   },
 ]
 
 export function NotificationDropdown() {
+  const t = useTranslations('notifications')
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -47,7 +51,7 @@ export function NotificationDropdown() {
           variant="ghost"
           size="icon"
           className="relative h-9 w-9 text-muted-foreground hover:text-foreground"
-          aria-label="Notifications"
+          aria-label={t('title')}
           aria-haspopup="true"
         >
           <Bell className="size-4" />
@@ -55,15 +59,15 @@ export function NotificationDropdown() {
           <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
             3
           </span>
-          <span className="sr-only">Notifications</span>
+          <span className="sr-only">{t('title')}</span>
         </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between">
-          <span>Notifications</span>
+          <span>{t('title')}</span>
           <span className="text-xs text-emerald-600 dark:text-emerald-400 font-normal cursor-pointer hover:underline">
-            Mark all as read
+            {t('markAllRead')}
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -76,7 +80,7 @@ export function NotificationDropdown() {
             >
               <div className="flex items-center justify-between w-full">
                 <span className="text-sm font-medium text-foreground">
-                  {notification.title}
+                  {t(notification.titleKey)}
                 </span>
                 <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
                   {notification.time}
@@ -91,7 +95,7 @@ export function NotificationDropdown() {
 
         <DropdownMenuSeparator />
         <DropdownMenuItem className="text-center justify-center text-sm text-emerald-600 dark:text-emerald-400 font-medium cursor-pointer">
-          View all notifications
+          {t('viewAll')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

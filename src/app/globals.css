@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant rtl ([dir="rtl"] &);
 
 @theme inline {
   --color-background: var(--background);
@@ -425,5 +426,51 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   RTL SUPPORT — CR-2: Multi-Language System
+   ============================================================ */
+
+/* RTL-specific overrides for Arabic layout */
+[dir="rtl"] {
+  /* Flip sidebar to right side */
+  --sidebar-side: right;
+}
+
+/* RTL-aware spacing utilities */
+@layer utilities {
+  /* Margin start/end (logical properties) */
+  .ms-auto { margin-inline-start: auto; }
+  .me-auto { margin-inline-end: auto; }
+
+  /* Padding start/end */
+  .ps-3 { padding-inline-start: 0.75rem; }
+  .pe-3 { padding-inline-end: 0.75rem; }
+
+  /* RTL transition for sidebar */
+  [dir="rtl"] .sidebar-transition {
+    transition: margin-right 200ms ease, margin-left 200ms ease;
+  }
+
+  /* Bengali font override for specific elements */
+  .font-bengali {
+    font-family: var(--font-bengali), var(--font-sans), sans-serif;
+  }
+
+  /* Arabic font override for specific elements */
+  .font-arabic {
+    font-family: var(--font-arabic), serif;
+  }
+
+  /* RTL flip for icons that need mirroring */
+  [dir="rtl"] .rtl-mirror {
+    transform: scaleX(-1);
+  }
+
+  /* Smooth direction transition */
+  html[dir] {
+    transition: direction 0s;
   }
 }

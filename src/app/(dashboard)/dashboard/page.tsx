@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -89,6 +90,7 @@ const sectionFade = {
  */
 export default function DashboardPage() {
   const [dateRange, setDateRange] = useState<DateRangeOption>('this_month');
+  const t = useTranslations('dashboard');
 
   // Fetch dashboard data with React Query
   const {
@@ -130,14 +132,14 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <AlertCircle className="h-10 w-10 text-rose-500" />
-        <p className="text-muted-foreground">Failed to load dashboard data</p>
+        <p className="text-muted-foreground">{t('failedToLoad')}</p>
         <Button
           variant="outline"
           onClick={() => refetch()}
           className="gap-2"
         >
           <RefreshCw className="h-4 w-4" />
-          Try Again
+          {t('tryAgain')}
         </Button>
       </div>
     );

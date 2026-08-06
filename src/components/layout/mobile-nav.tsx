@@ -3,18 +3,21 @@
 // ============================================================
 // MobileNav — Bottom tab bar for mobile navigation
 // Shows 5 main tabs from mobileTabs config
+// CR-2: Multi-Language System — All strings use useTranslations
 // ============================================================
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { mobileTabs } from '@/config/navigation'
 
 export function MobileNav() {
   const pathname = usePathname()
+  const t = useTranslations('nav')
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-border bg-background/95 backdrop-blur-md"
+      className="fixed bottom-0 start-0 end-0 z-40 md:hidden border-t border-border bg-background/95 backdrop-blur-md"
       aria-label="Mobile navigation"
     >
       <div className="flex items-center justify-around h-14 pb-safe">
@@ -38,7 +41,7 @@ export function MobileNav() {
             >
               <Icon className="size-5" />
               <span className="text-[10px] font-medium truncate px-1">
-                {tab.title}
+                {t(tab.titleKey)}
               </span>
             </Link>
           )
