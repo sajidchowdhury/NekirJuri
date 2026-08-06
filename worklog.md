@@ -855,3 +855,36 @@ Stage Summary:
 - All 8 files changed, 561 insertions, 91 deletions
 - Commit: e4f71e7 pushed to origin/main
 - Key feature: When selling to a student with "Add to Monthly Fee" enabled, sale amount is automatically added to student's current month fee invoice as a "Product Purchase" line item
+
+---
+Task ID: 10
+Agent: Main
+Task: CR-10 — Fee Category Creation Form (Full CRUD with react-hook-form + zod)
+
+Work Log:
+- Analyzed CR-10 spec from CORRECTION-WORK.md and master specification
+- Read existing placeholder in fees/page.tsx, fee-category-list.tsx, and api/fee-categories/route.ts
+- Created FeeCategoryForm component with react-hook-form + zod validation (src/components/finance/fee-category-form.tsx)
+  - Fields: Name (En), Name (Bn), Code, Amount (৳), Frequency (select), Is Recurring (switch), Description (textarea), IsActive (switch)
+  - Auto-sets isRecurring=false when frequency is one-time
+  - Supports both create and edit modes via defaultValues prop
+  - Wired to POST /api/fee-categories and PATCH /api/fee-categories/:id
+- Created PATCH/DELETE API route (src/app/api/fee-categories/[id]/route.ts)
+  - PATCH: Update fee category with audit logging
+  - DELETE: Soft delete (sets isActive=false) with audit logging
+  - Both enforce tenant isolation via requireTenantId
+- Replaced placeholder dialog in fees/page.tsx with FeeCategoryForm
+- Enhanced fee-category-list.tsx with:
+  - Edit dialog (opens FeeCategoryForm with defaultValues)
+  - Delete confirmation (AlertDialog with soft delete via API)
+  - Pencil + Trash icons visible on hover for each card
+- Fixed TypeScript errors: removed .default() from zod schema to avoid input/output type mismatch
+- Verified: lint passes (0 errors, 14 pre-existing warnings), both pages compile (HTTP 200)
+- Note: Pre-existing auth bug (computeEnforcement receives string dates instead of Date objects) prevents browser login; not related to CR-10
+
+Stage Summary:
+- FeeCategoryForm component created with full react-hook-form + zod validation
+- PATCH/DELETE API endpoints created at /api/fee-categories/[id]
+- Placeholder "available in next update" replaced with functional CRUD form
+- Delete confirmation dialog added to fee category card grid
+- All code compiles cleanly, no new lint/TS errors introduced

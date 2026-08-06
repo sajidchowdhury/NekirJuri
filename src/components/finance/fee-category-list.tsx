@@ -3,18 +3,34 @@
 // ============================================================
 // FeeCategoryList — Card grid of fee categories
 // Shows icon, name (Bn+En), amount, frequency badge, student count
+// Edit dialog (FeeCategoryForm) + Delete confirmation (AlertDialog)
 // ============================================================
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import {
   GraduationCap, BookOpen, FileText, Bus, Home, Library, Monitor, Trophy,
-  type LucideIcon, Plus, Pencil, Check, X
+  type LucideIcon, Plus, Pencil, Check, X, Trash2, Loader2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import FeeCategoryForm from '@/components/finance/fee-category-form';
 import {
   type FeeCategory,
   type FeeFrequency,
@@ -49,6 +65,15 @@ export default function FeeCategoryList({ onAddCategory }: FeeCategoryListProps)
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editAmount, setEditAmount] = React.useState<string>('');
 
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false);
+  const [editCategory, setEditCategory] = React.useState<FeeCategory | null>(null);
+
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deleteCategory, setDeleteCategory] = React.useState<FeeCategory | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
   const startEdit = (cat: FeeCategory) => {
     setEditingId(cat.id);
     setEditAmount(cat.amount.toString());
@@ -64,6 +89,41 @@ export default function FeeCategoryList({ onAddCategory }: FeeCategoryListProps)
 
   const cancelEdit = () => {
     setEditingId(null);
+  };
+
+  // Open full edit dialog
+  const openEditDialog = (cat: FeeCategory) => {
+    setEditCategory(cat);
+    setEditDialogOpen(true);
+  };
+
+  // Open delete confirmation
+  const openDeleteDialog = (cat: FeeCategory) => {
+    setDeleteCategory(cat);
+    setDeleteDialogOpen(true);
+  };
+
+  // Handle delete
+  const handleDelete = async () => {
+    if (!deleteCategory) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/fee-categories/${deleteCategory.id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to delete');
+      }
+      setCategories(prev => prev.filter(c => c.id !== deleteCategory.id));
+      toast.success('Fee category deleted');
+      setDeleteDialogOpen(false);
+      setDeleteCategory(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete fee category');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -107,14 +167,24 @@ export default function FeeCategoryList({ onAddCategory }: FeeCategoryListProps)
                       </div>
                     </div>
                     {!isEditing && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                        onClick={() => startEdit(cat)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => openEditDialog(cat)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-rose-500 hover:text-rose-600"
+                          onClick={() => openDeleteDialog(cat)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </div>
 
@@ -162,6 +232,60 @@ export default function FeeCategoryList({ onAddCategory }: FeeCategoryListProps)
           );
         })}
       </div>
+
+      {/* Edit Category Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Fee Category</DialogTitle>
+            <DialogDescription>
+              Update fee category details
+            </DialogDescription>
+          </DialogHeader>
+          {editCategory && (
+            <FeeCategoryForm
+              defaultValues={{
+                id: Number(editCategory.id),
+                name: editCategory.nameEn,
+                nameBn: editCategory.nameBn,
+                code: editCategory.nameEn.replace(/\s+/g, '_').toUpperCase().slice(0, 10),
+                amount: editCategory.amount.toString(),
+                frequency: editCategory.frequency,
+                isRecurring: editCategory.isRecurring,
+              }}
+              onSuccess={() => {
+                setEditDialogOpen(false);
+                setEditCategory(null);
+                toast.success('Fee category updated');
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation AlertDialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Fee Category</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deleteCategory?.nameBn || deleteCategory?.nameEn}</strong>?
+              This action will deactivate the category. Existing invoices and fee structures referencing this category will not be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

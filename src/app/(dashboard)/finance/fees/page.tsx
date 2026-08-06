@@ -16,6 +16,7 @@ import FeeStructureBuilder from '@/components/finance/fee-structure-builder';
 import FeeInvoiceList from '@/components/finance/fee-invoice-list';
 import GenerateInvoiceWizard from '@/components/finance/generate-invoice-wizard';
 import FeeInvoiceDetail from '@/components/finance/fee-invoice-detail';
+import FeeCategoryForm from '@/components/finance/fee-category-form';
 import { type FeeInvoice } from '@/lib/finance/sample-data';
 import { fadeIn, slideUp, staggerChildren, transitions } from '@/lib/animations';
 
@@ -134,30 +135,18 @@ export default function FeesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Category Dialog (simple placeholder) */}
+      {/* Add Category Dialog — Full CRUD form */}
       <Dialog open={addCategoryDialogOpen} onOpenChange={setAddCategoryDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Fee Category</DialogTitle>
             <DialogDescription>
               Create a new fee category for the institution
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              Fee category creation form will be available in the next update.
-              For now, categories are managed from the fee structure builder.
-            </p>
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setAddCategoryDialogOpen(false)}
-                size="sm"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
+          <FeeCategoryForm
+            onSuccess={() => setAddCategoryDialogOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </motion.div>
