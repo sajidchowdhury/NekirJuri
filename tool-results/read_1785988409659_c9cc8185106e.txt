@@ -1,0 +1,832 @@
+     1→# 🕌 Madrasha ERP — UI/UX Implementation Roadmap
+     2→
+     3→> **Project**: Madrasha ERP & Accounting Management System (SaaS)  
+     4→> **Stack**: Next.js 16 · TypeScript · Tailwind CSS 4 · shadcn/ui · Framer Motion · Recharts  
+     5→> **Design Philosophy**: *Islamic elegance meets modern productivity* — Clean, premium, mobile-first  
+     6→> **Version**: 1.0 · **Last Updated**: August 2025
+     7→
+     8→---
+     9→
+    10→## 🎨 Design Identity — "Islamic Modern Premium"
+    11→
+    12→### Core Principle
+    13→> *"Simplicity is the ultimate sophistication"* — Every screen should feel like walking into a well-designed masjid courtyard: **spacious, calm, purposeful, and beautiful.**
+    14→
+    15→### Islamic Design DNA
+    16→- **Geometric harmony** — Subtle geometric patterns as decorative accents (not overwhelming)
+    17→- **Calligraphic influence** — Arabic/Bengali typography treated with respect and proper font pairing
+    18→- **Arch motif** — Soft arch shapes for cards, modals, and containers (inspired by Islamic architecture)
+    19→- **Generous whitespace** — Reflects the spaciousness of Islamic architecture
+    20→- **Green as sacred** — Emerald/jade green as the primary brand color (color of Islam)
+    21→- **Gold as accent** — Warm gold for highlights, CTAs, and premium features
+    22→- **Symmetry & order** — Balanced layouts reflecting geometric precision
+    23→
+    24→---
+    25→
+    26→## 🌈 Color System — "Emerald & Gold"
+    27→
+    28→### Primary Palette
+    29→
+    30→| Token | Color | Hex | OKLCH | Usage |
+    31→|-------|-------|-----|-------|-------|
+    32→| `--primary` | Emerald 700 | `#047857` | `oklch(0.48 0.16 163)` | Buttons, active states, links, primary actions |
+    33→| `--primary-foreground` | White | `#ffffff` | `oklch(1 0 0)` | Text on primary backgrounds |
+    34→| `--primary-soft` | Emerald 50 | `#ecfdf5` | `oklch(0.97 0.02 163)` | Subtle backgrounds, hover states |
+    35→| `--primary-muted` | Emerald 100 | `#d1fae5` | `oklch(0.94 0.05 163)` | Badges, tags, soft highlights |
+    36→
+    37→### Accent Palette (Gold)
+    38→
+    39→| Token | Color | Hex | OKLCH | Usage |
+    40→|-------|-------|-----|-------|-------|
+    41→| `--accent` | Amber 600 | `#d97706` | `oklch(0.68 0.15 75)` | Premium indicators, CTAs, notifications |
+    42→| `--accent-foreground` | Amber 900 | `#78350f` | `oklch(0.38 0.08 75)` | Text on gold backgrounds |
+    43→| `--accent-soft` | Amber 50 | `#fffbeb` | `oklch(0.99 0.02 85)` | Gold tint backgrounds |
+    44→
+    45→### Semantic Colors
+    46→
+    47→| Token | Color | Hex | Usage |
+    48→|-------|-------|-----|-------|
+    49→| `--destructive` | Rose 600 | `#e11d48` | Errors, delete actions, overdue |
+    50→| `--warning` | Amber 500 | `#f59e0b` | Warnings, pending states |
+    51→| `--success` | Emerald 500 | `#10b981` | Success, completed, paid |
+    52→| `--info` | Sky 600 | `#0284c7` | Information, tooltips |
+    53→
+    54→### Neutral Palette (Warm Gray — not cold blue-gray)
+    55→
+    56→| Token | Color | Hex | Usage |
+    57→|-------|-------|-----|-------|
+    58→| `--background` | Warm White | `#fafaf7` | Page background |
+    59→| `--card` | Pure White | `#ffffff` | Card surfaces |
+    60→| `--muted` | Stone 100 | `#f5f5f4` | Muted backgrounds |
+    61→| `--border` | Stone 200 | `#e7e5e4` | Borders, dividers |
+    62→| `--foreground` | Stone 900 | `#1c1917` | Primary text |
+    63→| `--muted-foreground` | Stone 500 | `#78716c` | Secondary text |
+    64→
+    65→### Dark Mode Palette
+    66→
+    67→| Token | Color | Hex | Usage |
+    68→|-------|-------|-----|-------|
+    69→| `--background` | Stone 950 | `#0c0a09` | Page background |
+    70→| `--card` | Stone 900 | `#1c1917` | Card surfaces |
+    71→| `--primary` | Emerald 400 | `#34d399` | Buttons, active states |
+    72→| `--accent` | Amber 400 | `#fbbf24` | Gold accent |
+    73→| `--foreground` | Stone 50 | `#fafaf9` | Primary text |
+    74→
+    75→### Chart Colors (Data Visualization)
+    76→
+    77→| Index | Color | Hex | Usage |
+    78→|-------|-------|-----|-------|
+    79→| `--chart-1` | Emerald 500 | `#10b981` | Primary data series |
+    80→| `--chart-2` | Amber 500 | `#f59e0b` | Secondary series |
+    81→| `--chart-3` | Sky 500 | `#0ea5e9` | Tertiary series |
+    82→| `--chart-4` | Rose 400 | `#fb7185` | Contrast series |
+    83→| `--chart-5` | Violet 400 | `#a78bfa` | Additional series |
+    84→
+    85→---
+    86→
+    87→## 🔤 Typography System
+    88→
+    89→### Font Stack
+    90→
+    91→| Purpose | Font | Fallback | Weight |
+    92→|---------|------|----------|--------|
+    93→| **English UI** | Inter (Google Fonts) | system-ui, sans-serif | 400, 500, 600, 700 |
+    94→| **Bangla UI** | Noto Sans Bengali | sans-serif | 400, 500, 600, 700 |
+    95→| **Arabic** | Noto Naskh Arabic | serif | 400, 500 |
+    96→| **Monospace** | JetBrains Mono | monospace | 400 (for codes/IDs) |
+    97→
+    98→### Type Scale
+    99→
+   100→| Level | Size | Weight | Line Height | Usage |
+   101→|-------|------|--------|-------------|-------|
+   102→| `display` | 2.25rem (36px) | 700 | 1.2 | Dashboard hero stats |
+   103→| `h1` | 1.875rem (30px) | 700 | 1.3 | Page titles |
+   104→| `h2` | 1.5rem (24px) | 600 | 1.3 | Section headings |
+   105→| `h3` | 1.25rem (20px) | 600 | 1.4 | Card titles |
+   106→| `h4` | 1.125rem (18px) | 500 | 1.4 | Sub-sections |
+   107→| `body` | 0.875rem (14px) | 400 | 1.6 | Body text, table cells |
+   108→| `caption` | 0.75rem (12px) | 400 | 1.5 | Labels, badges, timestamps |
+   109→| `micro` | 0.625rem (10px) | 500 | 1.4 | Overlines, tiny badges |
+   110→
+   111→---
+   112→
+   113→## 📐 Spacing & Layout System
+   114→
+   115→### Spacing Scale (4px base)
+   116→`4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 · 64 · 80 · 96`
+   117→
+   118→### Container Widths
+   119→
+   120→| Breakpoint | Sidebar | Content | Max-width |
+   121→|------------|---------|---------|-----------|
+   122→| Mobile (<640px) | Hidden (sheet overlay) | Full width | 100% |
+   123→| Tablet (640-1024px) | Collapsed (icons only, 64px) | Fluid | 100% |
+   124→| Desktop (1024-1440px) | Expanded (256px) | Fluid | 100% |
+   125→| Wide (>1440px) | Expanded (280px) | Centered | 1440px |
+   126→
+   127→### Card System
+   128→- **Border radius**: `0.75rem` (12px) — soft but not pill-shaped
+   129→- **Padding**: `p-6` (24px) for content cards, `p-4` (16px) for compact cards
+   130→- **Gap**: `gap-6` between cards in grid
+   131→- **Shadow**: `shadow-sm` default, `shadow-md` on hover/elevated
+   132→- **Border**: `1px solid var(--border)` — subtle, always present
+   133→
+   134→### Islamic Arch Border Radius
+   135→- For hero cards and stat cards: Use a custom `border-radius` with a subtle arch shape on top — `12px 12px 12px 12px` with an optional decorative top border in `--primary` color (3px)
+   136→
+   137→---
+   138→
+   139→## 📱 Responsive Strategy — Mobile-First
+   140→
+   141→### Breakpoint Behavior
+   142→
+   143→| Breakpoint | Sidebar | Navigation | Tables | Forms |
+   144→|------------|---------|------------|--------|-------|
+   145→| **Mobile** (<640px) | Sheet overlay | Bottom tab bar | Card list view | Full-width stacked |
+   146→| **Tablet** (640-1024px) | Collapsed icon rail | Top breadcrumb | Responsive table | 2-column grid |
+   147→| **Desktop** (1024px+) | Full sidebar | Sidebar + breadcrumb | Full data table | 3-column grid |
+   148→
+   149→### Mobile-Specific Patterns
+   150→- **Bottom tab bar** for main navigation (5-7 items max)
+   151→- **Swipe gestures** for card actions (edit, delete)
+   152→- **Pull-to-refresh** for data lists
+   153→- **FAB (Floating Action Button)** for primary create actions
+   154→- **Sheet/Drawer** for forms instead of modals
+   155→- **Card list** instead of tables for data display
+   156→- **Collapsible sections** for long forms
+   157→
+   158→---
+   159→
+   160→## 🧩 Component Architecture
+   161→
+   162→### Atomic Design Structure
+   163→
+   164→```
+   165→src/components/
+   166→├── ui/              ← shadcn/ui (atoms — already installed)
+   167→├── atoms/           ← Custom atoms (icons, avatars, badges, status dots)
+   168→├── molecules/       ← Composed pieces (stat cards, search bars, user rows)
+   169→├── organisms/       ← Complex blocks (data tables, forms, charts, filters)
+   170→├── templates/       ← Page layouts (dashboard layout, form layout, list layout)
+   171→└── islamic/         ← Islamic decorative components (patterns, arches, bismillah)
+   172→```
+   173→
+   174→### Islamic Decorative Components
+   175→
+   176→| Component | Description | Where Used |
+   177→|-----------|-------------|------------|
+   178→| `IslamicPattern` | SVG geometric pattern (subtle, low opacity) | Card backgrounds, page headers |
+   179→| `ArchCard` | Card with Islamic arch-shaped top border | Hero stats, welcome cards |
+   180→| `BismillahHeader` | "بسم الله الرحمن الرحيم" in Arabic calligraphy | Report headers, print layouts |
+   181→| `GeometricDivider` | SVG geometric line divider | Section separators |
+   182→| `CrescentIcon` | Crescent moon icon (Islamic symbol) | Logo, loading states |
+   183→| `ArabicText` | Proper RTL Arabic text wrapper | Any Arabic content |
+   184→
+   185→---
+   186→
+   187→## 🗺️ Navigation Architecture
+   188→
+   189→### Sidebar Structure (Desktop)
+   190→
+   191→```
+   192→┌─────────────────────────────┐
+   193→│  🕌 Madrasha ERP            │  ← Logo + Tenant name
+   194→│  ─────────────────────────  │
+   195→│  📊 Dashboard               │
+   196→│  ─────────────────────────  │
+   197→│  🎓 ACADEMIC                │  ← Section header
+   198→│    ├── 📋 Students          │
+   199→│    ├── 👨‍🏫 Teachers           │
+   200→│    ├── 👨‍💼 Employees          │
+   201→│    ├── 🏫 Classes            │
+   202→│    ├── 📅 Academic Session   │
+   203→│    └── ⬆ Promotions         │
+   204→│  ─────────────────────────  │
+   205→│  💰 FINANCE                 │
+   206→│    ├── 🧾 Fee Management    │
+   207→│    ├── 💵 Fee Collection     │
+   208→│    ├── 🤝 Donations         │
+   209→│    ├── 📤 Expenses          │
+   210→│    └── 💲 Salary/Payroll     │
+   211→│  ─────────────────────────  │
+   212→│  📦 INVENTORY               │
+   213→│    ├── 🏷️ Products           │
+   214→│    ├── 🛒 Purchases          │
+   215→│    ├── 📊 Stock              │
+   216→│    └── 🧮 Sales              │
+   217→│  ─────────────────────────  │
+   218→│  📒 ACCOUNTING              │
+   219→│    ├── 📖 Chart of Accounts  │
+   220→│    └── 📝 Journal Entries    │
+   221→│  ─────────────────────────  │
+   222→│  🌐 WEBSITE                 │
+   223→│    ├── 📄 Pages             │
+   224→│    ├── 📢 Notices           │
+   225→│    └── 🖼️ Gallery            │
+   226→│  ─────────────────────────  │
+   227→│  ⚙️ SYSTEM                  │
+   228→│    ├── 👥 Users & Roles      │
+   229→│    ├── 🔔 Notifications     │
+   230→│    ├── 📊 Activity Logs      │
+   231→│    └── 🔧 Settings           │
+   232→└─────────────────────────────┘
+   233→```
+   234→
+   235→### Mobile Bottom Tab Bar
+   236→
+   237→```
+   238→┌──────┬──────┬──────┬──────┬──────┐
+   239→│ 📊   │ 🎓   │ 💰   │ 📦   │ ⚙️   │
+   240→│Home  │Learn │Finance│Store │More  │
+   241→└──────┴──────┴──────┴──────┴──────┘
+   242→```
+   243→
+   244→---
+   245→
+   246→## 📋 PHASE-BY-PHASE IMPLEMENTATION
+   247→
+   248→---
+   249→
+   250→## Phase 0 — Design System Foundation
+   251→
+   252→**Goal**: Set up the entire design system, theme, and reusable base components.  
+   253→**Duration**: ~1 session  
+   254→**Dependencies**: None  
+   255→**Delivers**: Theme, colors, fonts, base atoms, Islamic decorative components
+   256→
+   257→### Tasks
+   258→
+   259→| # | Task | Details |
+   260→|---|------|---------|
+   261→| 0.1 | **Install fonts** | Inter, Noto Sans Bengali, Noto Naskh Arabic via `next/font/google` |
+   262→| 0.2 | **Configure theme tokens** | Override `globals.css` with Emerald+Gold palette (light & dark) |
+   263→| 0.3 | **Set up `next-themes`** | Wire `ThemeProvider` into root layout with system preference detection |
+   264→| 0.4 | **Create design tokens file** | `src/lib/design-tokens.ts` — exported color map, spacing, typography constants |
+   265→| 0.5 | **Create `IslamicPattern` component** | SVG geometric pattern (repeating 8-point star or arabesque) with configurable opacity, color, and size |
+   266→| 0.6 | **Create `ArchCard` component** | Card wrapper with subtle arch-shaped top decorative border in `--primary` |
+   267→| 0.7 | **Create `GeometricDivider` component** | SVG divider with Islamic geometric line pattern |
+   268→| 0.8 | **Create `StatusBadge` component** | Unified badge: `active` (green), `inactive` (gray), `pending` (amber), `overdue` (red), `paid` (emerald) |
+   269→| 0.9 | **Create `BismillahHeader` component** | Arabic calligraphy "بسم الله الرحمن الرحيم" for report headers |
+   270→| 0.10 | **Create `PageHeader` component** | Consistent page title + description + Bismillah (optional) + breadcrumb + action buttons |
+   271→| 0.11 | **Create `EmptyState` component** | Illustrated empty state with Islamic-themed illustration placeholder, title, description, CTA |
+   272→| 0.12 | **Create `LoadingSkeleton` patterns** | Skeleton loaders for: table rows, stat cards, form fields, chart areas |
+   273→| 0.13 | **Configure Framer Motion** | Shared animation variants: `fadeIn`, `slideUp`, `scaleIn`, `staggerChildren`, `pageTransition` |
+   274→| 0.14 | **Create `CrescentLogo` component** | SVG crescent moon + star logo in primary color, animated on load |
+   275→
+   276→### Validation
+   277→- [ ] Theme renders correctly in light mode
+   278→- [ ] Theme renders correctly in dark mode
+   279→- [ ] All Islamic decorative components render
+   280→- [ ] Fonts load correctly (English, Bengali, Arabic)
+   281→- [ ] Animation variants work smoothly
+   282→
+   283→---
+   284→
+   285→## Phase 1 — Layout Shell & Navigation
+   286→
+   287→**Goal**: Build the complete app shell — sidebar, header, mobile nav, breadcrumbs.  
+   288→**Duration**: ~1 session  
+   289→**Dependencies**: Phase 0  
+   290→**Delivers**: Full navigable app shell with all routes defined
+   291→
+   292→### Tasks
+   293→
+   294→| # | Task | Details |
+   295→|---|------|---------|
+   296→| 1.1 | **Create sidebar data config** | `src/config/navigation.ts` — full sidebar menu structure with icons, labels, paths, group headers |
+   297→| 1.2 | **Build `AppSidebar` component** | Using shadcn `Sidebar` — logo, navigation groups, collapsible sections, user avatar at bottom, tenant switcher (for SaaS) |
+   298→| 1.3 | **Build `AppHeader` component** | Top bar — breadcrumb, search (Command+K), notifications bell with badge, theme toggle, user dropdown |
+   299→| 1.4 | **Build `CommandPalette` component** | shadcn `Command` dialog — search across all pages, students, actions. Triggered by Ctrl+K |
+   300→| 1.5 | **Build `MobileNav` component** | Bottom tab bar with 5 main sections + "More" overflow menu (Sheet) |
+   301→| 1.6 | **Build `BreadcrumbNav` component** | Auto-generated breadcrumbs from route segments |
+   302→| 1.7 | **Build `NotificationDropdown` component** | Bell icon → dropdown with latest notifications, "Mark all read", "View all" link |
+   303→| 1.8 | **Build `UserMenu` component** | Avatar → dropdown with profile, settings, logout |
+   304→| 1.9 | **Build `TenantSwitcher` component** | Dropdown to switch between tenants (SaaS multi-tenant) — shows tenant logo + name |
+   305→| 1.10 | **Create `(dashboard)` route group** | `src/app/(dashboard)/layout.tsx` — wraps all authenticated pages with sidebar + header |
+   306→| 1.11 | **Create `(auth)` route group** | `src/app/(auth)/layout.tsx` — centered layout for login/register |
+   307→| 1.12 | **Wire middleware** | Redirect unauthenticated users to login, authenticated users away from auth pages |
+   308→| 1.13 | **Create placeholder pages** | Create all route directories with simple "Coming Soon" pages so navigation works end-to-end |
+   309→
+   310→### Route Structure
+   311→
+   312→```
+   313→src/app/
+   314→├── (auth)/
+   315→│   ├── login/page.tsx
+   316→│   └── register/page.tsx
+   317→├── (dashboard)/
+   318→│   ├── layout.tsx              ← Sidebar + Header
+   319→│   ├── page.tsx                ← Dashboard (home)
+   320→│   ├── academic/
+   321→│   │   ├── students/page.tsx
+   322→│   │   ├── teachers/page.tsx
+   323→│   │   ├── employees/page.tsx
+   324→│   │   ├── classes/page.tsx
+   325→│   │   ├── sessions/page.tsx
+   326→│   │   └── promotions/page.tsx
+   327→│   ├── finance/
+   328→│   │   ├── fees/page.tsx
+   329→│   │   ├── fee-collections/page.tsx
+   330→│   │   ├── donations/page.tsx
+   331→│   │   ├── expenses/page.tsx
+   332→│   │   └── payroll/page.tsx
+   333→│   ├── inventory/
+   334→│   │   ├── products/page.tsx
+   335→│   │   ├── purchases/page.tsx
+   336→│   │   ├── stock/page.tsx
+   337→│   │   └── sales/page.tsx
+   338→│   ├── accounting/
+   339→│   │   ├── chart-of-accounts/page.tsx
+   340→│   │   └── journal-entries/page.tsx
+   341→│   ├── website/
+   342→│   │   ├── pages/page.tsx
+   343→│   │   ├── notices/page.tsx
+   344→│   │   └── gallery/page.tsx
+   345→│   └── system/
+   346→│       ├── users/page.tsx
+   347→│       ├── notifications/page.tsx
+   348→│       ├── activity-logs/page.tsx
+   349→│       └── settings/page.tsx
+   350→└── layout.tsx                  ← Root (fonts, themes, providers)
+   351→```
+   352→
+   353→### Validation
+   354→- [ ] Sidebar renders with all navigation items
+   355→- [ ] Sidebar collapses on tablet (icon-only mode)
+   356→- [ ] Sidebar becomes sheet overlay on mobile
+   357→- [ ] Mobile bottom tab bar renders on small screens
+   358→- [ ] Command palette (Ctrl+K) works
+   359→- [ ] Theme toggle works (light ↔ dark)
+   360→- [ ] All placeholder pages are navigable
+   361→- [ ] Breadcrumbs auto-generate correctly
+   362→
+   363→---
+   364→
+   365→## Phase 2 — Authentication & Onboarding
+   366→
+   367→**Goal**: Beautiful login/register flow with Islamic aesthetic.  
+   368→**Duration**: ~1 session  
+   369→**Dependencies**: Phase 0, Phase 1  
+   370→**Delivers**: Working auth UI connected to NextAuth
+   371→
+   372→### Tasks
+   373→
+   374→| # | Task | Details |
+   375→|---|------|---------|
+   376→| 2.1 | **Design login page** | Split layout: left side = Islamic geometric pattern background + branding, right side = login form. Mobile = full-screen form with pattern background |
+   377→| 2.2 | **Build `LoginForm` component** | Email + password fields with proper validation (react-hook-form + zod), "Remember me" checkbox, forgot password link, submit button with loading state |
+   378→| 2.3 | **Build `RegisterForm` component** | Multi-step: Step 1 (tenant info), Step 2 (admin user), Step 3 (subscription plan selection) |
+   379→| 2.4 | **Build `ForgotPasswordForm` component** | Email input → send reset link → success message |
+   380→| 2.5 | **Build `SubscriptionPlanCard` component** | Pricing card with plan features, green "Current" badge for selected, gold border for recommended |
+   381→| 2.6 | **Build `AuthPattern` component** | Animated Islamic geometric pattern for auth page backgrounds — slow rotation animation |
+   382→| 2.7 | **Connect to NextAuth** | Wire login/register forms to `/api/auth/[...nextauth]` |
+   383→| 2.8 | **Add error states** | Invalid credentials, network error, account locked — shown as toast + inline error |
+   384→
+   385→### Validation
+   386→- [ ] Login form validates and submits
+   387→- [ ] Register multi-step form works
+   388→- [ ] Auth pages have Islamic pattern background
+   389→- [ ] Error states display correctly
+   390→- [ ] Redirect after login works
+   391→- [ ] Mobile auth layout is clean
+   392→
+   393→---
+   394→
+   395→## Phase 3 — Dashboard & Analytics
+   396→
+   397→**Goal**: The heart of the app — a stunning dashboard with real-time stats, charts, and quick actions.  
+   398→**Duration**: ~1 session  
+   399→**Dependencies**: Phase 0, Phase 1, Phase 2  
+   400→**Delivers**: Full dashboard page with live data from `/api/dashboard`
+   401→
+   402→### Tasks
+   403→
+   404→| # | Task | Details |
+   405→|---|------|---------|
+   406→| 3.1 | **Build `StatCard` component** | Icon + label + value + trend (↑/↓ percentage) + sparkline. ArchCard variant for hero stats. Green for positive trends, red for negative |
+   407→| 3.2 | **Build `DashboardHero` section** | Welcome message with tenant name, current date (Hijri + Gregorian), quick action buttons (Add Student, Collect Fee, etc.) |
+   408→| 3.3 | **Build stat card grid** | 4 primary stats: Total Students, Fee Collection This Month, Pending Fees, Total Revenue. Responsive: 2x2 on mobile, 4 across on desktop |
+   409→| 3.4 | **Build `FeeCollectionChart`** | Area chart — monthly fee collection trend (Recharts). Emerald fill, gold accent line |
+   410→| 5.5 | **Build `StudentDistributionChart`** | Donut chart — students by class/section. Emerald/gold/sky palette |
+   411→| 3.6 | **Build `PaymentStatusChart`** | Stacked bar chart — paid vs unpaid vs partially paid by month |
+   412→| 3.7 | **Build `RecentActivity` component** | Timeline list of recent activities with icon, description, timestamp. Max 10 items with "View All" |
+   413→| 3.8 | **Build `UpcomingEvents` component** | Card list: due fees, pending salary, low stock alerts — with countdown/due date |
+   414→| 3.9 | **Build `QuickActions` component** | Grid of quick action buttons: "Admit Student", "Collect Fee", "Add Expense", "Pay Salary" — with icons |
+   415→| 3.10 | **Build `DashboardOverview` chart** | Composite: revenue vs expenses line chart for the academic session |
+   416→| 3.11 | **Connect to API** | Fetch all dashboard data from `/api/dashboard`, show skeletons while loading, handle errors |
+   417→| 3.12 | **Add date range filter** | Global date range selector (this month, this quarter, this session, custom) that filters all dashboard data |
+   418→
+   419→### Dashboard Layout (Desktop)
+   420→```
+   421→┌─────────────────────────────────────────────────┐
+   422→│  Welcome, Al-Huda Academy!   📅 Aug 5, 2025    │
+   423→│  ─────────────────────────────────────────────  │
+   424→│  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐       │
+   425→│  │ 1250 │  │৳4.2L │  │৳85K  │  │ 92%  │       │
+   426→│  │Studnt│  │Collec│  │Pendng│  │ Paid │       │
+   427→│  └──────┘  └──────┘  └──────┘  └──────┘       │
+   428→│  ─────────────────────────────────────────────  │
+   429→│  ┌─── Fee Collection Trend ───┐  ┌── Quick ──┐ │
+   430→│  │  📈 Area Chart             │  │  Actions   │ │
+   431→│  │                            │  │            │ │
+   432→│  └────────────────────────────┘  └────────────┘ │
+   433→│  ┌─── Payment Status ────────┐  ┌── Recent ──┐ │
+   434→│  │  📊 Stacked Bar           │  │  Activity   │ │
+   435→│  │                            │  │            │ │
+   436→│  └────────────────────────────┘  └────────────┘ │
+   437→└─────────────────────────────────────────────────┘
+   438→```
+   439→
+   440→### Validation
+   441→- [ ] All stat cards render with data
+   442→- [ ] Charts render with sample data
+   443→- [ ] Quick actions navigate to correct pages
+   444→- [ ] Recent activity timeline renders
+   445→- [ ] Dashboard is responsive (mobile card layout works)
+   446→- [ ] Skeleton loaders show during data fetch
+   447→- [ ] Date range filter updates all widgets
+   448→
+   449→---
+   450→
+   451→## Phase 4 — Academic Management
+   452→
+   453→**Goal**: Complete CRUD for students, teachers, employees, classes, sessions.  
+   454→**Duration**: ~2 sessions  
+   455→**Dependencies**: Phase 0-3  
+   456→**Delivers**: All academic module pages
+   457→
+   458→### 4A — Students Module
+   459→
+   460→| # | Task | Details |
+   461→|---|------|---------|
+   462→| 4A.1 | **Build `StudentDataTable`** | TanStack Table — columns: photo, name (En+Bn), class, section, roll, status, actions. Searchable, sortable, filterable, paginated |
+   463→| 4A.2 | **Build `StudentProfileCard`** | Avatar + name + class + status badge — used in table rows and lists |
+   464→| 4A.3 | **Build `StudentForm`** | Multi-step: Personal → Academic → Guardian → Documents. React-hook-form + zod validation. Photo upload with crop |
+   465→| 4A.4 | **Build `StudentDetailPage`** | Tab layout: Overview, Academic, Fees, Guardians, Documents. Profile header with photo + key info |
+   466→| 4A.5 | **Build `StudentFilters`** | Filter bar: class, section, status, gender, academic session. Saved filter presets |
+   467→| 4A.6 | **Build `StudentIDCard`** | Printable student ID card with photo, name, class, roll — Islamic decorative border |
+   468→| 4A.7 | **Build `BulkAdmission`** | Upload CSV → preview → validate → import students in bulk |
+   469→
+   470→### 4B — Teachers Module
+   471→
+   472→| # | Task | Details |
+   473→|---|------|---------|
+   474→| 4B.1 | **Build `TeacherDataTable`** | Similar to student table — columns: photo, name, employee ID, phone, qualification, status |
+   475→| 4B.2 | **Build `TeacherForm`** | Personal info + professional details + salary info |
+   476→| 4B.3 | **Build `TeacherDetailPage`** | Tabs: Overview, Classes (assigned), Salary, Documents |
+   477→
+   478→### 4C — Employees Module
+   479→
+   480→| # | Task | Details |
+   481→|---|------|---------|
+   482→| 4C.1 | **Build `EmployeeDataTable`** | Table with department, designation filters |
+   483→| 4C.2 | **Build `EmployeeForm`** | Personal + employment details |
+   484→| 4C.3 | **Build `EmployeeDetailPage`** | Overview, Salary, Documents tabs |
+   485→
+   486→### 4D — Classes & Sections
+   487→
+   488→| # | Task | Details |
+   489→|---|------|---------|
+   490→| 4D.1 | **Build `ClassManager`** | Card grid of classes — each card shows class name, code, sections, student count, teacher. Click to expand sections |
+   491→| 4D.2 | **Build `ClassForm`** | Name, code, capacity, assign teacher, academic session |
+   492→| 4D.3 | **Build `SectionForm`** | Name, capacity, assign section in-charge teacher |
+   493→| 4D.4 | **Build `ClassDetailView`** | Students list, sections, fee structures — all in one view |
+   494→
+   495→### 4E — Academic Sessions & Promotions
+   496→
+   497→| # | Task | Details |
+   498→|---|------|---------|
+   499→| 4E.1 | **Build `SessionManager`** | Timeline view of academic sessions — current session highlighted in green |
+   500→| 4E.2 | **Build `SessionForm`** | Name, start date, end date, status |
+   501→| 4E.3 | **Build `PromotionWizard`** | Multi-step: Select session → Select from class → Select students → Choose to class/section → Confirm |
+   502→
+   503→### Shared Components (built in Phase 4)
+   504→
+   505→| Component | Description |
+   506→|-----------|-------------|
+   507→| `PersonForm` | Base form for student/teacher/employee shared fields |
+   508→| `PhotoUpload` | Avatar upload with crop, preview, and default avatar |
+   509→| `AddressFields` | Reusable address block (address, city, state, country, postal code) |
+   510→| `DataTable` | Generic TanStack Table wrapper with search, sort, filter, pagination, export |
+   511→| `FormWizard` | Multi-step form with progress indicator and validation per step |
+   512→| `DetailPageLayout` | Tabbed detail page with profile header |
+   513→| `ExportButton` | CSV/PDF export trigger for any data table |
+   514→| `PrintLayout` | Print-optimized layout with Bismillah header, institution info, decorative border |
+   515→
+   516→### Validation
+   517→- [ ] All CRUD operations work for each entity
+   518→- [ ] Data tables are searchable, sortable, paginated
+   519→- [ ] Forms validate properly (inline errors)
+   520→- [ ] Mobile: tables switch to card list view
+   521→- [ ] Photo upload works
+   522→- [ ] Student ID card prints correctly
+   523→- [ ] Promotion wizard works end-to-end
+   524→
+   525→---
+   526→
+   527→## Phase 5 — Finance & Fee Management
+   528→
+   529→**Goal**: Complete fee management, collection, donations, expenses.  
+   530→**Duration**: ~2 sessions  
+   531→**Dependencies**: Phase 0-4  
+   532→**Delivers**: All finance module pages
+   533→
+   534→### 5A — Fee Management
+   535→
+   536→| # | Task | Details |
+   537→|---|------|---------|
+   538→| 5A.1 | **Build `FeeCategoryManager`** | List of fee categories with amount, recurring info. Inline edit |
+   539→| 5A.2 | **Build `FeeStructureBuilder`** | Matrix view: Classes (rows) × Fee Categories (columns) = Amount. Editable cells. Academic session selector |
+   540→| 5A.3 | **Build `FeeInvoiceList`** | Table: invoice #, student, total, paid, balance, status, due date. Color-coded status (paid=green, partial=amber, overdue=red) |
+   541→| 5A.4 | **Build `FeeInvoiceDetail`** | Invoice view: student info, line items, totals, payment history. Print button → formatted invoice with Islamic border |
+   542→| 5A.5 | **Build `GenerateInvoiceWizard`** | Multi-step: Select session/class → Select students → Review fee structure → Generate invoices |
+   543→| 5A.6 | **Build `FeeInvoicePrint`** | Print-optimized invoice: Bismillah header, institution info, student details, fee breakdown, total, received stamp area |
+   544→
+   545→### 5B — Fee Collection (Payments)
+   546→
+   547→| # | Task | Details |
+   548→|---|------|---------|
+   549→| 5B.1 | **Build `CollectPaymentForm`** | Search student → show outstanding invoices → select invoice → enter amount → payment method → collect. Receipt generated |
+   550→| 5B.2 | **Build `PaymentReceipt`** | Print-optimized receipt: Bismillah, institution, student, payment details, received by, stamp area |
+   551→| 5B.3 | **Build `CollectionReport`** | Daily/monthly collection summary with breakdown by payment method |
+   552→| 5B.4 | **Build `FeeDiscountForm`** | Apply discount to student invoice — type (percentage/flat), reason, approval |
+   553→
+   554→### 5C — Donations
+   555→
+   556→| # | Task | Details |
+   557→|---|------|---------|
+   558→| 5C.1 | **Build `DonationDashboard`** | Stats: total donations this month, top donors, by category. Chart: donation trend |
+   559→| 5C.2 | **Build `DonorList`** | Table with search, filters (category, date range) |
+   560→| 5C.3 | **Build `DonationForm`** | Donor search/create + amount + category + date + receipt |
+   561→
+   562→### 5D — Expenses
+   563→
+   564→| # | Task | Details |
+   565→|---|------|---------|
+   566→| 5D.1 | **Build `ExpenseDashboard`** | Stats: this month total, by category breakdown (pie chart), budget vs actual |
+   567→| 5D.2 | **Build `ExpenseList`** | Table with category, amount, date, description, receipt attachment |
+   568→| 5D.3 | **Build `ExpenseForm`** | Category, amount, date, description, receipt upload |
+   569→
+   570→### Validation
+   571→- [ ] Fee structure matrix builder works
+   572→- [ ] Invoice generation creates correct invoices
+   573→- [ ] Payment collection updates invoice status
+   574→- [ ] Receipt prints correctly with Islamic design
+   575→- [ ] Discount application works
+   576→- [ ] Donation and expense CRUD work
+   577→- [ ] All financial figures show in Bengali Taka (৳) format
+   578→
+   579→---
+   580→
+   581→## Phase 6 — HR & Payroll
+   582→
+   583→**Goal**: Salary structure management and payroll processing.  
+   584→**Duration**: ~1 session  
+   585→**Dependencies**: Phase 0-5  
+   586→**Delivers**: Payroll module pages
+   587→
+   588→### Tasks
+   589→
+   590→| # | Task | Details |
+   591→|---|------|---------|
+   592→| 6.1 | **Build `SalaryStructureList`** | Table: employee/teacher name, basic, total salary, net salary. Filter by type (teacher/employee) |
+   593→| 6.2 | **Build `SalaryStructureForm`** | Employee selector + basic salary + allowances (house rent, medical, transport, other) + deductions (PF, tax, other) → auto-calculate total/net |
+   594→| 6.3 | **Build `PayrollProcessor`** | Select month → Show all employees with salary → Mark absent days/deductions → Generate salary payments |
+   595→| 6.4 | **Build `PayslipView`** | Detailed payslip: Bismillah header, institution info, employee info, earnings breakdown, deductions breakdown, net pay. Print-optimized |
+   596→| 6.5 | **Build `PayrollDashboard`** | Stats: total payroll this month, paid vs pending, department breakdown. Chart: payroll trend |
+   597→| 6.6 | **Build `SalaryPaymentList`** | Table: employee, month, gross, deductions, net, status (paid/pending), payment date |
+   598→
+   599→### Validation
+   600→- [ ] Salary structure CRUD works
+   601→- [ ] Auto-calculation of total/net salary is correct
+   602→- [ ] Payroll processing generates payments
+   603→- [ ] Payslip prints correctly
+   604→- [ ] Payroll dashboard shows accurate stats
+   605→
+   606→---
+   607→
+   608→## Phase 7 — Inventory & Procurement
+   609→
+   610→**Goal**: Product management, purchasing, stock tracking, and sales.  
+   611→**Duration**: ~1 session  
+   612→**Dependencies**: Phase 0-6  
+   613→**Delivers**: Inventory module pages
+   614→
+   615→### Tasks
+   616→
+   617→| # | Task | Details |
+   618→|---|------|---------|
+   619→| 7.1 | **Build `ProductList`** | Table/grid toggle: name, category, SKU, purchase price, sale price, stock, status. Low stock highlighted in red |
+   620→| 7.2 | **Build `ProductForm`** | Name, category, SKU, prices, stock, min/max levels, unit, description |
+   621→| 7.3 | **Build `PurchaseOrderList`** | Table: PO #, supplier, date, total, status (draft/ordered/received) |
+   622→| 7.4 | **Build `PurchaseOrderForm`** | Supplier selector + line items (product, qty, price) → auto-total. Status workflow |
+   623→| 7.5 | **Build `StockDashboard`** | Stock value, low stock alerts, recent movements. Chart: stock levels by category |
+   624→| 7.6 | **Build `StockMovementLog`** | Timeline of stock in/out with reason, quantity, reference |
+   625→| 7.7 | **Build `SalesList`** | Table: invoice #, date, items, total, status |
+   626→| 7.8 | **Build `SalesForm`** | Customer info + line items → auto-total → create invoice |
+   627→
+   628→### Validation
+   629→- [ ] Product CRUD works with category filter
+   630→- [ ] Purchase order workflow (draft → ordered → received) works
+   631→- [ ] Stock updates on purchase receive / sales
+   632→- [ ] Low stock alerts show correctly
+   633→- [ ] Sales invoice generation works
+   634→
+   635→---
+   636→
+   637→## Phase 8 — Accounting & Reports
+   638→
+   639→**Goal**: Double-entry accounting, chart of accounts, journal entries, financial reports.  
+   640→**Duration**: ~1 session  
+   641→**Dependencies**: Phase 0-7  
+   642→**Delivers**: Accounting module pages
+   643→
+   644→### Tasks
+   645→
+   646→| # | Task | Details |
+   647→|---|------|---------|
+   648→| 8.1 | **Build `ChartOfAccountsTree`** | Hierarchical tree view: Assets, Liabilities, Income, Expenses, Equity — expandable with account codes |
+   649→| 8.2 | **Build `AccountForm`** | Code, name, type, parent account, opening balance |
+   650→| 8.3 | **Build `JournalEntryList`** | Table: entry #, date, description, total debit/credit, status |
+   651→| 8.4 | **Build `JournalEntryForm`** | Date + description + line items (account, debit, credit) → must balance (total debit = total credit) |
+   652→| 8.5 | **Build `LedgerView`** | Account ledger: all transactions for selected account with running balance |
+   653→| 8.6 | **Build `TrialBalance`** | Report: all accounts with debit/credit totals → must balance |
+   654→| 8.7 | **Build `IncomeStatement`** | Revenue - Expenses = Net Income. Monthly/yearly comparison |
+   655→| 8.8 | **Build `BalanceSheet`** | Assets = Liabilities + Equity. As-of-date snapshot |
+   656→| 8.9 | **Build `FinancialReportShell`** | Print layout wrapper: Bismillah, institution info, report title, date range, decorative Islamic border, page numbers |
+   657→
+   658→### Validation
+   659→- [ ] Chart of accounts tree renders and navigates
+   660→- [ ] Journal entries must balance before save
+   661→- [ ] Ledger view shows correct running balance
+   662→- [ ] Trial balance totals match
+   663→- [ ] Financial reports print correctly
+   664→- [ ] Bismillah + Islamic border on all print layouts
+   665→
+   666→---
+   667→
+   668→## Phase 9 — CMS & Communication
+   669→
+   670→**Goal**: Website content, notices, gallery management.  
+   671→**Duration**: ~1 session  
+   672→**Dependencies**: Phase 0-8  
+   673→**Delivers**: CMS module pages
+   674→
+   675→### Tasks
+   676→
+   677→| # | Task | Details |
+   678→|---|------|---------|
+   679→| 9.1 | **Build `PageEditor`** | MDXEditor-powered rich text editor for website pages — title, slug, content, SEO meta, publish/draft |
+   680→| 9.2 | **Build `PageList`** | Table: title, slug, status (published/draft), last updated |
+   681→| 9.3 | **Build `NoticeBoard`** | Card list of notices with date, priority badge (urgent=red, normal=green), audience (public/staff/students) |
+   682→| 9.4 | **Build `NoticeForm`** | Title, content (rich text), date, priority, audience, attachment |
+   683→| 9.5 | **Build `GalleryManager`** | Grid of gallery albums — each with cover image, title, image count. Click to manage images |
+   684→| 9.6 | **Build `ImageUploader`** | Drag & drop image upload with preview, reorder, caption. Optimized with Sharp |
+   685→
+   686→### Validation
+   687→- [ ] MDX editor works with rich content
+   688→- [ ] Pages can be published/drafted
+   689→- [ ] Notice board displays with priority badges
+   690→- [ ] Gallery upload and management works
+   691→- [ ] Image optimization works
+   692→
+   693→---
+   694→
+   695→## Phase 10 — System & Administration
+   696→
+   697→**Goal**: User management, RBAC, notifications, activity logs, settings.  
+   698→**Duration**: ~1 session  
+   699→**Dependencies**: Phase 0-9  
+   700→**Delivers**: System admin pages
+   701→
+   702→### Tasks
+   703→
+   704→| # | Task | Details |
+   705→|---|------|---------|
+   706→| 10.1 | **Build `UserManagement`** | Table: name, email, role, status, last login. Actions: edit, deactivate, reset password |
+   707→| 10.2 | **Build `UserForm`** | Personal info + role assignment (multi-select) + tenant assignment |
+   708→| 10.3 | **Build `RoleManager`** | Card grid of roles — click to edit permissions. System roles locked (badge: "System") |
+   709→| 10.4 | **Build `PermissionMatrix`** | Matrix: Roles (rows) × Permissions (columns) — toggle checkboxes. Grouped by module |
+   710→| 10.5 | **Build `NotificationCenter`** | Full-page notification list with filters (type, read/unread, date). Mark as read, bulk actions |
+   711→| 10.6 | **Build `ActivityLogViewer`** | Filterable timeline: user, action, entity, timestamp, IP address. Search and date range filter |
+   712→| 10.7 | **Build `AuditLogViewer`** | Read-only log with old/new values diff view (JSON diff highlighted) |
+   713→| 10.8 | **Build `SettingsPage`** | Grouped settings: General (institution info, logo), Academic (defaults), Finance (currency, fiscal year), Appearance (theme, branding), Notifications (email/SMS config) |
+   714→| 10.9 | **Build `InstitutionProfile`** | Edit institution name, logo, address, contact — with live preview of how it appears on print layouts |
+   715→
+   716→### Validation
+   717→- [ ] User CRUD with role assignment works
+   718→- [ ] Permission matrix toggles save correctly
+   719→- [ ] Notification center filters work
+   720→- [ ] Activity and audit logs display
+   721→- [ ] Settings save and apply
+   722→- [ ] Institution profile updates reflect in print layouts
+   723→
+   724→---
+   725→
+   726→## Phase 11 — Polish, Animations & Micro-Interactions
+   727→
+   728→**Goal**: Elevate the entire app to premium quality with animations, transitions, and micro-interactions.  
+   729→**Duration**: ~1 session  
+   730→**Dependencies**: Phase 0-10  
+   731→**Delivers**: Production-ready polish
+   732→
+   733→### Tasks
+   734→
+   735→| # | Task | Details |
+   736→|---|------|---------|
+   737→| 11.1 | **Page transitions** | Framer Motion `AnimatePresence` for route changes — subtle fade+slide |
+   738→| 11.2 | **Card hover effects** | Subtle lift (translate-y -2px) + shadow increase on hover for all interactive cards |
+   739→| 11.3 | **Button micro-interactions** | Scale-down on press (0.98), ripple effect on click for primary buttons |
+   740→| 11.4 | **Table row interactions** | Highlight on hover, slide-in animation for new rows, fade-out for deleted rows |
+   741→| 11.5 | **Stat card animations** | Count-up animation for numbers on dashboard load |
+   742→| 11.6 | **Form field focus** | Subtle border color transition + label float animation on focus |
+   743→| 11.7 | **Loading states** | Skeleton → fade → content transition. No layout shifts |
+   744→| 11.8 | **Success animations** | Checkmark animation after successful form submit, payment collection, etc. |
+   745→| 11.9 | **Sidebar transition** | Smooth width transition when collapsing/expanding sidebar |
+   746→| 11.10 | **Mobile gestures** | Swipe-to-delete on list items, pull-to-refresh on data pages |
+   747→| 11.11 | **Islamic pattern animation** | Subtle slow rotation/drift of Islamic pattern on auth pages and dashboard hero |
+   748→| 11.12 | **Empty state animations** | Gentle floating animation on empty state illustrations |
+   749→| 11.13 | **Notification badge** | Pulse animation on unread notification badge |
+   750→| 11.14 | **Chart animations** | Animated chart entry — bars grow up, lines draw in, donuts spin in |
+   751→
+   752→### Validation
+   753→- [ ] All animations are smooth (60fps)
+   754→- [ ] Animations respect `prefers-reduced-motion`
+   755→- [ ] No layout shifts during loading
+   756→- [ ] Mobile gestures work on touch devices
+   757→- [ ] App feels premium and polished
+   758→
+   759→---
+   760→
+   761→## Phase 12 — Accessibility & Final QA
+   762→
+   763→**Goal**: Ensure the app is accessible, performant, and production-ready.  
+   764→**Duration**: ~1 session  
+   765→**Dependencies**: Phase 0-11  
+   766→**Delivers**: Production-ready application
+   767→
+   768→### Tasks
+   769→
+   770→| # | Task | Details |
+   771→|---|------|---------|
+   772→| 12.1 | **Keyboard navigation** | All interactive elements reachable via Tab, operable via Enter/Space. Skip-to-content link |
+   773→| 12.2 | **Screen reader support** | Proper ARIA labels, live regions for dynamic updates, alt text for all images |
+   774→| 12.3 | **Color contrast audit** | All text meets WCAG 2.1 AA (4.5:1 for normal text, 3:1 for large text) |
+   775→| 12.4 | **Focus indicators** | Visible focus rings on all interactive elements — emerald color ring |
+   776→| 12.5 | **Error boundaries** | React error boundaries with friendly error UI (not crash) |
+   777→| 12.6 | **Performance optimization** | Lazy load charts, virtualize long lists, optimize images, code split by route |
+   778→| 12.7 | **Print stylesheets** | Clean print CSS for all report pages — hide navigation, show Bismillah header |
+   779→| 12.8 | **Bengali/Arabic text support** | Proper font rendering, no broken glyphs, RTL support for Arabic content |
+   780→| 12.9 | **Cross-browser testing** | Chrome, Firefox, Safari, Edge — verify layout consistency |
+   781→| 12.10 | **Mobile device testing** | Test on actual mobile viewport — touch targets ≥44px, no horizontal scroll |
+   782→
+   783→### Validation
+   784→- [ ] Keyboard-only navigation works for all flows
+   785→- [ ] Screen reader announces all content correctly
+   786→- [ ] Color contrast passes WCAG AA
+   787→- [ ] No console errors in production build
+   788→- [ ] Print layouts are clean
+   789→- [ ] Bengali and Arabic text renders correctly
+   790→
+   791→---
+   792→
+   793→## 📊 Phase Summary
+   794→
+   795→| Phase | Name | Sessions | Key Deliverable |
+   796→|-------|------|----------|-----------------|
+   797→| **0** | Design System Foundation | 1 | Theme, colors, fonts, Islamic components |
+   798→| **1** | Layout Shell & Navigation | 1 | Sidebar, header, mobile nav, all routes |
+   799→| **2** | Authentication & Onboarding | 1 | Login, register, subscription selection |
+   800→| **3** | Dashboard & Analytics | 1 | Live dashboard with charts & stats |
+   801→| **4** | Academic Management | 2 | Students, teachers, employees, classes CRUD |
+   802→| **5** | Finance & Fee Management | 2 | Fee structure, invoices, collections, receipts |
+   803→| **6** | HR & Payroll | 1 | Salary structures, payroll, payslips |
+   804→| **7** | Inventory & Procurement | 1 | Products, purchases, stock, sales |
+   805→| **8** | Accounting & Reports | 1 | Chart of accounts, journal entries, financial reports |
+   806→| **9** | CMS & Communication | 1 | Website pages, notices, gallery |
+   807→| **10** | System & Administration | 1 | Users, roles, permissions, settings |
+   808→| **11** | Polish & Animations | 1 | Micro-interactions, transitions, premium feel |
+   809→| **12** | Accessibility & QA | 1 | A11y, performance, cross-browser, final polish |
+   810→| | **TOTAL** | **~14 sessions** | **Complete ERP** |
+   811→
+   812→---
+   813→
+   814→## 🏁 Success Criteria
+   815→
+   816→When all phases are complete, the Madrasha ERP will:
+   817→
+   818→1. ✅ **Feel Islamic** — Emerald green, gold accents, geometric patterns, Bismillah on reports
+   819→2. ✅ **Feel Premium** — Smooth animations, generous whitespace, consistent design language
+   820→3. ✅ **Work on Mobile** — Every feature accessible on phone, bottom tab nav, sheet forms
+   821→4. ✅ **Be Productive** — Command palette, quick actions, keyboard shortcuts, smart defaults
+   822→5. ✅ **Be Accessible** — Keyboard nav, screen readers, WCAG AA contrast, Bengali/Arabic support
+   823→6. ✅ **Print Beautifully** — Bismillah header, Islamic borders, institution branding on all reports
+   824→7. ✅ **Scale as SaaS** — Multi-tenant, role-based access, subscription plans
+   825→8. ✅ **Be Maintainable** — Clean component architecture, documented, AI-friendly code
+   826→
+   827→---
+   828→
+   829→*بسم الله الرحمن الرحيم*  
+   830→*In the name of Allah, the Most Gracious, the Most Merciful*  
+   831→*Let us build something beautiful. 🕌*
+   832→

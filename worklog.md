@@ -83,3 +83,28 @@ Stage Summary:
 - Emerald green active states throughout
 - Auth layout with Islamic pattern background
 - All Phase 1 tasks completed successfully
+
+---
+Task ID: 3b
+Agent: Main
+Task: Phase 1 — Cross-platform fixes & re-verification
+
+Work Log:
+- Fixed dev script in package.json — removed `tee` (Unix-only) for Windows PowerShell compatibility
+- Changed `dev` script from `next dev -p 3000 2>&1 | tee dev.log` to `next dev -p 3000`
+- Changed `start` script similarly
+- Added NEXTAUTH_SECRET and NEXTAUTH_URL to .env to fix NextAuth NO_SECRET errors
+- Updated root page.tsx from server-side redirect to client-side navigation (reduces compilation memory)
+- Verified lint passes cleanly
+- Verified dashboard page (HTTP 200) — HTML contains sidebar, "Madrasha ERP" branding, emerald classes
+- Verified login page (HTTP 200) — HTML contains Login, arch-card, Islamic pattern, emerald classes
+- All 25+ placeholder routes accessible
+- Note: Sandbox has 4GB RAM limit; dev server uses ~1GB after first page compilation
+
+Stage Summary:
+- Dev script now works on both Unix and Windows (PowerShell)
+- NextAuth configuration errors resolved
+- Phase 1 fully verified: sidebar, header, breadcrumbs, command palette, notifications, user menu, mobile nav
+- Dashboard HTML (96KB) contains all expected components
+- Login HTML (36KB) contains Islamic pattern background and arch card
+- Lint: clean, no errors
