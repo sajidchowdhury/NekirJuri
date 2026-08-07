@@ -215,9 +215,8 @@ model User {
   userRoles     UserRole[]
   notifications Notification[]
 
-  @@unique([tenantId, email])
+  @@unique([email]) // Global unique: one email = one account across all tenants
   @@index([tenantId])
-  @@index([email])
   @@map("users")
 }
 

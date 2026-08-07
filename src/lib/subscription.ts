@@ -6,6 +6,24 @@
 // subscription system.
 // ============================================================
 
+// -----------------------------------------------------------
+// ensureDate — Defensive Date wrapper
+// -----------------------------------------------------------
+
+/**
+ * Ensure a value is a Date object.
+ * Prisma DateTime fields arrive as Date on the server,
+ * but after JSON serialization (API responses, JWT claims)
+ * they become ISO 8601 strings. This wrapper safely converts
+ * both to Date, preventing TypeError on .getTime() calls.
+ */
+function ensureDate(value: Date | string | null | undefined): Date | null {
+  if (!value) return null
+  if (value instanceof Date) return value
+  const d = new Date(value)
+  return isNaN(d.getTime()) ? null : d
+}
+
 /** Subscription status values (mirrors schema) */
 export type SubscriptionStatus =
   | 'trial'
@@ -190,12 +208,12 @@ export function formatBDT(amount: number): string {
  */
 export function computeEnforcement(params: {
   status: SubscriptionStatus
-  startDate: Date
-  endDate: Date
-  currentPeriodEnd?: Date | null
-  gracePeriodEnd?: Date | null
-  restrictedEnd?: Date | null
-  trialEnd?: Date | null
+  startDate: Date | string
+  endDate: Date | string
+  currentPeriodEnd?: Date | string | null
+  gracePeriodEnd?: Date | string | null
+  restrictedEnd?: Date | string | null
+  trialEnd?: Date | string | null
   now?: Date
   features?: string[]
   maxStudents?: number
@@ -206,12 +224,16 @@ export function computeEnforcement(params: {
   maxImageSizeMb?: number
 }): EnforcementResult {
   const now = params.now ?? new Date()
-  const { status, startDate, endDate } = params
+  const status = params.status
+
+  // Defensive: ensure Date objects (Prisma returns Date, but JSON-serialized = string)
+  const startDate = ensureDate(params.startDate) ?? new Date()
+  const endDate = ensureDate(params.endDate) ?? new Date()
 
   // Use new schema fields with fallback to computed values
-  const currentPeriodEnd = params.currentPeriodEnd ?? endDate
-  const gracePeriodEnd = params.gracePeriodEnd ?? computeGracePeriodEnd(endDate)
-  const trialEnd = params.trialEnd ?? null
+  const currentPeriodEnd = ensureDate(params.currentPeriodEnd) ?? endDate
+  const gracePeriodEnd = ensureDate(params.gracePeriodEnd) ?? computeGracePeriodEnd(endDate)
+  const trialEnd = ensureDate(params.trialEnd) ?? null
 
   const msPerDay = 86_400_000
   const daysRemaining = Math.max(0, Math.ceil((currentPeriodEnd.getTime() - now.getTime()) / msPerDay))

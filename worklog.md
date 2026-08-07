@@ -1101,3 +1101,30 @@ Stage Summary:
 - All 10 change requests are now ✅ COMPLETE (CR-1,2,4,5,6,7,8,9,10,11)
 - No remaining schema alignment gaps
 - Tenant.accountingMode is now a dedicated, queryable, indexable column
+
+---
+Task ID: Module-28
+Agent: Main
+Task: Module 28 — Backup & Restore (Full Feature)
+
+Work Log:
+- Added BackupRecord model to Prisma schema (15 fields, 4 indexes, Tenant relation)
+- Ran db:push — schema synced successfully
+- Created 5 backend lib files: constants.ts, models.ts, storage.ts, export.ts, import.ts
+- Created 6 API routes: backups (CRUD), download, restore, backup-schedule, cleanup
+- Created backup cron mini-service on port 3032 (daily scheduled backups + expired cleanup)
+- Created 7 frontend components: backup-page, backup-list, backup-stats-cards, backup-create-dialog, restore-dialog, backup-schedule-settings, backup-types
+- Created page route at /system/backup
+- Added HardDrive nav item to system group
+- Added Backup & Restore accordion to Settings page
+- All spec files updated (5 DEPT_*.md + Master Spec + DB Design Spec)
+- Lint: 0 errors, 14 pre-existing warnings
+- Total: 28 new files, 2713 lines added
+- Pushed to GitHub (2 commits)
+
+Stage Summary:
+- Module 28 is FULLY COMPLETE
+- 51 Prisma models (50 original + BackupRecord)
+- Full backup/restore lifecycle: trigger, list, download, delete, restore with safety backup
+- Scheduled backup cron (daily at 2 AM Asia/Dhaka)
+- Expired backup auto-cleanup
