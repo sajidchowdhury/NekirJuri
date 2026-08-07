@@ -30,7 +30,7 @@
 #### Domain 1: SaaS (3 models)
 | Model | Status | Key Fields |
 |-------|--------|------------|
-| Tenant | ✅ Done | id, uuid, name, slug, domain, logoUrl, address, city, state, country, phone, email, isActive, settings (Json), subscriptionStatus, isReadOnly, storageUsedMb |
+| Tenant | ✅ Done | id, uuid, name, slug, domain, logoUrl, address, city, state, country, phone, email, isActive, settings (Json), subscriptionStatus, isReadOnly, accountingMode, storageUsedMb |
 | SubscriptionPlan | ✅ Done | id, name, price, duration, features (Json), isRecommended, maxAlbums, maxImagesPerAlbum, maxImageSizeMb |
 | Subscription | ✅ Done | id, tenantId, planId, startDate, endDate, status (all CR-7 states), currentPeriodEnd, gracePeriodEnd, restrictedEnd, trialEnd, isAutoRenew, lastPaymentDate, lastPaymentMethod, lastPaymentRef, dataDeletionDate |
 
@@ -130,12 +130,12 @@ All fields now implemented in the Prisma schema:
 
 ---
 
-### CR-8: Simplified Accounting — Missing Field
-| Model | Missing Fields | Priority |
-|-------|---------------|----------|
-| **Tenant** | `accountingMode String @default("simple")` | Low |
+### ~~CR-8: Simplified Accounting — Missing Field~~ ✅ RESOLVED
+| Model | Field Added | Status |
+|-------|-------------|--------|
+| **Tenant** | `accountingMode String @default("double-entry") @map("accounting_mode")` | ✅ Done |
 
-**Note**: Currently stored in `Tenant.settings.accountingMode` JSON field. Functionally equivalent, but a dedicated column is more queryable/indexable.
+**Note**: Previously stored in `Tenant.settings.accountingMode` JSON field. Now a dedicated, queryable, indexable column.
 
 ---
 

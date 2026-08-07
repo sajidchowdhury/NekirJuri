@@ -2,12 +2,16 @@
 // Accounting Mode API Route — Get/Set accounting mode
 // CR-8: Simplified Accounting Mode
 // Modes: 'double-entry' (default) | 'simplified'
+// Schema-aligned: reads/writes Tenant.accountingMode directly
 // ============================================================
 
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { getTenantId } from '@/lib/api-utils'
+
+const VALID_MODES = ['simplified', 'double-entry'] as const
+type AccountingMode = (typeof VALID_MODES)[number]
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,17 +22,19 @@ export async function GET(req: NextRequest) {
 
     const tenant = await db.tenant.findUnique({
       where: { id: tenantId },
-      select: { settings: true },
+      select: { accountingMode: true },
     })
 
     if (!tenant) {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
     }
 
-    const settings = tenant.settings as Record<string, unknown> | null
-    const accountingMode = (settings?.accountingMode as string) || 'double-entry'
+    // Validate the stored value; fall back to 'double-entry' if corrupt
+    const mode: AccountingMode = VALID_MODES.includes(tenant.accountingMode as AccountingMode)
+      ? (tenant.accountingMode as AccountingMode)
+      : 'double-entry'
 
-    return NextResponse.json({ mode: accountingMode })
+    return NextResponse.json({ mode })
   } catch (error) {
     console.error('Error fetching accounting mode:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -45,29 +51,17 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { mode } = body
 
-    if (!mode || !['simplified', 'double-entry'].includes(mode)) {
+    if (!mode || !VALID_MODES.includes(mode)) {
       return NextResponse.json(
         { error: 'Invalid mode. Must be: simplified or double-entry' },
         { status: 400 }
       )
     }
 
-    // Update tenant settings with the new accounting mode
-    const tenant = await db.tenant.findUnique({
-      where: { id: tenantId },
-      select: { settings: true },
-    })
-
-    if (!tenant) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
-    }
-
-    const currentSettings = (tenant.settings as Record<string, unknown>) || {}
-    const updatedSettings = { ...currentSettings, accountingMode: mode }
-
+    // Update the dedicated accountingMode column on Tenant
     await db.tenant.update({
       where: { id: tenantId },
-      data: { settings: updatedSettings },
+      data: { accountingMode: mode },
     })
 
     // If switching to simplified mode, auto-generate basic accounts if none exist

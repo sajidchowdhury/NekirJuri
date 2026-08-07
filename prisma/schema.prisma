@@ -52,6 +52,7 @@ model Tenant {
   settings           Json?
   subscriptionStatus String   @default("active") @map("subscription_status") // Cached: trial | active | grace_period | restricted | suspended | terminated | cancelled
   isReadOnly         Boolean  @default(false) @map("is_read_only") // Cached: true when enforcement is readonly/restricted/blocked
+  accountingMode     String   @default("double-entry") @map("accounting_mode") // CR-8: 'simplified' | 'double-entry'
   storageUsedMb      Decimal  @default(0) @map("storage_used_mb")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")

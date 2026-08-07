@@ -43,16 +43,14 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 | CR-5 | Recurring Donations | ✅ Done | Recurring frequency (monthly/yearly), nextDueDate auto-calculate, daily reminder cron (port 3031), dashboard widget, payment recording dialog, donor reminder preferences |
 | CR-6 | Fix New Sale Modal | ✅ Done | Card-based line items, proper spacing, mobile Drawer, no overlapping fields |
 | CR-7 | Subscription Enforcement | ✅ Done | Enforcement levels (full/grace/restricted/suspended/terminated), computeEnforcement(), SubscriptionGuard, bKash/Nagad, grace period, read-only mode, Schema aligned: currentPeriodEnd, gracePeriodEnd, restrictedEnd; Tenant: subscriptionStatus, isReadOnly; User: emailVerified |
-| CR-8 | Simplified Accounting | ⚠️ Mostly Done | Two modes (Simple/Expert), auto-journal in Simple, no debit/credit terminology, mode toggle in settings. **Schema gap**: `accountingMode` stored in JSON `settings` instead of dedicated column. |
+| CR-8 | Simplified Accounting | ✅ Done | Two modes (Simple/Expert), auto-journal in Simple, no debit/credit terminology, mode toggle in settings. Schema aligned: `accountingMode` dedicated column on Tenant. |
 | CR-9 | Sidebar Collapsible Submenus | ✅ Done | Accordion behavior, active group auto-expanded, smooth animations |
 | CR-10 | Fee Category Form | ✅ Done | Full CRUD with react-hook-form + zod, edit/delete dialogs, audit logging, soft delete |
 | CR-11 | Image Upload Limits | ✅ Done | Tier-based limits (albums, images/album, size, storage), usage bar, 413 enforcement, upgrade prompts, image/album delete with storage cleanup |
 
 ## ⚠️ SCHEMA ALIGNMENT GAPS (Non-Blocking)
 
-| CR | Gap | Impact | Priority |
-|----|-----|--------|----------|
-| CR-8 | Tenant: `accountingMode` stored in JSON `settings` instead of dedicated column | Functionally equivalent, but harder to query/index | Low |
+_No remaining schema gaps. All CR-7 and CR-8 fields are now schema-aligned._
 
 ## ❌ NOT STARTED — Future Work
 
@@ -114,7 +112,7 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 | 18 | Salary & Payroll | ✅ Done | ✅ Done | ✅ Done |
 | 19 | Inventory & Stock | ✅ Done | ✅ Done | ✅ Done |
 | 20 | Sales (Student Store) | ✅ Done | ✅ Done (CR-4 complete) | ✅ Done |
-| 21 | Accounting | ✅ Done | ✅ Done (CR-8 complete) | ⚠️ accountingMode in JSON |
+| 21 | Accounting | ✅ Done | ✅ Done (CR-8 complete) | ✅ Done (accountingMode column) |
 | 22 | Reports | ✅ Done | ✅ Done | ✅ Done |
 | 23 | Notifications | ✅ Done | ✅ Done | ✅ Done |
 | 24 | Receipts & Printing | ✅ Done | ✅ Done | ✅ Done |
@@ -168,12 +166,12 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 - **Done**: `dataDeletionDate` on Subscription (for future data deletion cron)
 - **Pending**: Data deletion cron job for terminated tenants (30+ days)
 
-## ⚠️ CR-8: Simplified Accounting Mode — MOSTLY COMPLETE
+## ✅ CR-8: Simplified Accounting Mode — COMPLETE
 - **Done**: Two modes — "Simple" (no debit/credit, auto-journal, income/expense terminology) and "Expert" (standard double-entry)
 - **Done**: Mode toggle in settings
 - **Done**: SimplifiedJournalEntryForm, SimplifiedChartOfAccounts, SimplifiedAccountingSummary components
 - **Done**: Mode-aware pages (Chart of Accounts, Journal Entries render different UIs)
-- **Pending**: Dedicated `accountingMode` column on Tenant (currently in JSON `settings`)
+- **Done**: Dedicated `accountingMode` column on Tenant (String @default("double-entry")) — API route updated to read/write column directly
 
 ## ✅ CR-9: Sidebar Collapsible Submenus — COMPLETE
 - **Done**: Accordion behavior — click group expands, collapses others. Active group auto-expanded. Smooth Framer Motion animations.
@@ -204,7 +202,7 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 - [x] Multi-language (3 languages — CR-2 ✅)
 - [x] RTL layout for Arabic (CR-2 ✅)
 - [x] Subscription enforcement (CR-7 ✅)
-- [x] Simplified accounting mode (CR-8 ⚠️ mostly done)
+- [x] Simplified accounting mode (CR-8 ✅)
 - [x] Image upload limits per tier (CR-11 ✅)
 - [ ] Backup & Restore (Module 28)
 - [ ] QR/Barcode support
@@ -267,7 +265,7 @@ CR-8 (Simple Acct) ⚠️ ──→ CR-4 (Sale-to-Fee) ✅     [simple mode need
 CR-7 (Subscription) ✅ ──→ CR-5 (Recurring Donations) ✅  [reminder cron needs infra]
 ```
 
-All dependencies satisfied. Only CR-8 has a minor schema gap (non-blocking).
+All dependencies satisfied. All schema gaps resolved (CR-7 ✅, CR-8 ✅).
 
 ---
 
@@ -276,8 +274,8 @@ All dependencies satisfied. Only CR-8 has a minor schema gap (non-blocking).
 ## Priority 1 — High Impact, No Dependencies
 1. **Backup & Restore (Module 28)** — Full stack: Architecture → DB → API → UI. Critical for production safety.
 
-## Priority 2 — Schema Alignment (Quick Wins)
-2. **CR-8 schema alignment** — Add 1 field (accountingMode on Tenant)
+## Priority 2 — Schema Alignment
+_All schema alignment tasks complete._
 
 ## Priority 3 — Production Hardening
 4. **Data deletion cron job** — Terminate tenants 30+ days, delete business data only
@@ -293,8 +291,8 @@ All dependencies satisfied. Only CR-8 has a minor schema gap (non-blocking).
 ---
 
 # Handover Notes
-- **9 change requests are FULLY COMPLETE** (CR-1,2,4,5,6,7,9,10,11)
-- **CR-8 is functionally complete** with a minor schema gap (accountingMode in JSON settings)
+- **10 change requests are FULLY COMPLETE** (CR-1,2,4,5,6,7,8,9,10,11)
+- **CR-8 schema alignment DONE** — Tenant.accountingMode dedicated column added, API route updated
 - **CR-7 schema alignment DONE** — All Subscription/Tenant/User fields added, computeEnforcement() updated, tenant cache sync implemented
 - **CR-5 fully implemented** — Recurring Donations with Reminders with cron job, dashboard widget, payment recording UI, donor reminder preferences
 - All Prisma schema changes are pushed and in sync

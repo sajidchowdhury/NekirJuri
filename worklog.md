@@ -1080,3 +1080,24 @@ Stage Summary:
 - computeEnforcement() uses new fields with backward-compatible fallback
 - computeTenantCache() keeps tenant-level cache in sync
 - All existing data backfilled successfully
+
+---
+Task ID: CR-8-Schema-Alignment
+Agent: Main
+Task: CR-8 Schema Alignment — Add dedicated accountingMode column to Tenant model
+
+Work Log:
+- Read all spec files to identify CR-8 schema gap: Tenant.accountingMode stored in JSON settings instead of dedicated column
+- Added `accountingMode String @default("double-entry") @map("accounting_mode")` to Tenant model in prisma/schema.prisma
+- Rewrote /api/accounting-mode/route.ts: GET reads tenant.accountingMode directly (was settings?.accountingMode), POST writes tenant.accountingMode directly (was settings merge)
+- Added type-safe validation with VALID_MODES const array
+- Ran `bun run db:push` — schema synced successfully (102ms)
+- Ran `bun run lint` — 0 errors, 14 pre-existing warnings
+- Updated 5 department tracker/spec files: DEPT_Architect, DEPT_Backend_Lead, DEPT_Database_Designer, Master_Specification, Database_Design_Specification
+- Marked CR-8 as ✅ COMPLETE in all trackers
+
+Stage Summary:
+- CR-8 is now FULLY COMPLETE (was ⚠️ Mostly Done)
+- All 10 change requests are now ✅ COMPLETE (CR-1,2,4,5,6,7,8,9,10,11)
+- No remaining schema alignment gaps
+- Tenant.accountingMode is now a dedicated, queryable, indexable column

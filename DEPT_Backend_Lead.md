@@ -27,7 +27,7 @@
 | BL-14 | Sale-to-fee backend logic | CR-4 | CR-4 | ✅ POST /api/sales: if addToFee + studentId, creates FeeInvoiceItem linked to sale in transaction. Auto-creates Product Purchase category. |
 | BL-15 | Recurring donation API | CR-5 | CR-5 | ✅ POST /api/donations: calculate nextDueDate. PATCH /api/donations: record payment + advance nextDueDate. GET filters by isRecurring/upcomingDays. |
 | BL-16 | Donation reminder cron job | CR-5 | CR-5 | ✅ /api/donations/recurring-reminders — finds donations due within 7 days, creates admin notifications. Mini-service on port 3031 with node-cron (daily 9:00 AM). |
-| BL-17 | Simple mode accounting APIs | CR-8 | CR-8 | ✅ /api/accounting-mode (GET/POST), reads/writes tenant.settings.accountingMode, auto-generates simplified chart of accounts |
+| BL-17 | Simple mode accounting APIs | CR-8 | CR-8 | ✅ /api/accounting-mode (GET/POST), reads/writes Tenant.accountingMode dedicated column, auto-generates simplified chart of accounts |
 | BL-18 | Fee category CRUD API | CR-10 | CR-10 | ✅ POST/PUT/DELETE /api/fee-categories + /api/fee-categories/[id] — full CRUD with audit logging, soft delete |
 | BL-19 | Upload limit enforcement | CR-11 | CR-11 | ✅ POST /api/gallery/upload: checks plan limits (albums, images/album, image size, storage), returns 413 when exceeded. DELETE with storage cleanup. |
 | BL-20 | Wire scaffolded APIs to Prisma | All | — | ✅ Key APIs wired: students, teachers, employees, classes, sessions, fees, donations, sales, subscriptions, gallery, accounting — all with Prisma queries, tenant isolation, validation |
@@ -38,7 +38,7 @@
 
 | ID | Task | Priority | CR# | Dependencies | Details |
 |----|------|----------|-----|-------------|---------|
-| BL-21 | CR-8 accountingMode column | Low | CR-8 | DB update | Add dedicated `accountingMode` column to Tenant. Currently in JSON `settings` — functionally equivalent. |
+| BL-21 | CR-8 accountingMode column | Low | CR-8 | ✅ DONE | Dedicated `accountingMode` column added to Tenant. API route updated to read/write column directly instead of JSON settings. |
 | BL-22 | Data deletion cron job | Medium | CR-7 | — | Daily job: delete business data for terminated tenants 30+ days, keep Tenant+User+Subscription. Uses Subscription.dataDeletionDate field. Not yet implemented. |
 | BL-24 | Backup & Restore APIs | High | Module 28 | A-21 (arch) | POST /api/backup (trigger backup), GET /api/backups (list), POST /api/restore (restore from backup), backup scheduling |
 | BL-25 | SMS/Email sending backend | Medium | — | A-23 (arch) | POST /api/notifications/send-sms, /send-email — integrate with Twilio/MSG91 + Resend/SendGrid |
@@ -48,9 +48,9 @@
 ---
 
 ## 📊 Progress Summary
-- **Completed**: 20 tasks (5 original + 15 CR implementations, including CR-7 schema aligned)
-- **Pending**: 6 tasks
+- **Completed**: 21 tasks (5 original + 16 CR implementations, CR-7 + CR-8 schema aligned)
+- **Pending**: 5 tasks
 - **High Priority**: 1 (Backup & Restore APIs — Module 28)
 - **Medium Priority**: 3 (Data deletion cron, SMS/Email, Unit tests)
-- **Low Priority**: 2 (CR-8 schema fix, Advanced API features)
-- **✅ All CR backend logic is implemented** — CR-7 schema fully aligned, pending items are new modules
+- **Low Priority**: 1 (Advanced API features)
+- **✅ All CR backend logic is implemented** — CR-7 + CR-8 schema fully aligned, pending items are new modules

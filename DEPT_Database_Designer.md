@@ -27,7 +27,7 @@
 | B-14 | Sale-to-fee schema changes | CR-4 | CR-4 | ✅ SalesInvoice: studentId, addToFee, feeInvoiceId. FeeInvoiceItem: salesInvoiceId. All relations implemented. |
 | B-15 | Recurring donation schema | CR-5 | CR-5 | ✅ Donation: isRecurring, recurringFrequency, recurringAmount, nextDueDate, reminderSent, lastPaymentDate. Donor: totalPledged, reminderConsent, reminderMethod. All in schema. |
 | B-16 | Subscription enforcement schema | CR-7 | CR-7 | ✅ COMPLETE — SubscriptionPayment model ✅. Subscription: status (all states) ✅, currentPeriodEnd ✅, gracePeriodEnd ✅, restrictedEnd ✅, lastPaymentDate ✅, lastPaymentMethod ✅, lastPaymentRef ✅, dataDeletionDate ✅. Tenant: storageUsedMb ✅, subscriptionStatus ✅, isReadOnly ✅. User: emailVerified ✅. Composite index ✅. |
-| B-17 | Simplified accounting schema | CR-8 | CR-8 | ⚠️ PARTIAL — accountingMode stored in Tenant.settings JSON ✅. **MISSING**: Dedicated Tenant.accountingMode column |
+| B-17 | Simplified accounting schema | CR-8 | CR-8 | ✅ COMPLETE — Tenant.accountingMode dedicated column added (String @default("double-entry")). API route updated to use column directly. |
 | B-18 | Storage limits schema | CR-11 | CR-11 | ✅ SubscriptionPlan: maxAlbums, maxImagesPerAlbum, maxImageSizeMb. Gallery: imageCount. GalleryImage: fileSizeKb. Tenant: storageUsedMb. All in schema. |
 | B-19 | CR-related indexes | CR-5,7 | CR-5,7 | ✅ Key indexes added for donations (is_recurring, next_due_date), subscriptions (status), sales (student_id) |
 
@@ -37,7 +37,7 @@
 
 | ID | Task | Priority | CR# | New Fields/Models | Details |
 |----|------|----------|-----|-------------------|---------|
-| B-20 | CR-8 dedicated column | Low | CR-8 | 1 new field | Tenant: accountingMode String @default("simple"). Currently in JSON settings. |
+| B-20 | CR-8 dedicated column | Low | CR-8 | ✅ DONE | Tenant.accountingMode String @default("double-entry") @map("accounting_mode") added. API route updated. |
 | B-21 | Email unique index | Medium | CR-7 | 1 index | User.email — GLOBAL UNIQUE constraint (one email = one account across tenants) |
 | B-22 | Migration scripts | High | All | N/A | Generate formal Prisma migrations for all CR schema changes (currently using db:push) |
 | B-23 | Seed data with i18n | Medium | CR-2 | N/A | Seed data plan with Bengali/Arabic sample content for all _bn/_ar fields |
@@ -47,10 +47,10 @@
 ---
 
 ## 📊 Progress Summary
-- **Completed**: 19 tasks (12 original + 7 CR schema changes, including CR-7 fully aligned)
-- **Pending**: 6 tasks
+- **Completed**: 20 tasks (12 original + 8 CR schema changes, CR-7 + CR-8 fully aligned)
+- **Pending**: 5 tasks
 - **High Priority**: 2 (Migration scripts, Backup strategy)
 - **Medium Priority**: 2 (Email unique index, Seed data)
-- **Low Priority**: 2 (CR-8 column, ER Diagram)
+- **Low Priority**: 1 (ER Diagram)
 - **Total models**: 50 (49 original + SubscriptionPayment)
 - **Schema status**: All CR fields pushed and working. Gaps are optimization/alignment items.
