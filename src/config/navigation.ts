@@ -11,7 +11,7 @@ import {
   Package, ShoppingCart, BarChart3, ShoppingBag,
   BookOpen, FileText,
   Globe, FileSpreadsheet, Megaphone, ImageIcon,
-  Settings, Shield, Bell, Activity, Wrench
+  Settings, Shield, Bell, Activity, Wrench, HardDrive
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -88,6 +88,7 @@ export const navigation: NavGroup[] = [
       { titleKey: 'notifications', href: '/system/notifications', icon: Bell, badge: '3' },
       { titleKey: 'activityLog', href: '/system/activity-logs', icon: Activity },
       { titleKey: 'billing', href: '/system/billing', icon: CreditCard },
+      { titleKey: 'backupRestore', href: '/system/backup', icon: HardDrive },
       { titleKey: 'settings', href: '/system/settings', icon: Wrench },
     ],
   },

@@ -101,6 +101,7 @@ model Tenant {
   notifications      Notification[]
   activityLogs       ActivityLog[]
   auditLogs          AuditLog[]
+  backupRecords      BackupRecord[]
 
   @@map("tenants")
 }
@@ -1363,6 +1364,38 @@ model ActivityLog {
   @@index([userId])
   @@index([entityType, entityId])
   @@map("activity_logs")
+}
+
+// ============================================================
+// DOMAIN 7 ADDITION: Backup & Restore (Module 28)
+// ============================================================
+
+model BackupRecord {
+  id            Int       @id @default(autoincrement())
+  tenantId      Int       @map("tenant_id")
+  type          String    @default("full")                // full | partial | scheduled
+  status        String    @default("pending")           // pending | running | completed | failed | expired
+  triggerSource String    @default("manual")            // manual | scheduled | auto
+  sizeMb        Decimal?  @map("size_mb")                // File size in MB
+  recordCount   Int?      @map("record_count")           // Total records exported
+  storagePath   String?   @map("storage_path")           // Relative path: backups/{tenantId}/{filename}.json
+  fileName      String?   @map("file_name")              // Human-readable filename
+  description   String?                                   // User-provided note
+  error         String?                                   // Error message if status=failed
+  startedAt     DateTime? @map("started_at")             // When backup began processing
+  completedAt   DateTime? @map("completed_at")           // When backup finished
+  createdBy     Int?      @map("created_by")             // userId who triggered
+  expiresAt     DateTime? @map("expires_at")             // Auto-cleanup date
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([status, expiresAt])
+  @@map("backup_records")
 }
 
 model AuditLog {

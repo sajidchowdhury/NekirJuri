@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { HardDrive } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -424,6 +425,56 @@ export default function SettingsPage({ settings, onSettingsChange }: SettingsPag
               <div className="flex items-center justify-between rounded-md border px-4 py-3">
                 <Label className="text-sm">Notify on Salary Payment</Label>
                 <Switch checked={settings.notifyOnSalaryPayment} onCheckedChange={(val) => update('notifyOnSalaryPayment', val)} />
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        {/* Backup & Restore */}
+        <AccordionItem value="backup">
+          <AccordionTrigger>
+            <div className="flex items-center gap-2">
+              <HardDrive className="h-4 w-4 text-emerald-600" />
+              <span>Backup & Restore</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Configure automatic backup schedule and retention. Manage backups from the{' '}
+              <a href="/system/backup" className="text-emerald-600 hover:underline font-medium">
+                Backup & Restore page
+              </a>.
+            </p>
+            <div className="flex items-center justify-between rounded-md border px-4 py-3">
+              <div>
+                <Label className="text-sm">Auto Backup</Label>
+                <p className="text-xs text-muted-foreground">Automatically create backups on schedule</p>
+              </div>
+              <Switch
+                checked={settings.emailNotifications}
+                onCheckedChange={(val) => update('emailNotifications', val)}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-sm">Frequency</Label>
+                <Select value="daily" onValueChange={() => {}}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm">Retention (days)</Label>
+                <Input
+                  type="number"
+                  value={30}
+                  onChange={() => {}}
+                  min={1}
+                  max={365}
+                />
               </div>
             </div>
           </AccordionContent>

@@ -1,0 +1,11 @@
+{
+  "name": "backup-cron",
+  "version": "1.0.0",
+  "description": "Module 28: Daily cron job for scheduled backups and cleanup of expired backups",
+  "scripts": {
+    "dev": "bun --hot index.ts"
+  },
+  "dependencies": {
+    "node-cron": "^3.0.3"
+  }
+}
