@@ -60,7 +60,6 @@ _No remaining schema gaps. All CR-7 and CR-8 fields are now schema-aligned._
 | SMS/Email Sending Backend | Medium | Provider integration (Twilio/MSG91, Resend/SendGrid) |
 | QR/Barcode Support | Low | — |
 | Custom Domains | Low | — |
-| Data Deletion Cron (CR-7) | Medium | CR-7 schema alignment |
 | Formal Migration Scripts | Medium | All schema finalized |
 
 ### Build Stats
@@ -163,7 +162,7 @@ _No remaining schema gaps. All CR-7 and CR-8 fields are now schema-aligned._
 - **Done**: `computeTenantCache()` keeps tenant-level cache in sync
 - **Done**: `lastPaymentDate`, `lastPaymentMethod`, `lastPaymentRef` on Subscription
 - **Done**: `dataDeletionDate` on Subscription (for future data deletion cron)
-- **Pending**: Data deletion cron job for terminated tenants (30+ days)
+- **Done**: Data deletion cron job for terminated tenants (30+ days) — /api/cron/data-deletion + src/lib/data-deletion/index.ts
 
 ## ✅ CR-8: Simplified Accounting Mode — COMPLETE
 - **Done**: Two modes — "Simple" (no debit/credit, auto-journal, income/expense terminology) and "Expert" (standard double-entry)
@@ -208,7 +207,7 @@ _No remaining schema gaps. All CR-7 and CR-8 fields are now schema-aligned._
 - [ ] SMS/Email sending (UI ready, backend needed)
 - [ ] Custom domains (future)
 - [ ] Unit tests
-- [ ] Data deletion cron for terminated tenants
+- [x] Data deletion cron for terminated tenants (CR-7 ✅)
 
 ---
 
@@ -274,15 +273,15 @@ All dependencies satisfied. All schema gaps resolved (CR-7 ✅, CR-8 ✅).
 _All schema alignment tasks complete._
 
 ## Priority 2 — Production Hardening
-1. **Data deletion cron job** — Terminate tenants 30+ days, delete business data only
-2. **Formal migration scripts** — Replace db:push with proper Prisma migrations
-3. **User.email unique index** — Prevent duplicate accounts across tenants
-4. **Unit tests** — At minimum: API routes, subscription enforcement, tenant isolation
+1. **Formal migration scripts** — Replace db:push with proper Prisma migrations
+2. **Unit tests** — At minimum: API routes, subscription enforcement, tenant isolation
+
+~~Completed hardening items~~: Data deletion cron ✅, User.email unique index ✅, computeEnforcement() bug fix ✅
 
 ## Priority 3 — Feature Enhancements
-5. **SMS/Email backend** — Twilio/MSG91 + Resend/SendGrid integration
-6. **QR/Barcode support** — For students, receipts, products
-7. **Custom domains** — Per-tenant custom domain routing
+1. **SMS/Email backend** — Twilio/MSG91 + Resend/SendGrid integration
+2. **QR/Barcode support** — For students, receipts, products
+3. **Custom domains** — Per-tenant custom domain routing
 
 ---
 
@@ -294,5 +293,7 @@ _All schema alignment tasks complete._
 - **CR-5 fully implemented** — Recurring Donations with Reminders with cron job, dashboard widget, payment recording UI, donor reminder preferences
 - All Prisma schema changes are pushed and in sync
 - API routes are fully implemented (not just scaffolded)
-- The `computeEnforcement` bug (string vs Date in subscription.ts) is a pre-existing issue that should be fixed alongside CR-7 schema alignment
+- **BUG-01 FIXED**: `computeEnforcement()` string-vs-Date bug in subscription.ts — fixed with ensureDate() defensive wrapper
+- **B-21 DONE**: User.email @@unique([email]) global unique constraint — one email = one account across all tenants
+- **BL-22 DONE**: Data deletion cron job implemented — /api/cron/data-deletion + src/lib/data-deletion/index.ts
 - Frontend gracefully falls back to sample data when API returns 401 (no auth context)

@@ -27,9 +27,10 @@
 | A-13 | Multi-language i18n architecture | CR-2 | CR-2 | ✅ next-intl setup, RTL strategy for Arabic, ~800 translation keys, dynamic content with _bn/_ar fields |
 | A-14 | Sale-to-Student fee integration design | CR-4 | CR-4 | ✅ Cross-module flow: Sale → FeeInvoiceItem → Fee Collections. API contract implemented |
 | A-15 | Recurring donation system design | CR-5 | CR-5 | ✅ Scheduling model, reminder cron job (port 3031), notification template, dashboard widget |
-| A-16 | SaaS subscription enforcement design | CR-7 | CR-7 | ✅ COMPLETE — State machine (Active→Grace→Restricted→Suspended→Terminated) implemented via computeEnforcement(). API middleware spec done. Schema aligned with dedicated period-end fields + tenant cache. |
+| A-16 | SaaS subscription enforcement design | CR-7 | CR-7 | ✅ COMPLETE — State machine (Active→Grace→Restricted→Suspended→Terminated) implemented via computeEnforcement(). Data deletion cron for terminated tenants (30+ days). computeEnforcement() string-vs-Date bug fixed (ensureDate() wrapper). Schema aligned with dedicated period-end fields + tenant cache. |
 | A-17 | Simplified accounting mode design | CR-8 | CR-8 | ✅ COMPLETE — Dual-mode architecture implemented. Simple→expert mapping works. Auto-journal entry rules done. Dedicated `accountingMode` column on Tenant (schema-aligned). |
 | A-18 | Storage limits policy design | CR-11 | CR-11 | ✅ Tier-based limit matrix, image optimization pipeline, storage tracking — all implemented |
+| A-19 | Data deletion cron architecture | CR-7 | CR-7 | ✅ /api/cron/data-deletion endpoint design, src/lib/data-deletion/index.ts — preserves Tenant+User+Subscription, deletes business data for terminated tenants 30+ days |
 | A-20 | Backup & Restore architecture | Module 28 | Module 28 | ✅ Backup strategy (full/partial), restore flow, scheduled backup cron, storage management, disaster recovery plan |
 
 ---
@@ -44,7 +45,7 @@
 ---
 
 ## 📊 Progress Summary
-- **Completed**: 20 tasks (12 original + 7 CR architectures + Module 28, CR-7 + CR-8 schema aligned)
+- **Completed**: 22 tasks (12 original + 8 CR architectures + Module 28, CR-7 fully complete incl. data deletion cron + bug fix, CR-8 schema aligned)
 - **Pending**: 2 tasks
 - **High Priority**: 0
 - **Medium Priority**: 2 (Unit tests, SMS/Email)
