@@ -4,7 +4,7 @@
 
 > **Purpose**: Translate master specification into database architecture requirements  
 > **Last Updated**: March 2026 (Audit — cross-referenced with actual codebase)  
-> **Current State**: 50 Prisma models implemented, 7 domains, dual environment (SQLite dev / PostgreSQL prod)
+> **Current State**: 51 Prisma models implemented, 7 domains, dual environment (SQLite dev / PostgreSQL prod)
 
 ---
 
@@ -25,7 +25,7 @@
 
 ## Current Schema Status
 
-### ✅ IMPLEMENTED — 50 Models Across 7 Domains
+### ✅ IMPLEMENTED — 51 Models Across 7 Domains
 
 #### Domain 1: SaaS (3 models)
 | Model | Status | Key Fields |
@@ -102,6 +102,7 @@
 | Notification | ✅ Done | id, tenantId, userId, title, message, type, isRead |
 | ActivityLog | ✅ Done | id, tenantId, userId, action, entity, entityId, description, ipAddress |
 | AuditLog | ✅ Done | id, tenantId, userId, action, entity, entityId, oldValues (Json), newValues (Json) |
+| BackupRecord | ✅ Done | id, tenantId, type (full/partial), status (pending/running/completed/failed), sizeMb, storagePath, startedAt, completedAt, createdBy, expiresAt |
 
 ---
 
@@ -139,10 +140,10 @@ All fields now implemented in the Prisma schema:
 
 ---
 
-### Module 28: Backup & Restore — New Model Needed
-| Model | Fields | Priority |
-|-------|--------|----------|
-| **BackupRecord** | id, tenantId, type (full/partial), status (pending/running/completed/failed), sizeMb, storagePath, startedAt, completedAt, createdBy, expiresAt | High |
+### Module 28: Backup & Restore — ✅ IMPLEMENTED
+| Model | Fields | Status |
+|-------|--------|--------|
+| **BackupRecord** | id, tenantId, type (full/partial), status (pending/running/completed/failed), sizeMb, storagePath, startedAt, completedAt, createdBy, expiresAt | ✅ Done |
 
 ---
 
@@ -188,7 +189,7 @@ Design optimized for:
 - [x] **Subscription status report** (CR-7) ⚠️ (partial — needs schema fields)
 - [x] **Simple mode income/expense summary** (CR-8) ✅
 - [x] **Student product purchase report** (CR-4) ✅
-- [ ] **Backup history report** (Module 28)
+- [x] **Backup history report** (Module 28)
 
 ---
 
@@ -201,7 +202,7 @@ Design optimized for:
 ---
 
 ## Deliverables
-1. [x] Complete Prisma Schema (50 models, 1400+ lines)
+1. [x] Complete Prisma Schema (51 models, 1400+ lines)
 2. [ ] Updated ER Diagram (with CR-2 through CR-11 changes) — Low priority
 3. [x] Data Dictionary (embedded in schema comments)
 4. [x] Table Definitions (Prisma models)
@@ -210,12 +211,12 @@ Design optimized for:
 7. [x] Constraints (unique, composite)
 8. [ ] Migration Scripts for CR changes — Medium priority
 9. [ ] Seed Data Plan (with Bengali/Arabic sample content for CR-2) — Medium priority
-10. [ ] Backup Strategy — High priority
+10. [x] Backup Strategy — High priority ✅ DONE
 
 ---
 
 ## Migration Order for Remaining Changes
 1. **CR-7** — Subscription enforcement missing fields (5 fields on Subscription, 2 on Tenant, 1 on User)
 2. **CR-8** — Accounting mode dedicated column (1 field on Tenant)
-3. **Module 28** — BackupRecord model + backup strategy
+3. ~~**Module 28** — BackupRecord model + backup strategy~~ ✅ DONE
 4. **Indexes** — User.email unique, subscription_payments composite

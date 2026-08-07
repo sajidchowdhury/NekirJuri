@@ -30,6 +30,7 @@
 | B-17 | Simplified accounting schema | CR-8 | CR-8 | ✅ COMPLETE — Tenant.accountingMode dedicated column added (String @default("double-entry")). API route updated to use column directly. |
 | B-18 | Storage limits schema | CR-11 | CR-11 | ✅ SubscriptionPlan: maxAlbums, maxImagesPerAlbum, maxImageSizeMb. Gallery: imageCount. GalleryImage: fileSizeKb. Tenant: storageUsedMb. All in schema. |
 | B-19 | CR-related indexes | CR-5,7 | CR-5,7 | ✅ Key indexes added for donations (is_recurring, next_due_date), subscriptions (status), sales (student_id) |
+| B-24 | Backup strategy | Module 28 | Module 28 | ✅ BackupRecord model, backup scheduling, storage management, restore validation |
 
 ---
 
@@ -41,16 +42,15 @@
 | B-21 | Email unique index | Medium | CR-7 | 1 index | User.email — GLOBAL UNIQUE constraint (one email = one account across tenants) |
 | B-22 | Migration scripts | High | All | N/A | Generate formal Prisma migrations for all CR schema changes (currently using db:push) |
 | B-23 | Seed data with i18n | Medium | CR-2 | N/A | Seed data plan with Bengali/Arabic sample content for all _bn/_ar fields |
-| B-24 | Backup strategy | High | Module 28 | 1+ new model | BackupRecord model, backup scheduling, storage management, restore validation |
 | B-25 | ER Diagram update | Low | — | N/A | Updated ER Diagram with all CR-2 through CR-11 changes |
 
 ---
 
 ## 📊 Progress Summary
-- **Completed**: 20 tasks (12 original + 8 CR schema changes, CR-7 + CR-8 fully aligned)
-- **Pending**: 5 tasks
-- **High Priority**: 2 (Migration scripts, Backup strategy)
+- **Completed**: 21 tasks (12 original + 8 CR schema changes + Module 28, CR-7 + CR-8 fully aligned)
+- **Pending**: 4 tasks
+- **High Priority**: 1 (Migration scripts)
 - **Medium Priority**: 2 (Email unique index, Seed data)
 - **Low Priority**: 1 (ER Diagram)
-- **Total models**: 50 (49 original + SubscriptionPayment)
+- **Total models**: 51 (49 original + SubscriptionPayment + BackupRecord)
 - **Schema status**: All CR fields pushed and working. Gaps are optimization/alignment items.

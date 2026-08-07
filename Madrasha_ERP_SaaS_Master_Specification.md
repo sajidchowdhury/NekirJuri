@@ -4,7 +4,7 @@
 
 > This document is the **single source of truth** for all team members.  
 > Last updated: March 2026 (Audit — cross-referenced with actual codebase)  
-> Build status: **UI/UX Phases 0-12 COMPLETE** | **CRs 1,2,4,5,6,7,8,9,10,11 FUNCTIONALLY COMPLETE** | **Schema gaps in CR-7 & CR-8**
+> Build status: **UI/UX Phases 0-12 COMPLETE** | **Module 28 (Backup & Restore) COMPLETE** | **CRs 1,2,4,5,6,7,8,9,10,11 FUNCTIONALLY COMPLETE**
 
 ---
 
@@ -56,7 +56,6 @@ _No remaining schema gaps. All CR-7 and CR-8 fields are now schema-aligned._
 
 | Module | Priority | Dependencies |
 |--------|----------|-------------|
-| Backup & Restore (Module 28) | **High** | Architecture, DB schema, API, UI |
 | Unit Tests | Medium | Test framework setup |
 | SMS/Email Sending Backend | Medium | Provider integration (Twilio/MSG91, Resend/SendGrid) |
 | QR/Barcode Support | Low | — |
@@ -68,7 +67,7 @@ _No remaining schema gaps. All CR-7 and CR-8 fields are now schema-aligned._
 - **156+ components** (atoms, molecules, organisms, domain-specific)
 - **29 pages** (3 auth + 26 dashboard)
 - **60+ API routes** (wired to Prisma with validation)
-- **50 Prisma models** (49 original + SubscriptionPayment)
+- **51 Prisma models** (49 original + SubscriptionPayment + BackupRecord)
 - **42,000+ lines** of TypeScript/TSX
 - **0 lint errors**
 
@@ -119,7 +118,7 @@ _No remaining schema gaps. All CR-7 and CR-8 fields are now schema-aligned._
 | 25 | Search | ✅ Command palette | — | — |
 | 26 | Settings | ✅ Done | ✅ Done | ✅ Done |
 | 27 | Security | ✅ Done | ✅ Done | ✅ Done |
-| 28 | Backup & Restore | ❌ Not started | ❌ Not started | ❌ Not started |
+| 28 | Backup & Restore | ✅ Done | ✅ Done | ✅ Done (BackupRecord model) |
 | 29 | Activity Log | ✅ Done | ✅ Done | ✅ Done |
 | 30 | Future Modules | ❌ Planned | ❌ Planned | ❌ Planned |
 
@@ -204,7 +203,7 @@ _No remaining schema gaps. All CR-7 and CR-8 fields are now schema-aligned._
 - [x] Subscription enforcement (CR-7 ✅)
 - [x] Simplified accounting mode (CR-8 ✅)
 - [x] Image upload limits per tier (CR-11 ✅)
-- [ ] Backup & Restore (Module 28)
+- [x] Backup & Restore (Module 28)
 - [ ] QR/Barcode support
 - [ ] SMS/Email sending (UI ready, backend needed)
 - [ ] Custom domains (future)
@@ -214,7 +213,7 @@ _No remaining schema gaps. All CR-7 and CR-8 fields are now schema-aligned._
 ---
 
 # Database Expectations
-Core entities: ✅ All 50 models implemented in Prisma schema (49 original + SubscriptionPayment).
+Core entities: ✅ All 51 models implemented in Prisma schema (49 original + SubscriptionPayment + BackupRecord).
 
 Every business table includes `tenant_id`.  
 ⚠️ CR-7 and CR-8 have minor schema gaps — see detailed status above.
@@ -271,27 +270,25 @@ All dependencies satisfied. All schema gaps resolved (CR-7 ✅, CR-8 ✅).
 
 # Recommended Build Order (Next Phase)
 
-## Priority 1 — High Impact, No Dependencies
-1. **Backup & Restore (Module 28)** — Full stack: Architecture → DB → API → UI. Critical for production safety.
-
-## Priority 2 — Schema Alignment
+## Priority 1 — Schema Alignment
 _All schema alignment tasks complete._
 
-## Priority 3 — Production Hardening
-4. **Data deletion cron job** — Terminate tenants 30+ days, delete business data only
-5. **Formal migration scripts** — Replace db:push with proper Prisma migrations
-6. **User.email unique index** — Prevent duplicate accounts across tenants
-7. **Unit tests** — At minimum: API routes, subscription enforcement, tenant isolation
+## Priority 2 — Production Hardening
+1. **Data deletion cron job** — Terminate tenants 30+ days, delete business data only
+2. **Formal migration scripts** — Replace db:push with proper Prisma migrations
+3. **User.email unique index** — Prevent duplicate accounts across tenants
+4. **Unit tests** — At minimum: API routes, subscription enforcement, tenant isolation
 
-## Priority 4 — Feature Enhancements
-8. **SMS/Email backend** — Twilio/MSG91 + Resend/SendGrid integration
-9. **QR/Barcode support** — For students, receipts, products
-10. **Custom domains** — Per-tenant custom domain routing
+## Priority 3 — Feature Enhancements
+5. **SMS/Email backend** — Twilio/MSG91 + Resend/SendGrid integration
+6. **QR/Barcode support** — For students, receipts, products
+7. **Custom domains** — Per-tenant custom domain routing
 
 ---
 
 # Handover Notes
 - **10 change requests are FULLY COMPLETE** (CR-1,2,4,5,6,7,8,9,10,11)
+- **Module 28 (Backup & Restore) COMPLETE** — Architecture, DB schema (BackupRecord model), API routes, UI all implemented
 - **CR-8 schema alignment DONE** — Tenant.accountingMode dedicated column added, API route updated
 - **CR-7 schema alignment DONE** — All Subscription/Tenant/User fields added, computeEnforcement() updated, tenant cache sync implemented
 - **CR-5 fully implemented** — Recurring Donations with Reminders with cron job, dashboard widget, payment recording UI, donor reminder preferences
@@ -299,4 +296,3 @@ _All schema alignment tasks complete._
 - API routes are fully implemented (not just scaffolded)
 - The `computeEnforcement` bug (string vs Date in subscription.ts) is a pre-existing issue that should be fixed alongside CR-7 schema alignment
 - Frontend gracefully falls back to sample data when API returns 401 (no auth context)
-- **Backup & Restore is the highest priority next module** — required for production safety
