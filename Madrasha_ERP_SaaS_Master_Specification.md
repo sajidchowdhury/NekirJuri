@@ -1,10 +1,10 @@
 # Madrasha ERP & Accounting Management System (SaaS)
 ## Master Software Specification
-### Version: 3.1 — All CR Implementation Complete
+### Version: 3.2 — Audited & Status-Corrected
 
 > This document is the **single source of truth** for all team members.  
-> Last updated: August 2025  
-> Build status: **UI/UX Phases 0-12 COMPLETE** | **ALL CRs (1,2,4,5,6,7,8,9,10,11) COMPLETE**
+> Last updated: March 2026 (Audit — cross-referenced with actual codebase)  
+> Build status: **UI/UX Phases 0-12 COMPLETE** | **CRs 1,2,4,5,6,7,8,9,10,11 FUNCTIONALLY COMPLETE** | **Schema gaps in CR-7 & CR-8**
 
 ---
 
@@ -40,29 +40,44 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 | CR-1 | Bismillah Placement | ✅ Done | Removed from pages, added to top bar (centered, subtle), kept on print layouts |
 | CR-2 | Multi-Language System | ✅ Done | 3-language (Ar/En/Bn), RTL for Arabic, language switcher, `_bn`/`_ar` DB fields, next-intl architecture |
 | CR-4 | Sale-to-Student Fee | ✅ Done | Student selector in sales, "Add to Monthly Fee" toggle, auto-creates FeeInvoiceItem, fee invoice link in sale detail |
+| CR-5 | Recurring Donations | ✅ Done | Recurring frequency (monthly/yearly), nextDueDate auto-calculate, daily reminder cron (port 3031), dashboard widget, payment recording dialog, donor reminder preferences |
 | CR-6 | Fix New Sale Modal | ✅ Done | Card-based line items, proper spacing, mobile Drawer, no overlapping fields |
-| CR-7 | Subscription Enforcement | ✅ Done | Enforcement levels (full/grace/restricted/suspended/terminated), bKash/Nagad, grace period, read-only mode, data deletion warning |
-| CR-8 | Simplified Accounting | ✅ Done | Two modes (Simple/Expert), auto-journal in Simple, no debit/credit terminology, mode toggle in settings |
+| CR-7 | Subscription Enforcement | ⚠️ Mostly Done | Enforcement levels (full/grace/restricted/suspended/terminated), computeEnforcement(), SubscriptionGuard, bKash/Nagad, grace period, read-only mode. **Schema gap**: Missing `currentPeriodEnd`, `gracePeriodEnd`, `restrictedEnd` on Subscription; `subscriptionStatus`, `isReadOnly` on Tenant. |
+| CR-8 | Simplified Accounting | ⚠️ Mostly Done | Two modes (Simple/Expert), auto-journal in Simple, no debit/credit terminology, mode toggle in settings. **Schema gap**: `accountingMode` stored in JSON `settings` instead of dedicated column. |
 | CR-9 | Sidebar Collapsible Submenus | ✅ Done | Accordion behavior, active group auto-expanded, smooth animations |
 | CR-10 | Fee Category Form | ✅ Done | Full CRUD with react-hook-form + zod, edit/delete dialogs, audit logging, soft delete |
 | CR-11 | Image Upload Limits | ✅ Done | Tier-based limits (albums, images/album, size, storage), usage bar, 413 enforcement, upgrade prompts, image/album delete with storage cleanup |
-| CR-5 | Recurring Donations | ✅ Done | Recurring frequency (monthly/yearly), nextDueDate auto-calculate, daily reminder cron, dashboard widget, payment recording dialog, donor reminder preferences |
 
-## ✅ ALL CHANGE REQUESTS COMPLETE
+## ⚠️ SCHEMA ALIGNMENT GAPS (Non-Blocking)
 
-No remaining change requests. All CRs (1,2,4,5,6,7,8,9,10,11) have been implemented.
+| CR | Gap | Impact | Priority |
+|----|-----|--------|----------|
+| CR-7 | Subscription: missing `currentPeriodEnd`, `gracePeriodEnd`, `restrictedEnd`. Tenant: missing `subscriptionStatus`, `isReadOnly`. | Currently using `status` + `endDate` — functionally works but less granular period tracking | Medium |
+| CR-8 | Tenant: `accountingMode` stored in JSON `settings` instead of dedicated column | Functionally equivalent, but harder to query/index | Low |
+
+## ❌ NOT STARTED — Future Work
+
+| Module | Priority | Dependencies |
+|--------|----------|-------------|
+| Backup & Restore (Module 28) | **High** | Architecture, DB schema, API, UI |
+| Unit Tests | Medium | Test framework setup |
+| SMS/Email Sending Backend | Medium | Provider integration (Twilio/MSG91, Resend/SendGrid) |
+| QR/Barcode Support | Low | — |
+| Custom Domains | Low | — |
+| Data Deletion Cron (CR-7) | Medium | CR-7 schema alignment |
+| Formal Migration Scripts | Medium | All schema finalized |
 
 ### Build Stats
 - **156+ components** (atoms, molecules, organisms, domain-specific)
 - **29 pages** (3 auth + 26 dashboard)
-- **60+ API routes** (scaffolded + CR implementations)
-- **49 Prisma models** (7 domains)
+- **60+ API routes** (wired to Prisma with validation)
+- **50 Prisma models** (49 original + SubscriptionPayment)
 - **42,000+ lines** of TypeScript/TSX
 - **0 lint errors**
 
 ---
 
-#% Core Architecture
+# Core Architecture
 - Multi-tenant SaaS
 - One codebase, separate data per Madrasha (tenant_id)
 - Modular architecture with 7 domains
@@ -80,9 +95,9 @@ No remaining change requests. All CRs (1,2,4,5,6,7,8,9,10,11) have been implemen
 
 | # | Module | UI Status | API Status | DB Status |
 |---|--------|-----------|------------|-----------|
-| 1 | SaaS Administration | ✅ Done | ✅ Done | ✅ 49 models |
-| 2 | Subscription & Billing | ✅ Done | ✅ Done | ✅ Enforcement complete |
-| 3 | Tenant (Madrasha) Management | ✅ Done | ✅ Done | ✅ Done |
+| 1 | SaaS Administration | ✅ Done | ✅ Done | ✅ 50 models |
+| 2 | Subscription & Billing | ✅ Done | ✅ Done | ⚠️ Missing period-end fields |
+| 3 | Tenant (Madrasha) Management | ✅ Done | ✅ Done | ⚠️ Missing subscriptionStatus/isReadOnly |
 | 4 | Authentication | ✅ Done | ✅ NextAuth v4 | ✅ Done |
 | 5 | Roles & Permissions | ✅ Done | ✅ Done | ✅ Done |
 | 6 | Dashboard | ✅ Done | ✅ Done | ✅ Done |
@@ -100,7 +115,7 @@ No remaining change requests. All CRs (1,2,4,5,6,7,8,9,10,11) have been implemen
 | 18 | Salary & Payroll | ✅ Done | ✅ Done | ✅ Done |
 | 19 | Inventory & Stock | ✅ Done | ✅ Done | ✅ Done |
 | 20 | Sales (Student Store) | ✅ Done | ✅ Done (CR-4 complete) | ✅ Done |
-| 21 | Accounting | ✅ Done | ✅ Done (CR-8 complete) | ✅ Done |
+| 21 | Accounting | ✅ Done | ✅ Done (CR-8 complete) | ⚠️ accountingMode in JSON |
 | 22 | Reports | ✅ Done | ✅ Done | ✅ Done |
 | 23 | Notifications | ✅ Done | ✅ Done | ✅ Done |
 | 24 | Receipts & Printing | ✅ Done | ✅ Done | ✅ Done |
@@ -135,17 +150,27 @@ No remaining change requests. All CRs (1,2,4,5,6,7,8,9,10,11) have been implemen
 - **Done**: Donor reminder preferences (reminderConsent, reminderMethod) with UI toggle and settings dialog
 - **Done**: Cron mini-service (port 3031) with node-cron + manual trigger endpoint
 - **Done**: Fixed recurring-reminders API — Notification model userId requirement resolved with findTenantAdminUserId()
-- **Dependencies**: ~~CR-7~~ ✅ (subscription infra complete)
-- **Category**: DB + Backend + Frontend
 
 ## ✅ CR-6: Fix New Sale Modal — COMPLETE
 - **Done**: Card-based line items, proper grid layout, no overlapping fields, mobile Drawer component.
 
-## ✅ CR-7: SaaS Subscription Enforcement — COMPLETE
-- **Done**: Enforcement levels (full → grace_period → restricted → suspended → terminated). `computeEnforcement()` in subscription.ts. Grace period (14 days), read-only mode, data deletion warning. Payment via bKash/Nagad. SubscriptionGuard component.
+## ⚠️ CR-7: SaaS Subscription Enforcement — MOSTLY COMPLETE
+- **Done**: Enforcement levels (full → grace_period → restricted → suspended → terminated)
+- **Done**: `computeEnforcement()` in subscription.ts (234 lines)
+- **Done**: SubscriptionGuard component with read-only mode + upgrade CTA
+- **Done**: SubscriptionBanner by enforcement level
+- **Done**: Grace period (14 days), read-only mode, data deletion warning
+- **Done**: Payment via bKash/Nagad (SubscriptionPayment model)
+- **Pending**: Subscription schema missing `currentPeriodEnd`, `gracePeriodEnd`, `restrictedEnd` dedicated fields
+- **Pending**: Tenant schema missing `subscriptionStatus`, `isReadOnly` dedicated fields
+- **Pending**: Data deletion cron job for terminated tenants (30+ days)
 
-## ✅ CR-8: Simplified Accounting Mode — COMPLETE
-- **Done**: Two modes — "Simple" (no debit/credit, auto-journal, income/expense terminology) and "Expert" (standard double-entry). Mode toggle in settings. SimplifiedJournalEntryForm component.
+## ⚠️ CR-8: Simplified Accounting Mode — MOSTLY COMPLETE
+- **Done**: Two modes — "Simple" (no debit/credit, auto-journal, income/expense terminology) and "Expert" (standard double-entry)
+- **Done**: Mode toggle in settings
+- **Done**: SimplifiedJournalEntryForm, SimplifiedChartOfAccounts, SimplifiedAccountingSummary components
+- **Done**: Mode-aware pages (Chart of Accounts, Journal Entries render different UIs)
+- **Pending**: Dedicated `accountingMode` column on Tenant (currently in JSON `settings`)
 
 ## ✅ CR-9: Sidebar Collapsible Submenus — COMPLETE
 - **Done**: Accordion behavior — click group expands, collapses others. Active group auto-expanded. Smooth Framer Motion animations.
@@ -175,20 +200,23 @@ No remaining change requests. All CRs (1,2,4,5,6,7,8,9,10,11) have been implemen
 - [x] PDF/Excel export (UI ready)
 - [x] Multi-language (3 languages — CR-2 ✅)
 - [x] RTL layout for Arabic (CR-2 ✅)
-- [x] Subscription enforcement (CR-7 ✅)
-- [x] Simplified accounting mode (CR-8 ✅)
+- [x] Subscription enforcement (CR-7 ⚠️ mostly done)
+- [x] Simplified accounting mode (CR-8 ⚠️ mostly done)
 - [x] Image upload limits per tier (CR-11 ✅)
+- [ ] Backup & Restore (Module 28)
 - [ ] QR/Barcode support
 - [ ] SMS/Email sending (UI ready, backend needed)
 - [ ] Custom domains (future)
+- [ ] Unit tests
+- [ ] Data deletion cron for terminated tenants
 
 ---
 
 # Database Expectations
-Core entities: ✅ All 49 models implemented in Prisma schema.
+Core entities: ✅ All 50 models implemented in Prisma schema (49 original + SubscriptionPayment).
 
 Every business table includes `tenant_id`.  
-New fields for CR-5 still needed — see `Database_Design_Specification_Madrasha_ERP.md`.
+⚠️ CR-7 and CR-8 have minor schema gaps — see detailed status above.
 
 ---
 
@@ -230,31 +258,44 @@ New fields for CR-5 still needed — see `Database_Design_Specification_Madrasha
 # Dependency Graph
 
 ```
-CR-7 (Subscription) ✅ ──→ CR-11 (Upload Limits) ✅  [limits tied to subscription tier]
+CR-7 (Subscription) ⚠️ ──→ CR-11 (Upload Limits) ✅  [limits tied to subscription tier]
 CR-2 (i18n) ✅         ──→ CR-1 (Bismillah) ✅       [Bismillah text needs Arabic rendering]
-CR-8 (Simple Acct) ✅  ──→ CR-4 (Sale-to-Fee) ✅     [simple mode needs income recording]
-CR-7 (Subscription) ✅ ──→ CR-5 (Recurring Donations) ✅  [reminder cron needs infra]
+CR-8 (Simple Acct) ⚠️ ──→ CR-4 (Sale-to-Fee) ✅     [simple mode needs income recording]
+CR-7 (Subscription) ⚠️ ──→ CR-5 (Recurring Donations) ✅  [reminder cron needs infra]
 ```
 
-All dependencies satisfied. All CRs implemented.
+All functional dependencies satisfied. Schema alignment gaps are non-blocking.
 
 ---
 
 # Recommended Build Order (Next Phase)
 
-## All CRs Complete — Future Enhancements
-- Backup & Restore (Module 28)
-- QR/Barcode support
-- SMS/Email sending backend
-- Unit tests
-- Custom domains
+## Priority 1 — High Impact, No Dependencies
+1. **Backup & Restore (Module 28)** — Full stack: Architecture → DB → API → UI. Critical for production safety.
+
+## Priority 2 — Schema Alignment (Quick Wins)
+2. **CR-7 schema alignment** — Add 5 missing fields (currentPeriodEnd, gracePeriodEnd, restrictedEnd on Subscription; subscriptionStatus, isReadOnly on Tenant)
+3. **CR-8 schema alignment** — Add 1 field (accountingMode on Tenant)
+
+## Priority 3 — Production Hardening
+4. **Data deletion cron job** — Terminate tenants 30+ days, delete business data only
+5. **Formal migration scripts** — Replace db:push with proper Prisma migrations
+6. **User.email unique index** — Prevent duplicate accounts across tenants
+7. **Unit tests** — At minimum: API routes, subscription enforcement, tenant isolation
+
+## Priority 4 — Feature Enhancements
+8. **SMS/Email backend** — Twilio/MSG91 + Resend/SendGrid integration
+9. **QR/Barcode support** — For students, receipts, products
+10. **Custom domains** — Per-tenant custom domain routing
 
 ---
 
 # Handover Notes
-- **All 10 change requests are COMPLETE** (CR-1,2,4,5,6,7,8,9,10,11)
+- **All 10 change requests are FUNCTIONALLY COMPLETE** (CR-1,2,4,5,6,7,8,9,10,11)
+- **CR-7 and CR-8 have minor schema gaps** that should be aligned for production
 - **CR-5 fully implemented** — Recurring Donations with Reminders with cron job, dashboard widget, payment recording UI, donor reminder preferences
 - All Prisma schema changes are pushed and in sync
 - API routes are fully implemented (not just scaffolded)
-- The `computeEnforcement` bug (string vs Date in subscription.ts) is a pre-existing issue that should be fixed alongside CR-5
+- The `computeEnforcement` bug (string vs Date in subscription.ts) is a pre-existing issue that should be fixed alongside CR-7 schema alignment
 - Frontend gracefully falls back to sample data when API returns 401 (no auth context)
+- **Backup & Restore is the highest priority next module** — required for production safety
