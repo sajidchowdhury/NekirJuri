@@ -27,7 +27,7 @@
 | A-13 | Multi-language i18n architecture | CR-2 | CR-2 | ✅ next-intl setup, RTL strategy for Arabic, ~800 translation keys, dynamic content with _bn/_ar fields |
 | A-14 | Sale-to-Student fee integration design | CR-4 | CR-4 | ✅ Cross-module flow: Sale → FeeInvoiceItem → Fee Collections. API contract implemented |
 | A-15 | Recurring donation system design | CR-5 | CR-5 | ✅ Scheduling model, reminder cron job (port 3031), notification template, dashboard widget |
-| A-16 | SaaS subscription enforcement design | CR-7 | CR-7 | ⚠️ MOSTLY DONE — State machine (Active→Grace→Restricted→Suspended→Terminated) implemented via computeEnforcement(). API middleware spec done. See A-21 for remaining schema gaps. |
+| A-16 | SaaS subscription enforcement design | CR-7 | CR-7 | ✅ COMPLETE — State machine (Active→Grace→Restricted→Suspended→Terminated) implemented via computeEnforcement(). API middleware spec done. Schema aligned with dedicated period-end fields + tenant cache. |
 | A-17 | Simplified accounting mode design | CR-8 | CR-8 | ⚠️ MOSTLY DONE — Dual-mode architecture implemented. Simple→expert mapping works. Auto-journal entry rules done. See A-22 for schema gap. |
 | A-18 | Storage limits policy design | CR-11 | CR-11 | ✅ Tier-based limit matrix, image optimization pipeline, storage tracking — all implemented |
 
@@ -37,18 +37,16 @@
 
 | ID | Task | Priority | CR# | Dependencies | Details |
 |----|------|----------|-----|-------------|---------|
-| A-19 | Subscription schema alignment | Medium | CR-7 | DB schema update | Add dedicated `currentPeriodEnd`, `gracePeriodEnd`, `restrictedEnd` to Subscription model; `subscriptionStatus`, `isReadOnly` to Tenant model. Currently using `status`+`endDate` workaround. |
-| A-20 | Accounting mode schema alignment | Low | CR-8 | DB schema update | Add dedicated `accountingMode` column to Tenant model. Currently stored in `Tenant.settings` JSON field — functionally equivalent but less queryable. |
-| A-21 | Backup & Restore architecture | High | Module 28 | None | Design backup strategy (full/partial), restore flow, scheduled backup cron, storage management, disaster recovery plan |
-| A-22 | Unit test architecture | Medium | — | None | Test framework selection (vitest/jest), test structure per domain, mock strategy for Prisma + API routes |
-| A-23 | SMS/Email backend architecture | Medium | — | None | Provider integration design (Twilio/MSG91 for SMS, Resend/SendGrid for email), template system, queue management |
+| A-19 | Accounting mode schema alignment | Low | CR-8 | DB schema update | Add dedicated `accountingMode` column to Tenant model. Currently stored in `Tenant.settings` JSON field — functionally equivalent but less queryable. |
+| A-20 | Backup & Restore architecture | High | Module 28 | None | Design backup strategy (full/partial), restore flow, scheduled backup cron, storage management, disaster recovery plan |
+| A-21 | Unit test architecture | Medium | — | None | Test framework selection (vitest/jest), test structure per domain, mock strategy for Prisma + API routes |
+| A-22 | SMS/Email backend architecture | Medium | — | None | Provider integration design (Twilio/MSG91 for SMS, Resend/SendGrid for email), template system, queue management |
 
 ---
 
 ## 📊 Progress Summary
-- **Completed**: 18 tasks (12 original + 6 CR architectures)
-- **Pending**: 5 tasks
+- **Completed**: 18 tasks (12 original + 6 CR architectures, including CR-7 schema aligned)
+- **Pending**: 4 tasks
 - **High Priority**: 1 (Backup & Restore architecture — Module 28)
-- **Medium Priority**: 3 (CR-7 schema fix, Unit tests, SMS/Email)
+- **Medium Priority**: 2 (Unit tests, SMS/Email)
 - **Low Priority**: 1 (CR-8 schema alignment — cosmetic)
-- **⚠️ Note**: CR-7 and CR-8 are functionally complete. Pending items are schema alignment improvements, not blocking.

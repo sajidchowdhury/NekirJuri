@@ -16,7 +16,7 @@ import {
   forbidden,
   getUserId,
 } from '@/lib/api-utils'
-import { computeEndDate } from '@/lib/subscription'
+import { computeEndDate, computeGracePeriodEnd, computeCurrentPeriodEnd, computeTenantCache, computeEnforcement } from '@/lib/subscription'
 
 // Statuses that can be promoted to 'active' upon payment verification
 const PROMOTABLE_STATUSES = new Set([
@@ -94,13 +94,20 @@ export async function POST(request: NextRequest) {
       if (PROMOTABLE_STATUSES.has(subscription.status)) {
         // Compute new end date: extend from current date by the payment duration
         newEndDate = computeEndDate(now, payment.duration as 1 | 6 | 12)
+        const newCurrentPeriodEnd = computeCurrentPeriodEnd(now, payment.duration as 1 | 6 | 12)
+        const newGracePeriodEnd = computeGracePeriodEnd(newEndDate)
 
         await tx.subscription.update({
           where: { id: subscription.id },
           data: {
             status: 'active',
             endDate: newEndDate,
+            currentPeriodEnd: newCurrentPeriodEnd,
+            gracePeriodEnd: newGracePeriodEnd,
             paymentMethod: payment.paymentMethod,
+            lastPaymentDate: now,
+            lastPaymentMethod: payment.paymentMethod,
+            lastPaymentRef: paymentRef,
             // If upgrading from trial, clear trialEnd
             ...(subscription.status === 'trial' ? { trialEnd: null } : {}),
           },
@@ -110,16 +117,48 @@ export async function POST(request: NextRequest) {
       } else if (subscription.status === 'active') {
         // Already active — extend the end date by the payment duration
         newEndDate = computeEndDate(subscription.endDate, payment.duration as 1 | 6 | 12)
+        const newCurrentPeriodEnd = computeCurrentPeriodEnd(subscription.endDate, payment.duration as 1 | 6 | 12)
+        const newGracePeriodEnd = computeGracePeriodEnd(newEndDate)
 
         await tx.subscription.update({
           where: { id: subscription.id },
           data: {
             endDate: newEndDate,
+            currentPeriodEnd: newCurrentPeriodEnd,
+            gracePeriodEnd: newGracePeriodEnd,
             paymentMethod: payment.paymentMethod,
+            lastPaymentDate: now,
+            lastPaymentMethod: payment.paymentMethod,
+            lastPaymentRef: paymentRef,
           },
         })
 
         subscriptionUpdated = true
+      }
+
+      // Update tenant cache after payment verification
+      const freshSub = await tx.subscription.findUnique({
+        where: { id: subscription.id },
+        include: { plan: true },
+      })
+      if (freshSub) {
+        const enforcementResult = computeEnforcement({
+          status: freshSub.status as any,
+          startDate: freshSub.startDate,
+          endDate: freshSub.endDate,
+          currentPeriodEnd: freshSub.currentPeriodEnd,
+          gracePeriodEnd: freshSub.gracePeriodEnd,
+          restrictedEnd: freshSub.restrictedEnd,
+          trialEnd: freshSub.trialEnd,
+        })
+        const tenantCache = computeTenantCache(enforcementResult)
+        await tx.tenant.update({
+          where: { id: tenantId },
+          data: {
+            subscriptionStatus: tenantCache.subscriptionStatus,
+            isReadOnly: tenantCache.isReadOnly,
+          },
+        })
       }
 
       // Audit log

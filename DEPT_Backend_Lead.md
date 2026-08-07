@@ -38,9 +38,8 @@
 
 | ID | Task | Priority | CR# | Dependencies | Details |
 |----|------|----------|-----|-------------|---------|
-| BL-21 | CR-7 schema field alignment | Medium | CR-7 | DB update | Add `currentPeriodEnd`, `gracePeriodEnd`, `restrictedEnd` to Subscription; `subscriptionStatus`, `isReadOnly` to Tenant. Currently using `status`+`endDate` workaround. |
-| BL-22 | CR-8 accountingMode column | Low | CR-8 | DB update | Add dedicated `accountingMode` column to Tenant. Currently in JSON `settings` — functionally equivalent. |
-| BL-23 | Data deletion cron job | Medium | CR-7 | BL-21 | Daily job: delete business data for terminated tenants 30+ days, keep Tenant+User+Subscription. Not yet implemented. |
+| BL-21 | CR-8 accountingMode column | Low | CR-8 | DB update | Add dedicated `accountingMode` column to Tenant. Currently in JSON `settings` — functionally equivalent. |
+| BL-22 | Data deletion cron job | Medium | CR-7 | — | Daily job: delete business data for terminated tenants 30+ days, keep Tenant+User+Subscription. Uses Subscription.dataDeletionDate field. Not yet implemented. |
 | BL-24 | Backup & Restore APIs | High | Module 28 | A-21 (arch) | POST /api/backup (trigger backup), GET /api/backups (list), POST /api/restore (restore from backup), backup scheduling |
 | BL-25 | SMS/Email sending backend | Medium | — | A-23 (arch) | POST /api/notifications/send-sms, /send-email — integrate with Twilio/MSG91 + Resend/SendGrid |
 | BL-26 | Unit tests for API routes | Medium | — | A-22 (arch) | Test all CRUD endpoints, subscription enforcement, cron jobs, tenant isolation |
@@ -49,9 +48,9 @@
 ---
 
 ## 📊 Progress Summary
-- **Completed**: 20 tasks (5 original + 15 CR implementations)
-- **Pending**: 7 tasks
+- **Completed**: 20 tasks (5 original + 15 CR implementations, including CR-7 schema aligned)
+- **Pending**: 6 tasks
 - **High Priority**: 1 (Backup & Restore APIs — Module 28)
-- **Medium Priority**: 4 (CR-7 schema fix, Data deletion cron, SMS/Email, Unit tests)
+- **Medium Priority**: 3 (Data deletion cron, SMS/Email, Unit tests)
 - **Low Priority**: 2 (CR-8 schema fix, Advanced API features)
-- **✅ All CR backend logic is implemented** — pending items are schema alignment and new modules
+- **✅ All CR backend logic is implemented** — CR-7 schema fully aligned, pending items are new modules

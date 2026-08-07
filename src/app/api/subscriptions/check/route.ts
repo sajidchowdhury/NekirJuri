@@ -15,7 +15,7 @@ import {
   notFound,
   getTenantId,
 } from '@/lib/api-utils'
-import { computeEnforcement } from '@/lib/subscription'
+import { computeEnforcement, computeTenantCache } from '@/lib/subscription'
 
 // -----------------------------------------------------------
 // GET /api/subscriptions/check?tenantId=1
@@ -52,6 +52,14 @@ export async function GET(request: NextRequest) {
 
     // No subscription at all — fully blocked
     if (!subscription) {
+      // Update tenant cache to reflect no subscription
+      if (tenant.subscriptionStatus !== 'cancelled' || !tenant.isReadOnly) {
+        await db.tenant.update({
+          where: { id: tenantId },
+          data: { subscriptionStatus: 'cancelled', isReadOnly: true },
+        })
+      }
+
       return success({
         level: 'blocked',
         status: 'none',
@@ -59,6 +67,7 @@ export async function GET(request: NextRequest) {
         isInTrial: false,
         daysRemaining: 0,
         trialDaysRemaining: 0,
+        gracePeriodDaysRemaining: 0,
         warnings: ['No active subscription found. Please subscribe to access the system.'],
         features: [],
         maxStudents: 0,
@@ -70,11 +79,14 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Compute enforcement level
+    // Compute enforcement level using new schema fields
     const enforcement = computeEnforcement({
       status: subscription.status as 'trial' | 'active' | 'grace_period' | 'restricted' | 'suspended' | 'terminated' | 'cancelled',
       startDate: subscription.startDate,
       endDate: subscription.endDate,
+      currentPeriodEnd: subscription.currentPeriodEnd,
+      gracePeriodEnd: subscription.gracePeriodEnd,
+      restrictedEnd: subscription.restrictedEnd,
       trialEnd: subscription.trialEnd,
       features: subscription.plan.features as string[] | undefined,
       maxStudents: subscription.plan.maxStudents,
@@ -84,6 +96,18 @@ export async function GET(request: NextRequest) {
       maxImagesPerAlbum: subscription.plan.maxImagesPerAlbum,
       maxImageSizeMb: subscription.plan.maxImageSizeMb,
     })
+
+    // Update tenant cache (subscriptionStatus + isReadOnly) if stale
+    const cache = computeTenantCache(enforcement)
+    if (tenant.subscriptionStatus !== cache.subscriptionStatus || tenant.isReadOnly !== cache.isReadOnly) {
+      await db.tenant.update({
+        where: { id: tenantId },
+        data: {
+          subscriptionStatus: cache.subscriptionStatus,
+          isReadOnly: cache.isReadOnly,
+        },
+      })
+    }
 
     return success(enforcement)
   } catch (e) {

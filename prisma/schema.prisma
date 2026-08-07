@@ -48,11 +48,13 @@ model Tenant {
   phone       String?
   email       String?
   website     String?
-  isActive      Boolean  @default(true) @map("is_active")
-  settings      Json?
-  storageUsedMb Decimal  @default(0) @map("storage_used_mb")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  isActive           Boolean  @default(true) @map("is_active")
+  settings           Json?
+  subscriptionStatus String   @default("active") @map("subscription_status") // Cached: trial | active | grace_period | restricted | suspended | terminated | cancelled
+  isReadOnly         Boolean  @default(false) @map("is_read_only") // Cached: true when enforcement is readonly/restricted/blocked
+  storageUsedMb      Decimal  @default(0) @map("storage_used_mb")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   subscriptions      Subscription[]
   subscriptionPayments SubscriptionPayment[]
@@ -127,18 +129,25 @@ model SubscriptionPlan {
 }
 
 model Subscription {
-  id              Int      @id @default(autoincrement())
-  tenantId        Int      @map("tenant_id")
-  planId          Int      @map("plan_id")
-  status          String   // trial | active | grace_period | restricted | suspended | terminated | cancelled
-  billingDuration Int      @default(1) @map("billing_duration") // 1, 6, or 12 months
-  paymentMethod   String?  @map("payment_method") // bkash | nagad | bank | manual
-  startDate       DateTime @map("start_date")
-  endDate         DateTime @map("end_date")
-  trialEnd        DateTime? @map("trial_end")
-  isAutoRenew     Boolean  @default(false) @map("is_auto_renew")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id                Int      @id @default(autoincrement())
+  tenantId          Int      @map("tenant_id")
+  planId            Int      @map("plan_id")
+  status            String   // trial | active | grace_period | restricted | suspended | terminated | cancelled
+  billingDuration   Int      @default(1) @map("billing_duration") // 1, 6, or 12 months
+  paymentMethod     String?  @map("payment_method") // bkash | nagad | bank | manual
+  startDate         DateTime @map("start_date")
+  endDate           DateTime @map("end_date")
+  currentPeriodEnd  DateTime @default(now()) @map("current_period_end") // Exact end of current billing period (defaults to now for existing rows, updated on next payment)
+  gracePeriodEnd    DateTime? @map("grace_period_end") // When grace period ends (endDate + 14 days)
+  restrictedEnd     DateTime? @map("restricted_end") // When restricted period ends before suspension
+  trialEnd          DateTime? @map("trial_end")
+  isAutoRenew       Boolean  @default(false) @map("is_auto_renew")
+  lastPaymentDate   DateTime? @map("last_payment_date") // Date of most recent successful payment
+  lastPaymentMethod String?   @map("last_payment_method") // bkash | nagad | bank | manual — from most recent payment
+  lastPaymentRef    String?   @map("last_payment_ref") // Transaction ref from most recent payment
+  dataDeletionDate  DateTime? @map("data_deletion_date") // When business data will be deleted (terminated + 30 days)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   plan     SubscriptionPlan    @relation(fields: [planId], references: [id])
@@ -146,6 +155,7 @@ model Subscription {
 
   @@index([tenantId])
   @@index([status])
+  @@index([tenantId, status, currentPeriodEnd])
   @@map("subscriptions")
 }
 
@@ -191,12 +201,13 @@ model User {
   name         String
   phone        String?
   avatarUrl    String?   @map("avatar_url")
-  isActive     Boolean   @default(true) @map("is_active")
-  isSuperAdmin Boolean   @default(false) @map("is_super_admin")
-  lastLoginAt  DateTime? @map("last_login_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  deletedAt    DateTime? @map("deleted_at")
+  isActive      Boolean   @default(true) @map("is_active")
+  isSuperAdmin  Boolean   @default(false) @map("is_super_admin")
+  emailVerified Boolean   @default(false) @map("email_verified") // Has user verified their email via OTP?
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
 
   tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userRoles     UserRole[]

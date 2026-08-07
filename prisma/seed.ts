@@ -122,7 +122,11 @@ async function main() {
       status: 'active',
       startDate: new Date('2025-01-01'),
       endDate: new Date('2025-12-31'),
+      currentPeriodEnd: new Date('2025-12-31'),
+      gracePeriodEnd: new Date('2026-01-14'),
       isAutoRenew: true,
+      lastPaymentDate: new Date('2025-01-01'),
+      lastPaymentMethod: 'manual',
     },
   })
 

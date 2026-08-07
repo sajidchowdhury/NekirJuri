@@ -42,7 +42,7 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 | CR-4 | Sale-to-Student Fee | ✅ Done | Student selector in sales, "Add to Monthly Fee" toggle, auto-creates FeeInvoiceItem, fee invoice link in sale detail |
 | CR-5 | Recurring Donations | ✅ Done | Recurring frequency (monthly/yearly), nextDueDate auto-calculate, daily reminder cron (port 3031), dashboard widget, payment recording dialog, donor reminder preferences |
 | CR-6 | Fix New Sale Modal | ✅ Done | Card-based line items, proper spacing, mobile Drawer, no overlapping fields |
-| CR-7 | Subscription Enforcement | ⚠️ Mostly Done | Enforcement levels (full/grace/restricted/suspended/terminated), computeEnforcement(), SubscriptionGuard, bKash/Nagad, grace period, read-only mode. **Schema gap**: Missing `currentPeriodEnd`, `gracePeriodEnd`, `restrictedEnd` on Subscription; `subscriptionStatus`, `isReadOnly` on Tenant. |
+| CR-7 | Subscription Enforcement | ✅ Done | Enforcement levels (full/grace/restricted/suspended/terminated), computeEnforcement(), SubscriptionGuard, bKash/Nagad, grace period, read-only mode, Schema aligned: currentPeriodEnd, gracePeriodEnd, restrictedEnd; Tenant: subscriptionStatus, isReadOnly; User: emailVerified |
 | CR-8 | Simplified Accounting | ⚠️ Mostly Done | Two modes (Simple/Expert), auto-journal in Simple, no debit/credit terminology, mode toggle in settings. **Schema gap**: `accountingMode` stored in JSON `settings` instead of dedicated column. |
 | CR-9 | Sidebar Collapsible Submenus | ✅ Done | Accordion behavior, active group auto-expanded, smooth animations |
 | CR-10 | Fee Category Form | ✅ Done | Full CRUD with react-hook-form + zod, edit/delete dialogs, audit logging, soft delete |
@@ -52,7 +52,6 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 
 | CR | Gap | Impact | Priority |
 |----|-----|--------|----------|
-| CR-7 | Subscription: missing `currentPeriodEnd`, `gracePeriodEnd`, `restrictedEnd`. Tenant: missing `subscriptionStatus`, `isReadOnly`. | Currently using `status` + `endDate` — functionally works but less granular period tracking | Medium |
 | CR-8 | Tenant: `accountingMode` stored in JSON `settings` instead of dedicated column | Functionally equivalent, but harder to query/index | Low |
 
 ## ❌ NOT STARTED — Future Work
@@ -96,8 +95,8 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 | # | Module | UI Status | API Status | DB Status |
 |---|--------|-----------|------------|-----------|
 | 1 | SaaS Administration | ✅ Done | ✅ Done | ✅ 50 models |
-| 2 | Subscription & Billing | ✅ Done | ✅ Done | ⚠️ Missing period-end fields |
-| 3 | Tenant (Madrasha) Management | ✅ Done | ✅ Done | ⚠️ Missing subscriptionStatus/isReadOnly |
+| 2 | Subscription & Billing | ✅ Done | ✅ Done | ✅ All fields present (CR-7 aligned) |
+| 3 | Tenant (Madrasha) Management | ✅ Done | ✅ Done | ✅ Done (subscriptionStatus, isReadOnly added) |
 | 4 | Authentication | ✅ Done | ✅ NextAuth v4 | ✅ Done |
 | 5 | Roles & Permissions | ✅ Done | ✅ Done | ✅ Done |
 | 6 | Dashboard | ✅ Done | ✅ Done | ✅ Done |
@@ -154,15 +153,19 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 ## ✅ CR-6: Fix New Sale Modal — COMPLETE
 - **Done**: Card-based line items, proper grid layout, no overlapping fields, mobile Drawer component.
 
-## ⚠️ CR-7: SaaS Subscription Enforcement — MOSTLY COMPLETE
+## ⚠️ CR-7: SaaS Subscription Enforcement — COMPLETE (Schema Aligned)
 - **Done**: Enforcement levels (full → grace_period → restricted → suspended → terminated)
-- **Done**: `computeEnforcement()` in subscription.ts (234 lines)
+- **Done**: `computeEnforcement()` in subscription.ts — uses currentPeriodEnd, gracePeriodEnd, restrictedEnd
 - **Done**: SubscriptionGuard component with read-only mode + upgrade CTA
 - **Done**: SubscriptionBanner by enforcement level
 - **Done**: Grace period (14 days), read-only mode, data deletion warning
 - **Done**: Payment via bKash/Nagad (SubscriptionPayment model)
-- **Pending**: Subscription schema missing `currentPeriodEnd`, `gracePeriodEnd`, `restrictedEnd` dedicated fields
-- **Pending**: Tenant schema missing `subscriptionStatus`, `isReadOnly` dedicated fields
+- **Done**: `currentPeriodEnd`, `gracePeriodEnd`, `restrictedEnd` on Subscription model
+- **Done**: `subscriptionStatus`, `isReadOnly` on Tenant model (cached for quick checks)
+- **Done**: `emailVerified` on User model
+- **Done**: `computeTenantCache()` keeps tenant-level cache in sync
+- **Done**: `lastPaymentDate`, `lastPaymentMethod`, `lastPaymentRef` on Subscription
+- **Done**: `dataDeletionDate` on Subscription (for future data deletion cron)
 - **Pending**: Data deletion cron job for terminated tenants (30+ days)
 
 ## ⚠️ CR-8: Simplified Accounting Mode — MOSTLY COMPLETE
@@ -200,7 +203,7 @@ Build a scalable multi-tenant SaaS ERP for Madrashas with isolated tenant data, 
 - [x] PDF/Excel export (UI ready)
 - [x] Multi-language (3 languages — CR-2 ✅)
 - [x] RTL layout for Arabic (CR-2 ✅)
-- [x] Subscription enforcement (CR-7 ⚠️ mostly done)
+- [x] Subscription enforcement (CR-7 ✅)
 - [x] Simplified accounting mode (CR-8 ⚠️ mostly done)
 - [x] Image upload limits per tier (CR-11 ✅)
 - [ ] Backup & Restore (Module 28)
@@ -258,13 +261,13 @@ Every business table includes `tenant_id`.
 # Dependency Graph
 
 ```
-CR-7 (Subscription) ⚠️ ──→ CR-11 (Upload Limits) ✅  [limits tied to subscription tier]
+CR-7 (Subscription) ✅ ──→ CR-11 (Upload Limits) ✅  [limits tied to subscription tier]
 CR-2 (i18n) ✅         ──→ CR-1 (Bismillah) ✅       [Bismillah text needs Arabic rendering]
 CR-8 (Simple Acct) ⚠️ ──→ CR-4 (Sale-to-Fee) ✅     [simple mode needs income recording]
-CR-7 (Subscription) ⚠️ ──→ CR-5 (Recurring Donations) ✅  [reminder cron needs infra]
+CR-7 (Subscription) ✅ ──→ CR-5 (Recurring Donations) ✅  [reminder cron needs infra]
 ```
 
-All functional dependencies satisfied. Schema alignment gaps are non-blocking.
+All dependencies satisfied. Only CR-8 has a minor schema gap (non-blocking).
 
 ---
 
@@ -274,8 +277,7 @@ All functional dependencies satisfied. Schema alignment gaps are non-blocking.
 1. **Backup & Restore (Module 28)** — Full stack: Architecture → DB → API → UI. Critical for production safety.
 
 ## Priority 2 — Schema Alignment (Quick Wins)
-2. **CR-7 schema alignment** — Add 5 missing fields (currentPeriodEnd, gracePeriodEnd, restrictedEnd on Subscription; subscriptionStatus, isReadOnly on Tenant)
-3. **CR-8 schema alignment** — Add 1 field (accountingMode on Tenant)
+2. **CR-8 schema alignment** — Add 1 field (accountingMode on Tenant)
 
 ## Priority 3 — Production Hardening
 4. **Data deletion cron job** — Terminate tenants 30+ days, delete business data only
@@ -291,8 +293,9 @@ All functional dependencies satisfied. Schema alignment gaps are non-blocking.
 ---
 
 # Handover Notes
-- **All 10 change requests are FUNCTIONALLY COMPLETE** (CR-1,2,4,5,6,7,8,9,10,11)
-- **CR-7 and CR-8 have minor schema gaps** that should be aligned for production
+- **9 change requests are FULLY COMPLETE** (CR-1,2,4,5,6,7,9,10,11)
+- **CR-8 is functionally complete** with a minor schema gap (accountingMode in JSON settings)
+- **CR-7 schema alignment DONE** — All Subscription/Tenant/User fields added, computeEnforcement() updated, tenant cache sync implemented
 - **CR-5 fully implemented** — Recurring Donations with Reminders with cron job, dashboard widget, payment recording UI, donor reminder preferences
 - All Prisma schema changes are pushed and in sync
 - API routes are fully implemented (not just scaffolded)

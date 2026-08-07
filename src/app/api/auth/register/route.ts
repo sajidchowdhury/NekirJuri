@@ -158,6 +158,8 @@ export async function POST(request: NextRequest) {
         const now = new Date();
         const trialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14-day trial
         const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        const currentPeriodEnd = new Date(endDate); // Same as endDate for new subscription
+        const gracePeriodEnd = new Date(endDate.getTime() + 14 * 24 * 60 * 60 * 1000); // endDate + 14 days
 
         await tx.subscription.create({
           data: {
@@ -166,6 +168,8 @@ export async function POST(request: NextRequest) {
             status: 'trial',
             startDate: now,
             endDate,
+            currentPeriodEnd,
+            gracePeriodEnd,
             trialEnd,
             isAutoRenew: false,
           },

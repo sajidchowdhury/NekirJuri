@@ -88,6 +88,9 @@ export const authOptions: NextAuthOptions = {
               status: subscription.status as any,
               startDate: subscription.startDate,
               endDate: subscription.endDate,
+              currentPeriodEnd: subscription.currentPeriodEnd,
+              gracePeriodEnd: subscription.gracePeriodEnd,
+              restrictedEnd: subscription.restrictedEnd,
               trialEnd: subscription.trialEnd,
               features: (subscription.plan.features as string[]) ?? [],
               maxStudents: subscription.plan.maxStudents,
@@ -98,6 +101,19 @@ export const authOptions: NextAuthOptions = {
               maxImageSizeMb: subscription.plan.maxImageSizeMb,
             })
             enforcementLevel = enforcement.level
+
+            // Update tenant cache if stale
+            const { computeTenantCache } = await import('./subscription')
+            const cache = computeTenantCache(enforcement)
+            if (user.tenant && (user.tenant.subscriptionStatus !== cache.subscriptionStatus || user.tenant.isReadOnly !== cache.isReadOnly)) {
+              await db.tenant.update({
+                where: { id: user.tenantId },
+                data: {
+                  subscriptionStatus: cache.subscriptionStatus,
+                  isReadOnly: cache.isReadOnly,
+                },
+              })
+            }
           }
         }
 

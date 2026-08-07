@@ -30,14 +30,14 @@
 #### Domain 1: SaaS (3 models)
 | Model | Status | Key Fields |
 |-------|--------|------------|
-| Tenant | ✅ Done | id, uuid, name, slug, domain, logoUrl, address, city, state, country, phone, email, isActive, settings (Json), storageUsedMb ⚠️ Missing: subscriptionStatus, isReadOnly, defaultLanguage |
+| Tenant | ✅ Done | id, uuid, name, slug, domain, logoUrl, address, city, state, country, phone, email, isActive, settings (Json), subscriptionStatus, isReadOnly, storageUsedMb |
 | SubscriptionPlan | ✅ Done | id, name, price, duration, features (Json), isRecommended, maxAlbums, maxImagesPerAlbum, maxImageSizeMb |
-| Subscription | ✅ Done | id, tenantId, planId, startDate, endDate, status (all CR-7 states), trialEnd ⚠️ Missing: currentPeriodEnd, gracePeriodEnd, restrictedEnd, lastPaymentDate, lastPaymentMethod, lastPaymentRef, dataDeletionDate |
+| Subscription | ✅ Done | id, tenantId, planId, startDate, endDate, status (all CR-7 states), currentPeriodEnd, gracePeriodEnd, restrictedEnd, trialEnd, isAutoRenew, lastPaymentDate, lastPaymentMethod, lastPaymentRef, dataDeletionDate |
 
 #### Domain 2: Security (5 models)
 | Model | Status | Key Fields |
 |-------|--------|------------|
-| User | ✅ Done | id, uuid, email, password, name, phone, photoUrl, isActive, lastLogin, language ⚠️ Missing: emailVerified, @@unique(email) |
+| User | ✅ Done | id, uuid, email, password, name, phone, photoUrl, isActive, lastLogin, language, emailVerified ⚠️ Missing: @@unique(email) |
 | Role | ✅ Done | id, tenantId, name, isSystem, description |
 | Permission | ✅ Done | id, name, module, description |
 | RolePermission | ✅ Done | id, roleId, permissionId |
@@ -120,14 +120,13 @@
 
 ## 🔴 REMAINING SCHEMA CHANGES
 
-### CR-7: Subscription Enforcement — Missing Fields
-| Model | Missing Fields | Priority |
-|-------|---------------|----------|
-| **Subscription** | `currentPeriodEnd DateTime`, `gracePeriodEnd DateTime?`, `restrictedEnd DateTime?`, `lastPaymentDate DateTime?`, `lastPaymentMethod String?`, `lastPaymentRef String?`, `dataDeletionDate DateTime?` | Medium |
-| **Tenant** | `subscriptionStatus String @default("active")`, `isReadOnly Boolean @default(false)` | Medium |
-| **User** | `emailVerified Boolean @default(false)`, `@@unique([email])` | Medium |
+### CR-7: Subscription Enforcement — ✅ COMPLETE
 
-**Note**: Functionally, subscription enforcement works via `status` + `endDate` + `computeEnforcement()`. These fields would add granular period tracking and cached tenant-level status.
+All fields now implemented in the Prisma schema:
+- Subscription: currentPeriodEnd, gracePeriodEnd, restrictedEnd, lastPaymentDate, lastPaymentMethod, lastPaymentRef, dataDeletionDate
+- Tenant: subscriptionStatus, isReadOnly
+- User: emailVerified
+- Composite index: @@index([tenantId, status, currentPeriodEnd])
 
 ---
 

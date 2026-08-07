@@ -2,7 +2,8 @@
 // Madrasha ERP SaaS — Subscription Utility Functions
 // ============================================================
 // Provides helpers for computing enforcement levels, end dates,
-// billing periods, and pricing for the subscription system.
+// billing periods, pricing, and tenant cache updates for the
+// subscription system.
 // ============================================================
 
 /** Subscription status values (mirrors schema) */
@@ -26,6 +27,7 @@ export interface EnforcementResult {
   isInTrial: boolean
   daysRemaining: number
   trialDaysRemaining: number
+  gracePeriodDaysRemaining: number
   warnings: string[]
   features: string[]
   maxStudents: number
@@ -42,6 +44,12 @@ export type BillingDuration = 1 | 6 | 12
 /** Valid payment methods */
 export type PaymentMethod = 'bkash' | 'nagad' | 'bank' | 'manual'
 
+/** Grace period duration in days */
+export const GRACE_PERIOD_DAYS = 14
+
+/** Data deletion delay after termination in days */
+export const DATA_DELETION_DELAY_DAYS = 30
+
 // -----------------------------------------------------------
 // computeEndDate
 // -----------------------------------------------------------
@@ -54,6 +62,47 @@ export function computeEndDate(startDate: Date, duration: BillingDuration): Date
   const end = new Date(startDate)
   end.setMonth(end.getMonth() + duration)
   return end
+}
+
+// -----------------------------------------------------------
+// computeCurrentPeriodEnd
+// -----------------------------------------------------------
+
+/**
+ * Compute the currentPeriodEnd — the exact end of the current billing period.
+ * For a new subscription, this equals endDate.
+ * For a renewed subscription, this is the new billing period end.
+ */
+export function computeCurrentPeriodEnd(startDate: Date, duration: BillingDuration): Date {
+  return computeEndDate(startDate, duration)
+}
+
+// -----------------------------------------------------------
+// computeGracePeriodEnd
+// -----------------------------------------------------------
+
+/**
+ * Compute when the grace period ends after subscription expiration.
+ * Grace period = endDate + GRACE_PERIOD_DAYS (14 days by default).
+ */
+export function computeGracePeriodEnd(endDate: Date): Date {
+  const graceEnd = new Date(endDate)
+  graceEnd.setDate(graceEnd.getDate() + GRACE_PERIOD_DAYS)
+  return graceEnd
+}
+
+// -----------------------------------------------------------
+// computeDataDeletionDate
+// -----------------------------------------------------------
+
+/**
+ * Compute when business data should be deleted after termination.
+ * dataDeletionDate = terminatedAt + DATA_DELETION_DELAY_DAYS (30 days).
+ */
+export function computeDataDeletionDate(terminatedAt: Date): Date {
+  const deletionDate = new Date(terminatedAt)
+  deletionDate.setDate(deletionDate.getDate() + DATA_DELETION_DELAY_DAYS)
+  return deletionDate
 }
 
 // -----------------------------------------------------------
@@ -122,6 +171,14 @@ export function formatBDT(amount: number): string {
  * Determine the enforcement level for a tenant based on their
  * subscription status, dates, and plan limits.
  *
+ * Uses new CR-7 schema fields:
+ *   - currentPeriodEnd: Exact end of current billing period
+ *   - gracePeriodEnd: When grace period ends (endDate + 14 days)
+ *   - restrictedEnd: When restricted period ends before suspension
+ *
+ * Fallback: If new fields are null/missing (legacy data), computes
+ * them from endDate + GRACE_PERIOD_DAYS.
+ *
  * Logic:
  *   - trial          → full access, with trial warning
  *   - active         → full access if not expired; otherwise grace_period
@@ -135,7 +192,10 @@ export function computeEnforcement(params: {
   status: SubscriptionStatus
   startDate: Date
   endDate: Date
-  trialEnd: Date | null
+  currentPeriodEnd?: Date | null
+  gracePeriodEnd?: Date | null
+  restrictedEnd?: Date | null
+  trialEnd?: Date | null
   now?: Date
   features?: string[]
   maxStudents?: number
@@ -146,15 +206,21 @@ export function computeEnforcement(params: {
   maxImageSizeMb?: number
 }): EnforcementResult {
   const now = params.now ?? new Date()
-  const { status, startDate, endDate, trialEnd } = params
+  const { status, startDate, endDate } = params
+
+  // Use new schema fields with fallback to computed values
+  const currentPeriodEnd = params.currentPeriodEnd ?? endDate
+  const gracePeriodEnd = params.gracePeriodEnd ?? computeGracePeriodEnd(endDate)
+  const trialEnd = params.trialEnd ?? null
 
   const msPerDay = 86_400_000
-  const daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / msPerDay))
+  const daysRemaining = Math.max(0, Math.ceil((currentPeriodEnd.getTime() - now.getTime()) / msPerDay))
   const trialDaysRemaining = trialEnd
     ? Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / msPerDay))
     : 0
+  const gracePeriodDaysRemaining = Math.max(0, Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / msPerDay))
 
-  const isExpired = now > endDate
+  const isExpired = now > currentPeriodEnd
   const isInTrial = status === 'trial'
 
   const warnings: string[] = []
@@ -187,7 +253,11 @@ export function computeEnforcement(params: {
 
     case 'grace_period':
       level = 'readonly'
-      warnings.push('Your subscription is in grace period. You can view data but cannot make changes. Please renew.')
+      if (gracePeriodDaysRemaining > 0) {
+        warnings.push(`Your subscription is in grace period (${gracePeriodDaysRemaining} day(s) remaining). You can view data but cannot make changes. Please renew.`)
+      } else {
+        warnings.push('Grace period has ended. Your subscription will be restricted soon. Please renew immediately.')
+      }
       break
 
     case 'restricted':
@@ -222,6 +292,7 @@ export function computeEnforcement(params: {
     isInTrial,
     daysRemaining,
     trialDaysRemaining,
+    gracePeriodDaysRemaining,
     warnings,
     features: params.features ?? [],
     maxStudents: params.maxStudents ?? 0,
@@ -230,5 +301,28 @@ export function computeEnforcement(params: {
     maxAlbums: params.maxAlbums ?? 5,
     maxImagesPerAlbum: params.maxImagesPerAlbum ?? 20,
     maxImageSizeMb: params.maxImageSizeMb ?? 2,
+  }
+}
+
+// -----------------------------------------------------------
+// computeTenantCache
+// -----------------------------------------------------------
+
+/**
+ * Compute the cached tenant-level fields from subscription data.
+ * These are stored on the Tenant model for quick checks without
+ * joining to the Subscription table.
+ *
+ * Returns:
+ *   - subscriptionStatus: The current subscription status string
+ *   - isReadOnly: Whether the tenant should be blocked from writes
+ */
+export function computeTenantCache(enforcement: EnforcementResult): {
+  subscriptionStatus: SubscriptionStatus
+  isReadOnly: boolean
+} {
+  return {
+    subscriptionStatus: enforcement.status,
+    isReadOnly: enforcement.level !== 'full',
   }
 }

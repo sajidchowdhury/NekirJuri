@@ -20,7 +20,10 @@ import {
 } from '@/lib/api-utils'
 import {
   computeEnforcement,
+  computeTenantCache,
   computeEndDate,
+  computeGracePeriodEnd,
+  computeCurrentPeriodEnd,
   computeBillingPeriod,
   computePrice,
   type BillingDuration,
@@ -69,11 +72,14 @@ export async function GET(request: NextRequest) {
       take: 20,
     })
 
-    // Compute enforcement level
+    // Compute enforcement level using new schema fields
     const enforcement = computeEnforcement({
       status: subscription.status as 'trial' | 'active' | 'grace_period' | 'restricted' | 'suspended' | 'terminated' | 'cancelled',
       startDate: subscription.startDate,
       endDate: subscription.endDate,
+      currentPeriodEnd: subscription.currentPeriodEnd,
+      gracePeriodEnd: subscription.gracePeriodEnd,
+      restrictedEnd: subscription.restrictedEnd,
       trialEnd: subscription.trialEnd,
       features: subscription.plan.features as string[] | undefined,
       maxStudents: subscription.plan.maxStudents,
@@ -167,8 +173,10 @@ export async function POST(request: NextRequest) {
       // Determine initial status — if amount is 0 (free plan), go directly to active
       const initialStatus = amount === 0 ? 'active' : 'trial'
       const trialEnd = amount === 0 ? null : new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000) // 14-day trial
+      const currentPeriodEnd = computeCurrentPeriodEnd(startDate, duration)
+      const gracePeriodEnd = computeGracePeriodEnd(endDate)
 
-      // Create new subscription
+      // Create new subscription with all CR-7 fields
       const subscription = await tx.subscription.create({
         data: {
           tenantId,
@@ -178,6 +186,8 @@ export async function POST(request: NextRequest) {
           paymentMethod,
           startDate,
           endDate,
+          currentPeriodEnd,
+          gracePeriodEnd,
           trialEnd,
           isAutoRenew: false,
         },
@@ -200,6 +210,28 @@ export async function POST(request: NextRequest) {
           },
         })
       }
+
+      // Update tenant cache to reflect new subscription
+      const enforcementResult = computeEnforcement({
+        status: initialStatus as any,
+        startDate,
+        endDate,
+        currentPeriodEnd,
+        gracePeriodEnd,
+        trialEnd,
+        features: (plan.features as string[]) ?? [],
+        maxStudents: plan.maxStudents,
+        maxEmployees: plan.maxEmployees,
+        maxStorageMb: plan.maxStorageMb,
+      })
+      const tenantCache = computeTenantCache(enforcementResult)
+      await tx.tenant.update({
+        where: { id: tenantId },
+        data: {
+          subscriptionStatus: tenantCache.subscriptionStatus,
+          isReadOnly: tenantCache.isReadOnly,
+        },
+      })
 
       // Audit log
       await tx.activityLog.create({

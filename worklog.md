@@ -1042,3 +1042,41 @@ Stage Summary:
 - Cron: Daily reminder job running on port 3031, scheduled at 9:00 AM Asia/Dhaka
 - Types: Updated DonationCreateInput, added RecurringPaymentInput and DonorReminderSettings
 - Sample data: Updated donors with reminder preferences and recurring status
+
+---
+Task ID: CR-7-Schema-Alignment
+Agent: Main
+Task: CR-7 Schema Alignment — Add missing fields to Subscription, Tenant, and User models
+
+Work Log:
+- Added 7 new fields to Subscription model: currentPeriodEnd (with @default(now())), gracePeriodEnd, restrictedEnd, lastPaymentDate, lastPaymentMethod, lastPaymentRef, dataDeletionDate
+- Added 2 new fields to Tenant model: subscriptionStatus (@default("active")), isReadOnly (@default(false))
+- Added 1 new field to User model: emailVerified (@default(false))
+- Added composite index on Subscription: @@index([tenantId, status, currentPeriodEnd])
+- Updated subscription.ts library:
+  - Added computeCurrentPeriodEnd(), computeGracePeriodEnd(), computeDataDeletionDate() functions
+  - Added GRACE_PERIOD_DAYS (14) and DATA_DELETION_DELAY_DAYS (30) constants
+  - Updated computeEnforcement() to accept currentPeriodEnd, gracePeriodEnd, restrictedEnd params with fallback
+  - Added gracePeriodDaysRemaining to EnforcementResult interface
+  - Added computeTenantCache() function for tenant-level cache updates
+- Updated /api/subscriptions/check to use new schema fields and update tenant cache when stale
+- Updated /api/subscriptions (GET + POST) to use new schema fields and compute period dates
+- Updated /api/subscriptions/payment/verify to update lastPaymentDate/lastPaymentMethod/lastPaymentRef and tenant cache
+- Updated /api/auth/register to set currentPeriodEnd and gracePeriodEnd on new subscriptions
+- Updated /lib/auth.ts to use new schema fields and update tenant cache on login
+- Updated /hooks/use-subscription.ts to include gracePeriodDaysRemaining in fallback enforcement results
+- Updated prisma/seed.ts to include new subscription fields
+- Backfilled existing data: 2 subscriptions updated with currentPeriodEnd + gracePeriodEnd, 2 tenants updated with subscriptionStatus + isReadOnly
+- Pushed schema successfully with db:push
+- Lint: 0 errors, 14 pre-existing warnings
+- TypeScript: 0 new errors (pre-existing errors in examples/mini-services/seed only)
+
+Stage Summary:
+- CR-7 Schema Alignment COMPLETE
+- Subscription model now has full period tracking (currentPeriodEnd, gracePeriodEnd, restrictedEnd)
+- Tenant model has cached subscription status (subscriptionStatus, isReadOnly) for quick checks
+- User model has emailVerified for future OTP verification
+- All API routes updated to use and maintain new fields
+- computeEnforcement() uses new fields with backward-compatible fallback
+- computeTenantCache() keeps tenant-level cache in sync
+- All existing data backfilled successfully
