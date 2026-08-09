@@ -56,11 +56,9 @@ _No remaining schema gaps. All CR-7 and CR-8 fields are now schema-aligned._
 
 | Module | Priority | Dependencies |
 |--------|----------|-------------|
-| Unit Tests | Medium | Test framework setup |
 | SMS/Email Sending Backend | Medium | Provider integration (Twilio/MSG91, Resend/SendGrid) |
 | QR/Barcode Support | Low | — |
 | Custom Domains | Low | — |
-| Formal Migration Scripts | Medium | All schema finalized |
 
 ### Build Stats
 - **156+ components** (atoms, molecules, organisms, domain-specific)

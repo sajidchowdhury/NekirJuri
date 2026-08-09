@@ -39,13 +39,14 @@
 
 | ID | Task | Priority | CR# | Dependencies | Details |
 |----|------|----------|-----|-------------|---------|
-| A-21 | Unit test architecture | Medium | — | None | Test framework selection (vitest/jest), test structure per domain, mock strategy for Prisma + API routes |
+| A-20 | Backup & Restore architecture | High | Module 28 | ✅ DONE | Design backup strategy (full/partial), restore flow, scheduled backup cron, storage management, disaster recovery plan |
+| A-21 | Unit test architecture | Medium | — | ✅ DONE | Vitest 4 + v8 coverage, Prisma mock strategy, 108 tests across 6 suites (lib + API routes) |
 | A-22 | SMS/Email backend architecture | Medium | — | None | Provider integration design (Twilio/MSG91 for SMS, Resend/SendGrid for email), template system, queue management |
 
 ---
 
 ## 📊 Progress Summary
-- **Completed**: 22 tasks (12 original + 8 CR architectures + Module 28, CR-7 fully complete incl. data deletion cron + bug fix, CR-8 schema aligned)
-- **Pending**: 2 tasks
+- **Completed**: 22 tasks (12 original + 8 CR architectures + Module 28 + A-21 unit tests, CR-7 + CR-8 schema aligned)
+- **Pending**: 1 task
 - **High Priority**: 0
-- **Medium Priority**: 2 (Unit tests, SMS/Email)
+- **Medium Priority**: 1 (SMS/Email)

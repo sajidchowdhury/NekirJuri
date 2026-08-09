@@ -42,16 +42,18 @@
 | ID | Task | Priority | CR# | Dependencies | Details |
 |----|------|----------|-----|-------------|---------|
 | BL-21 | CR-8 accountingMode column | Low | CR-8 | ✅ DONE | Dedicated `accountingMode` column added to Tenant. API route updated to read/write column directly instead of JSON settings. |
+| BL-22 | Data deletion cron job | Medium | CR-7 | ✅ DONE | Daily job: delete business data for terminated tenants 30+ days, keep Tenant+User+Subscription. Uses Subscription.dataDeletionDate field. |
+| BL-24 | Backup & Restore APIs | High | Module 28 | ✅ DONE | POST /api/backup (trigger backup), GET /api/backups (list), POST /api/restore (restore from backup), backup scheduling |
 | BL-25 | SMS/Email sending backend | Medium | — | A-23 (arch) | POST /api/notifications/send-sms, /send-email — integrate with Twilio/MSG91 + Resend/SendGrid |
-| BL-26 | Unit tests for API routes | Medium | — | A-22 (arch) | Test all CRUD endpoints, subscription enforcement, cron jobs, tenant isolation |
+| BL-26 | Unit tests for API routes | Medium | — | ✅ DONE | Vitest 4.1.10, 108 tests, 6 suites: subscription.ts (55), api-utils.ts (18), audit.ts (7), accounting-mode (11), subscriptions-check (9), subscription-plans (8) |
 | BL-27 | Advanced API features | Low | — | — | Bulk operations, advanced filtering/sorting, CSV/Excel export endpoints, rate limiting |
 
 ---
 
 ## 📊 Progress Summary
-- **Completed**: 24 tasks (5 original + 18 CR implementations + Module 28, CR-7 + CR-8 schema aligned, data deletion cron + enforcement bug fix)
-- **Pending**: 3 tasks
+- **Completed**: 25 tasks (5 original + 16 CR implementations + Module 28 + data deletion cron + BL-26 unit tests, CR-7 + CR-8 schema aligned)
+- **Pending**: 2 tasks
 - **High Priority**: 0
-- **Medium Priority**: 2 (SMS/Email, Unit tests)
+- **Medium Priority**: 1 (SMS/Email)
 - **Low Priority**: 1 (Advanced API features)
-- **✅ All CR backend logic + Module 28 implemented** — CR-7 fully complete (incl. data deletion cron + bug fix), CR-8 schema fully aligned, pending items are new modules
+- **✅ All CR backend logic + Module 28 + tests implemented** — CR-7 + CR-8 schema fully aligned, pending items are new modules

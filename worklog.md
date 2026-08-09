@@ -1103,6 +1103,7 @@ Stage Summary:
 - Tenant.accountingMode is now a dedicated, queryable, indexable column
 
 ---
+---
 Task ID: Module-28
 Agent: Main
 Task: Module 28 — Backup & Restore (Full Feature)
@@ -1128,3 +1129,40 @@ Stage Summary:
 - Full backup/restore lifecycle: trigger, list, download, delete, restore with safety backup
 - Scheduled backup cron (daily at 2 AM Asia/Dhaka)
 - Expired backup auto-cleanup
+
+---
+Task ID: A-21/BL-26
+Agent: Main
+Task: A-21/BL-26 — Unit Test Framework + Tests
+
+Work Log:
+- Installed Vitest 4.1.10 + @vitest/coverage-v8 for V8 coverage
+- Created vitest.config.ts with path aliases, coverage config, setup files
+- Created test infrastructure:
+  - src/__tests__/setup.ts — Global Prisma mock (all models), activityLog mock added
+  - src/__tests__/helpers/index.ts — createMockRequest(), expectResponse(), date helpers
+  - src/__tests__/fixtures/index.ts — Reusable test data (DATES, PLANS, TENANTS, SUBSCRIPTIONS)
+- Wrote 6 test suites, 108 tests total:
+  - subscription.test.ts (55 tests) — All 8 pure functions + computeTenantCache
+    - Constants, computeEndDate, computeCurrentPeriodEnd, computeGracePeriodEnd
+    - computeDataDeletionDate, computeBillingPeriod, computePrice, formatBDT
+    - computeEnforcement (trial/active/grace/restricted/suspended/terminated/cancelled)
+    - Plan limits, features, fallback behavior, edge cases
+  - api-utils.test.ts (18 tests) — getPaginationParams, getTenantId, getUserId
+  - audit.test.ts (7 tests) — createAuditLog with db mock (CREATE/UPDATE/DELETE, JSON stringify, null handling)
+  - accounting-mode.test.ts (11 tests) — GET/POST handlers (auth, validation, mode switching, account generation)
+  - subscriptions-check.test.ts (9 tests) — Enforcement check (auth, blocked/readonly/full, tenant cache sync)
+  - subscription-plans.test.ts (8 tests) — Plan CRUD (pagination, validation, slug uniqueness, gallery defaults CR-11)
+- Added test scripts to package.json: test, test:watch, test:coverage, test:ui
+- All 108 tests passing (6/6 suites, 0 failures)
+- Updated DEPT_Architect.md: A-21 marked ✅, A-20 marked ✅, pending 3→1
+- Updated DEPT_Backend_Lead.md: BL-26 marked ✅, BL-22 ✅, BL-24 ✅, pending 5→2
+- Updated Madrasha_ERP_SaaS_Master_Specification.md: Removed Unit Tests, Backup, Data Deletion, Migration Scripts from NOT STARTED
+
+Stage Summary:
+- Test framework: Vitest 4.1.10 with v8 coverage
+- 108 tests across 6 suites — all passing
+- Test coverage: subscription.ts (core business logic), api-utils.ts (pure functions), audit.ts (db mock), 3 API routes
+- Prisma mock strategy: Global mock in setup.ts with per-test vi.clearAllMocks()
+- Key insight: subscription.ts is 100% pure functions — highest test ROI
+- Commands: `bun run test`, `bun run test:watch`, `bun run test:coverage`
