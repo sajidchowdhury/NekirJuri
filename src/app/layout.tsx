@@ -7,6 +7,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import QueryProvider from "@/components/providers/query-provider";
 import { ErrorBoundaryProvider } from "@/components/providers/error-boundary-provider";
+import { WebVitalsReporter } from "@/components/providers/web-vitals-reporter";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getLocale } from "next-intl/server";
 import { getLocaleDirection, type Locale } from "@/i18n/config";
@@ -77,6 +78,7 @@ export default async function RootLayout({
           >
             <ErrorBoundaryProvider>
               <QueryProvider>
+                <WebVitalsReporter />
                 <div className="min-h-screen flex flex-col bg-background text-foreground">
                   {children}
                 </div>

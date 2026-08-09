@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { dbLogger } from '@/lib/logger'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -23,13 +24,13 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
 // Graceful shutdown: disconnect Prisma when the process exits
 // This prevents dangling DB connections, especially with PostgreSQL connection pools.
 const gracefulShutdown = async (signal: string) => {
-  console.log(`\n📴 Received ${signal}. Closing database connections...`)
+  dbLogger.info({ signal }, 'Received shutdown signal, closing database connections')
   try {
     await db.$disconnect()
-    console.log('✅ Database connections closed.')
+    dbLogger.info('Database connections closed successfully')
     process.exit(0)
   } catch (err) {
-    console.error('❌ Error closing database connections:', err)
+    dbLogger.error({ err }, 'Error closing database connections')
     process.exit(1)
   }
 }

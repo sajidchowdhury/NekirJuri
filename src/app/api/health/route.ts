@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { apiLogger } from '@/lib/logger'
+import { recordRequest } from '@/lib/metrics'
 
 export const dynamic = 'force-dynamic'
 

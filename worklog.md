@@ -1826,3 +1826,59 @@ Stage Summary:
 - Security posture transformed from "no protection" to "production-hardened"
 - Stage 5 progress: 50% (Docker + Security done, CI/CD + monitoring still pending)
 - Next session: 4.3 — Monitoring & Error Handling
+---
+Task ID: 4.3
+Agent: Main
+Task: Session 4.3 — Monitoring & Error Handling (structured logging, Sentry, Web Vitals, admin metrics endpoint)
+
+Work Log:
+- Fixed build error: @tanstack/react-query-devtools not installed → bun install + dynamic import
+- Created src/lib/logger.ts: custom structured logger with 7 child loggers (api, auth, db, billing, job, security, perf)
+  - Dev: human-readable console output
+  - Prod: newline-delimited JSON for log aggregation
+  - Log levels: debug/info/warn/error with configurable LOG_LEVEL env var
+- Created src/lib/metrics.ts: in-memory metrics collection with CircularBuffer
+  - Tracks! request metrics (method, path, status, duration, tenant)
+  - Tracks error metrics (type, message, path, tenant)
+  - Tracks performance snapshots (memory usage)
+  - Tracks Web Vitals (LCP, FID, CLS, TTFB, INP)
+  - Provides p50/p95/p99 latency percentiles
+  - Provides top paths, error rates, Web Vitals summaries
+- Created src/instrumentation.ts: Next.js instrumentation hook
+  - Initializes Sentry server-side when SENTRY_DSN is set
+  - Dynamic import to avoid Turbopack issues
+- Created src/app/api/admin/metrics/route.ts: GET /api/admin/metrics
+  - Returns uptime, request stats (p50/p95/p99), error rates, memory, Web Vitals, DB status, Node info
+- Created src/app/api/vitals/route.ts: POST /api/vitals
+  - Receives Web Vitals beacons from client (navigator.sendBeacon)
+- Created src/app/api/error(1)/report/route.ts: POST /api/error-report
+  - Receives client-side error reports from ErrorBoundary
+  - Records in metrics + logs via structured logger
+- Created src/app/global-error.tsx: root-level error boundary
+  - Must define own <html>/<body> (Next.js App Router requirement)
+  - Shows friendly fallback UI with Try Again button
+- Created src/components/providers/web-vitals-reporter.tsx + web-vitals-inner.tsx
+  - Production-only (returns null in dev to avoid stability issues)
+  - Uses next/dynamic for lazy loading (avoids Turbopack issues)
+  - Reports to /api/vitals via navigator.sendBeacon
+- Updated src/components/ui/error-boundary.tsx
+  - Sends errors to /api/error-report via sendBeacon
+  - Removed direct @sentry/nextjs import (Turbopack incompatibility)
+- Updated src/lib/db.ts: graceful shutdown uses structured logger
+- Updated src/app/api/health/route.ts: imports logger and metrics
+- Updated src/components/providers/query-provider.tsx: dynamic import for ReactQueryDevtools
+- Updated .env.example: added Sentry + Web Vitals env vars
+- Architecture decision: Sentry client-side NOT included due to Turbopack incompatibility with @sentry/nextjs webpack plugin
+- Architecture decision: Web Vitals disabled in dev mode (causes server stability issues with hot-reload)
+- Architecture decision: pino/pino-pretty NOT used (Turbopack worker transport issues), custom console logger instead
+
+Stage Summary:
+- Structured logging: ✅ Custom logger with 7 child loggers, JSON in production
+- Sentry error tracking: ✅ Server-side only via instrumentation.ts
+- Web Vitals: ✅ LCP/FID/CLS/TTFB/INP in production, reported to /api/vitals
+- Admin metrics: ✅ GET /api/admin/metrics (uptime, latency percentiles, errors, memory, vitals)
+- Error reporting: ✅ ErrorBoundary → sendBeacon → /api/error-report → metrics + logger
+- Global error boundary: ✅ global-error/tsx with fallback UI
+- Lint: 05 errors, 14 pre-existing warnings
+- New files: 8 (logger, metrics, instrumentation, 3 API routes, global-error, web-vitals)
+- Modified files: 5 (db.ts, health/route.ts, error-boundary.tsx, query-provider.tsx, .env.example)

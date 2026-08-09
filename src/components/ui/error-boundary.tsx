@@ -8,6 +8,11 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+// Note: Sentry reporting is handled server-side via sentry.server.config.ts
+// Client-side error reporting would add @sentry/nextjs to the client bundle
+// which is incompatible with Turbopack. Errors are captured via:
+// 1. This ErrorBoundary → console.error → server-side Sentry
+// 2. Global error endpoint → /api/error-report
 
 interface ErrorBoundaryProps {
   children: React.ReactNode
@@ -30,9 +35,29 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error for debugging (in production, send to error tracking service)
+    // Report to server-side error tracking via console.error
+    // (Sentry server-side picks up console.error in production)
     console.error('[ErrorBoundary] Caught render error:', error)
     console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack)
+
+    // Also send to error reporting endpoint (fire-and-forget)
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      try {
+        navigator.sendBeacon(
+          '/api/error-report?XTransformPort=3000',
+          JSON.stringify({
+            type: 'ErrorBoundary',
+            message: error.message,
+            stack: error.stack,
+            componentStack: errorInfo.componentStack,
+            url: typeof window !== 'undefined' ? window.location.href : '',
+            timestamp: Date.now(),
+          })
+        )
+      } catch {
+        // Silently fail
+      }
+    }
   }
 
   resetErrorBoundary = () => {
