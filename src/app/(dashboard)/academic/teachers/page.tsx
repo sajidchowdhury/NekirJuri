@@ -2,10 +2,11 @@
 
 // ============================================================
 // Teachers Page — List, search, and manage teachers
+// Fully wired to API — no sample data fallbacks
 // ============================================================
 
 import * as React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { ColumnDef } from '@tanstack/react-table';
@@ -30,41 +31,65 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import StatusBadge from '@/components/atoms/status-badge';
 import TeacherForm from '@/components/academic/teacher-form';
 import { slideUp, transitions } from '@/lib/animations';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, UserCog } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, UserCog, AlertCircle, RefreshCw } from 'lucide-react';
+import { apiDelete } from '@/lib/api-client';
 
-// ── Sample data ──────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────
 
-const sampleTeachers = [
-  { id: 1, name: 'Maulana Ahmad Ali', employeeIdNo: 'TCH-001', phone: '+880 1711-111111', qualification: 'M.A. Islamic Studies', specialization: 'Quran & Hadith', status: 'active', photoUrl: '', gender: 'Male' },
-  { id: 2, name: 'Hafiz Mohammad Yunus', employeeIdNo: 'TCH-002', phone: '+880 1711-222222', qualification: 'Hifz Certificate', specialization: 'Hifz', status: 'active', photoUrl: '', gender: 'Male' },
-  { id: 3, name: 'Ms. Rabeya Khatun', employeeIdNo: 'TCH-003', phone: '+880 1711-333333', qualification: 'B.Ed', specialization: 'Mathematics', status: 'active', photoUrl: '', gender: 'Female' },
-  { id: 4, name: 'Maulana Ishaq Siddiqui', employeeIdNo: 'TCH-004', phone: '+880 1711-444444', qualification: 'M.Sc. Physics', specialization: 'Science', status: 'active', photoUrl: '', gender: 'Male' },
-  { id: 5, name: 'Ms. Nasreen Jahan', employeeIdNo: 'TCH-005', phone: '+880 1711-555555', qualification: 'B.A. English', specialization: 'English', status: 'inactive', photoUrl: '', gender: 'Female' },
-];
+interface Teacher {
+  id: number;
+  name: string;
+  employeeIdNo: string;
+  phone?: string;
+  qualification?: string;
+  specialization?: string;
+  status: string;
+  photoUrl?: string;
+  gender?: string;
+}
 
-type Teacher = typeof sampleTeachers[number];
+// ── Page ─────────────────────────────────────────────────
 
 export default function TeachersPage() {
+  const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = React.useState(false);
   const [editTeacher, setEditTeacher] = React.useState<Teacher | null>(null);
 
-  const { data: teachersData, isLoading } = useQuery({
+  const {
+    data: teachersResponse,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['teachers'],
     queryFn: async () => {
-      try {
-        const res = await fetch('/api/teachers');
-        if (!res.ok) throw new Error('Failed');
-        const json = await res.json();
-        return json.data?.length ? json.data : null;
-      } catch {
-        return null;
-      }
+      const res = await fetch('/api/teachers?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch teachers');
+      return res.json();
     },
   });
 
-  const teachers: Teacher[] = teachersData || sampleTeachers;
+  const teachers: Teacher[] = teachersResponse?.data || [];
 
-  const columns: ColumnDef<Teacher, unknown>[] = React.useMemo(() => [
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => apiDelete(`/api/teachers/${id}`),
+    onSuccess: () => {
+      toast.success('Teacher deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to delete teacher');
+    },
+  });
+
+  const handleDelete = (teacher: Teacher) => {
+    if (confirm(`Are you sure you want to delete ${teacher.name}? This action cannot be undone.`)) {
+      deleteMutation.mutate(teacher.id);
+    }
+  };
+
+  const columns: ColumnDef<Teacher, unknown>[] = [
     {
       accessorKey: 'name',
       header: 'Teacher',
@@ -95,18 +120,19 @@ export default function TeachersPage() {
       accessorKey: 'phone',
       header: 'Phone',
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.original.phone}</span>
+        <span className="text-sm text-muted-foreground">{row.original.phone || '—'}</span>
       ),
     },
     {
       accessorKey: 'qualification',
       header: 'Qualification',
+      cell: ({ row }) => <span className="text-sm">{row.original.qualification || '—'}</span>,
     },
     {
       accessorKey: 'specialization',
       header: 'Subject',
       cell: ({ row }) => (
-        <Badge variant="secondary" className="text-xs">{row.original.specialization}</Badge>
+        <Badge variant="secondary" className="text-xs">{row.original.specialization || '—'}</Badge>
       ),
     },
     {
@@ -129,12 +155,12 @@ export default function TeachersPage() {
           <DropdownMenuContent align="end">
             <DropdownMenuItem className="gap-2 cursor-pointer"><Eye className="h-4 w-4" /> View</DropdownMenuItem>
             <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => setEditTeacher(row.original)}><Pencil className="h-4 w-4" /> Edit</DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600" onClick={() => toast.info('Delete not available in preview')}><Trash2 className="h-4 w-4" /> Delete</DropdownMenuItem>
+            <DropdownMenuItem className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600" onClick={() => handleDelete(row.original)}><Trash2 className="h-4 w-4" /> Delete</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
     },
-  ], []);
+  ];
 
   const renderCard = (teacher: Teacher) => (
     <div className="flex items-center gap-3">
@@ -145,11 +171,34 @@ export default function TeachersPage() {
       </Avatar>
       <div className="flex flex-col gap-0.5 min-w-0">
         <span className="text-sm font-medium truncate">{teacher.name}</span>
-        <span className="text-xs text-muted-foreground">{teacher.specialization} • {teacher.employeeIdNo}</span>
+        <span className="text-xs text-muted-foreground">{teacher.specialization || 'N/A'} • {teacher.employeeIdNo}</span>
       </div>
       <StatusBadge status={teacher.status as 'active' | 'inactive'} className="ml-auto shrink-0" />
     </div>
   );
+
+  const handleFormSuccess = () => {
+    setFormOpen(false);
+    setEditTeacher(null);
+    queryClient.invalidateQueries({ queryKey: ['teachers'] });
+  };
+
+  // Error state
+  if (isError) {
+    return (
+      <motion.div initial={slideUp.initial} animate={slideUp.animate} transition={transitions.normal} className="flex flex-col gap-6">
+        <PageHeader title="Teachers" description="Manage teacher profiles, assignments, and qualifications" />
+        <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+          <AlertCircle className="h-12 w-12 text-rose-500" />
+          <h3 className="text-lg font-semibold">Failed to load teachers</h3>
+          <p className="text-sm text-muted-foreground max-w-md">There was an error fetching teacher data. Please try again.</p>
+          <Button variant="outline" className="gap-2" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4" /> Retry
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -161,7 +210,6 @@ export default function TeachersPage() {
       <PageHeader
         title="Teachers"
         description="Manage teacher profiles, assignments, and qualifications"
-
         actions={
           <div className="flex items-center gap-2">
             <ExportButton
@@ -207,7 +255,7 @@ export default function TeachersPage() {
               specialization: editTeacher.specialization,
               gender: editTeacher.gender,
             } : undefined}
-            onSuccess={() => { setFormOpen(false); setEditTeacher(null); }}
+            onSuccess={handleFormSuccess}
           />
         </DialogContent>
       </Dialog>

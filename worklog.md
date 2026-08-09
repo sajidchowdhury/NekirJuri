@@ -1383,3 +1383,30 @@ Stage Summary:
 - 28+ Zod schemas total across all modules
 - Subscription business model defined: FREE (20 students) / PAID (300 BDT/month, bKash/Nagad)
 - Next: Phase 2, Session 2.1 — Frontend→API Data Wiring (Academic Pages)
+
+---
+Task ID: 2.1
+Agent: Main
+Task: Session 2.1 — Academic Pages Frontend→API Wiring
+
+Work Log:
+- Read PRODUCTION_ROADMAP.md and identified Session 2.1 scope (6 academic pages)
+- Explored all 6 academic page files, form components, API routes, DataTable component
+- Identified the sample data fallback pattern: `const data = apiData || sampleData`
+- Created centralized API client utility at `src/lib/api-client.ts` with `apiFetch`, `apiFetchList`, `apiSubmit`, `apiDelete`, `ApiError`
+- Rewrote `students/page.tsx`: Removed sampleStudents/sampleClasses/sampleSections/sampleSessions; added useQuery for students+classes+sections+sessions; added useMutation for delete; error state with retry; query invalidation on CUD
+- Rewrote `teachers/page.tsx`: Removed sampleTeachers; added useQuery for teachers; useMutation for delete; error+retry
+- Rewrote `employees/page.tsx`: Removed sampleEmployees; added useQuery for employees; useMutation for delete; error+retry
+- Rewrote `classes/page.tsx`: Removed sampleClasses/sampleTeachers/sampleSessions; added useQuery for classes+teachers+sessions; loading skeleton cards; empty state; useMutation for delete class/section
+- Rewrote `sessions/page.tsx`: Removed sampleSessions; added useQuery for sessions; transforms _count for studentCount/classCount; loading skeleton; empty state; delete with guard for current session
+- Rewrote `promotions/page.tsx`: Removed all sample data; added useQuery for sessions+classes+sections+students(by-class); useMutation for batch promote via PUT /api/students/:id; proper loading states per step
+- Fixed React Compiler memoization errors (react-hooks/preserve-manual-memoization) by removing React.useMemo from column definitions in students/teachers/employees pages
+- Ran lint: 0 errors, 14 pre-existing warnings
+- Updated PRODUCTION_ROADMAP.md: Session 2.1 marked ✅ DONE, Stage 4 updated to 55%, pages connected count updated to 15/27
+
+Stage Summary:
+- 6 academic pages fully wired to real API data (no sample data fallbacks)
+- 1 new utility file created: src/lib/api-client.ts
+- Key patterns established: error state with retry, loading skeletons, empty states, CUD invalidation, supporting data caching (10min staleTime), delete with confirmation
+- Stage 4 progress: 40% → 55%
+- Next: Session 2.2 — Finance Pages

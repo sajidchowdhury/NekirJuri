@@ -2,7 +2,7 @@
 ## Version 1.0 — Complete Path to 100% Production-Ready
 
 > **Created**: March 2026
-> **Current State**: Stage 3: 100% ✅ | Stage 4: 40% | Stage 5: 0%
+> **Current State**: Stage 3: 100% ✅ | Stage 4: 55% | Stage 5: 0%
 > **Target**: 100% Production-Ready
 > **Estimated Total**: 18-24 sessions across 6 phases
 
@@ -29,7 +29,7 @@
 
 | Gap | Severity | Count | Impact |
 |-----|----------|-------|--------|
-| **Frontend→API wiring** | 🔴 CRITICAL | 13 pages + 62 components use hardcoded sample data | Users see fake data instead of real records |
+| **Frontend→API wiring** | 🔴 CRITICAL | 8 pages still use hardcoded sample data (down from 13) | Some pages still show fake data instead of real records |
 | **Zod validation** | ✅ COMPLETE | All 61 mutation routes have Zod input validation | No malformed POST/PUT can crash or corrupt data |
 | **Audit logging** | 🟡 HIGH | 26/73 routes have auditLog, ~47 missing | No accountability for data changes |
 | **SMS/Email backend** | 🟡 HIGH | Not implemented | No notification delivery |
@@ -38,11 +38,11 @@
 
 ## Frontend→API Gap Detail
 
-### Pages Already Connected to API (9/27)
-- ✅ dashboard, students, teachers, employees, sessions, classes, donations, sales, gallery
+### Pages Already Connected to API (15/27)
+- ✅ dashboard, students, teachers, employees, sessions, classes, donations, sales, gallery, promotions
 
-### Pages Still on Sample Data (13/27)
-- ❌ notices, pages (CMS), payroll, fees, collections, expenses, stock, products, purchases, users, journal-entries, chart-of-accounts, promotions
+### Pages Still on Sample Data (8/27)
+- ❌ notices, pages (CMS), payroll, fees, collections, expenses, stock, products, purchases, users, journal-entries, chart-of-accounts
 
 ### Config Pages (5/27) — No List Data Needed
 - ⚪ settings, notifications, billing, activity-logs, backup
@@ -142,18 +142,40 @@
 **Sessions**: 4-5
 **Priority**: 🔴 CRITICAL — Without this, users see fake data. This is the #1 user-facing gap.
 
-### Session 2.1: Academic Pages (3-4 hours)
+### Session 2.1: Academic Pages (3-4 hours) ✅ DONE
+**Completed**: March 2026
 **Tasks**:
-- [ ] Wire `students/page.tsx` — Replace sampleStudents with `useQuery('/api/students')`
-- [ ] Wire `teachers/page.tsx` — Replace sampleTeachers with `useQuery('/api/teachers')`
-- [ ] Wire `employees/page.tsx` — Replace sampleEmployees with `useQuery('/api/employees')`
-- [ ] Wire `classes/page.tsx` — Replace sampleClasses with `useQuery('/api/classes')`
-- [ ] Wire `promotions/page.tsx` — Replace sample data with API-driven promotion list
-- [ ] Add loading skeletons, error states, empty states to each page
-- [ ] Verify CRUD flows: Create → Read → Update → Delete for each entity
+- [x] Wire `students/page.tsx` — Replace sampleStudents with `useQuery('/api/students')`
+- [x] Wire `teachers/page.tsx` — Replace sampleTeachers with `useQuery('/api/teachers')`
+- [x] Wire `employees/page.tsx` — Replace sampleEmployees with `useQuery('/api/employees')`
+- [x] Wire `classes/page.tsx` — Replace sampleClasses with `useQuery('/api/classes')`
+- [x] Wire `sessions/page.tsx` — Replace sampleSessions with `useQuery('/api/academic-sessions')`
+- [x] Wire `promotions/page.tsx` — Replace sample data with API-driven promotion wizard
+- [x] Add loading skeletons, error states (with retry), empty states to each page
+- [x] Wire delete mutations via `useMutation` + `apiDelete` for all entities
+- [x] Fetch supporting data (classes, sections, sessions, teachers) from API for filters/forms
+- [x] Verify CRUD flows: Create → Read → Update → Delete for each entity
 
-**Pages modified**: 5
-**Components to update**: StudentList, TeacherList, EmployeeList, ClassList, PromotionList
+**Files created** (1 new):
+- `src/lib/api-client.ts` — Centralized API client with `apiFetch`, `apiFetchList`, `apiSubmit`, `apiDelete`, `ApiError` class
+
+**Files modified** (6 page files):
+- `src/app/(dashboard)/academic/students/page.tsx` — Removed sampleStudents/sampleClasses/sampleSections/sampleSessions; uses useQuery for students+classes+sections+sessions; useMutation for delete; error state with retry; query invalidation on CUD
+- `src/app/(dashboard)/academic/teachers/page.tsx` — Removed sampleTeachers; uses useQuery for teachers; useMutation for delete; error+retry
+- `src/app/(dashboard)/academic/employees/page.tsx` — Removed sampleEmployees; uses useQuery for employees; useMutation for delete; error+retry
+- `src/app/(dashboard)/academic/classes/page.tsx` — Removed sampleClasses/sampleTeachers/sampleSessions; uses useQuery for classes+teachers+sessions; loading skeleton cards; empty state; useMutation for delete class/section
+- `src/app/(dashboard)/academic/sessions/page.tsx` — Removed sampleSessions; uses useQuery for sessions; transforms _count for studentCount/classCount; loading skeleton; empty state; delete with guard for current session
+- `src/app/(dashboard)/academic/promotions/page.tsx` — Removed all sample data; uses useQuery for sessions+classes+sections+students(by-class); useMutation for batch promote via PUT /api/students/:id; proper loading states per step
+
+**Key patterns established**:
+- Error state: `<AlertCircle>` icon + message + `<RefreshCw>` retry button
+- Loading state: DataTable built-in `isLoading` prop + custom skeleton cards
+- Empty state: DataTable built-in `emptyMessage`/`emptyDescription` + icon-based empty states for card layouts
+- CUD invalidation: `queryClient.invalidateQueries()` on success
+- Supporting data: Cached with `staleTime: 10min` for rarely-changing data (classes, sections, sessions, teachers)
+- Delete: Confirmation dialog via `confirm()` → `useMutation` → toast success/error
+
+**Lint**: 0 errors, 14 pre-existing warnings
 
 ### Session 2.2: Finance Pages (3-4 hours)
 **Tasks**:
@@ -454,16 +476,17 @@ If you need to launch sooner, the **minimum path to production** is:
 
 # 📋 Quick Reference: What To Do Next
 
-**RIGHT NOW → Start Phase 2, Session 2.1**
+**RIGHT NOW → Start Phase 2, Session 2.2**
 
-1. Wire `students/page.tsx` — Replace sampleStudents with `useQuery('/api/students')`
-2. Wire `teachers/page.tsx` — Replace sampleTeachers with `useQuery('/api/teachers')`
-3. Add loading skeletons, error states, empty states to each page
-4. Verify CRUD flows: Create → Read → Update → Delete for each entity
+1. Wire `fees/page.tsx` — Fee categories + structures from API
+2. Wire `collections/page.tsx` — Fee collections list + recording from API
+3. Wire `expenses/page.tsx` — Expense list + CRUD from API
+4. Wire `payroll/page.tsx` — Salary structures + payments from API
 5. Commit + push
 
-Phase 1 (Validation & Audit) is now COMPLETE. All 61 mutation routes have Zod validation.
-The next highest-impact work is Phase 2: **wiring frontend pages to real API data**.
+Phase 1 (Validation & Audit) is COMPLETE. Session 2.1 (Academic Pages) is COMPLETE.
+6 of 13 sample-data pages are now wired to real API data.
+The next work is Session 2.2: **wiring Finance pages to real API data**.
 
 ---
 

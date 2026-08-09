@@ -2,10 +2,11 @@
 
 // ============================================================
 // Students Page — List, search, filter, and manage students
+// Fully wired to API — no sample data fallbacks
 // ============================================================
 
 import * as React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { ColumnDef } from '@tanstack/react-table';
@@ -32,84 +33,126 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import StatusBadge from '@/components/atoms/status-badge';
 import StudentForm from '@/components/academic/student-form';
 import { staggerChildren, slideUp, transitions } from '@/lib/animations';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, GraduationCap } from 'lucide-react';
-
-// ── Sample data ──────────────────────────────────────────
-
-const sampleStudents = [
-  { id: 1, name: 'Abdullah Rahim', nameBn: 'আব্দুল্লাহ রহিম', className: 'Class 8', section: 'A', roll: '01', gender: 'Male', status: 'active', phone: '+880 1712-345678', photoUrl: '', classId: 3, sectionId: 1 },
-  { id: 2, name: 'Fatima Khatun', nameBn: 'ফাতিমা খাতুন', className: 'Class 5', section: 'B', roll: '05', gender: 'Female', status: 'active', phone: '+880 1812-345678', photoUrl: '', classId: 2, sectionId: 2 },
-  { id: 3, name: 'Mohammad Hasan', nameBn: 'মোহাম্মদ হাসান', className: 'Class 10', section: 'A', roll: '12', gender: 'Male', status: 'active', phone: '+880 1512-345678', photoUrl: '', classId: 5, sectionId: 1 },
-  { id: 4, name: 'Aisha Begum', nameBn: 'আয়শা বেগম', className: 'Hifz', section: 'A', roll: '03', gender: 'Female', status: 'active', phone: '+880 1612-345678', photoUrl: '', classId: 4, sectionId: 1 },
-  { id: 5, name: 'Ibrahim Khan', nameBn: 'ইব্রাহিম খান', className: 'Class 6', section: 'C', roll: '08', gender: 'Male', status: 'inactive', phone: '+880 1912-345678', photoUrl: '', classId: 6, sectionId: 3 },
-  { id: 6, name: 'Zainab Akter', nameBn: 'জায়নাব আক্তার', className: 'Class 8', section: 'B', roll: '15', gender: 'Female', status: 'active', phone: '+880 1312-345678', photoUrl: '', classId: 3, sectionId: 2 },
-  { id: 7, name: 'Omar Farooq', nameBn: 'ওমর ফারুক', className: 'Class 5', section: 'A', roll: '22', gender: 'Male', status: 'active', phone: '+880 1412-345678', photoUrl: '', classId: 2, sectionId: 1 },
-];
-
-const sampleClasses = [
-  { id: 1, name: 'Class 1', code: 'C1' },
-  { id: 2, name: 'Class 5', code: 'C5' },
-  { id: 3, name: 'Class 8', code: 'C8' },
-  { id: 4, name: 'Hifz', code: 'HF' },
-  { id: 5, name: 'Class 10', code: 'C10' },
-  { id: 6, name: 'Class 6', code: 'C6' },
-];
-
-const sampleSections = [
-  { id: 1, name: 'A' },
-  { id: 2, name: 'B' },
-  { id: 3, name: 'C' },
-];
-
-const sampleSessions = [
-  { id: 1, name: '2025-2026' },
-  { id: 2, name: '2026-2027' },
-];
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, GraduationCap, AlertCircle, RefreshCw } from 'lucide-react';
+import { apiDelete } from '@/lib/api-client';
 
 // ── Types ────────────────────────────────────────────────
 
-type Student = typeof sampleStudents[number];
+interface Student {
+  id: number;
+  name: string;
+  nameBn?: string;
+  className?: string;
+  section?: string;
+  roll?: string;
+  gender: string;
+  status: string;
+  phone?: string;
+  photoUrl?: string;
+  classId?: number;
+  sectionId?: number;
+}
+
+interface LookupItem {
+  id: number;
+  name: string;
+}
 
 // ── Page ─────────────────────────────────────────────────
 
 export default function StudentsPage() {
+  const queryClient = useQueryClient();
   const [filters, setFilters] = React.useState<StudentFilterValues>({});
   const [formOpen, setFormOpen] = React.useState(false);
   const [editStudent, setEditStudent] = React.useState<Student | null>(null);
 
-  // Fetch students
-  const { data: studentsData, isLoading } = useQuery({
+  // ── Fetch students ──────────────────────────────────────
+  const {
+    data: studentsResponse,
+    isLoading: studentsLoading,
+    isError: studentsError,
+    refetch: refetchStudents,
+  } = useQuery({
     queryKey: ['students', filters],
     queryFn: async () => {
-      try {
-        const params = new URLSearchParams();
-        if (filters.classId) params.set('classId', filters.classId);
-        if (filters.sectionId) params.set('sectionId', filters.sectionId);
-        if (filters.status) params.set('status', filters.status);
-        const res = await fetch(`/api/students?${params}`);
-        if (!res.ok) throw new Error('Failed to fetch');
-        const json = await res.json();
-        return json.data?.length ? json.data : null;
-      } catch {
-        return null;
-      }
+      const params = new URLSearchParams();
+      if (filters.classId) params.set('classId', filters.classId);
+      if (filters.sectionId) params.set('sectionId', filters.sectionId);
+      if (filters.status) params.set('status', filters.status);
+      if (filters.gender) params.set('search', filters.gender);
+      const res = await fetch(`/api/students?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch students');
+      return res.json();
     },
   });
 
-  // Use sample data when no API data
-  const students: Student[] = studentsData || sampleStudents;
+  const students: Student[] = studentsResponse?.data || [];
 
-  // Filter by gender client-side (since API doesn't support it directly)
-  const filteredStudents = React.useMemo(() => {
-    let result = students;
-    if (filters.gender) {
-      result = result.filter((s) => s.gender === filters.gender);
+  // ── Fetch classes for filters ──────────────────────────
+  const { data: classesResponse } = useQuery({
+    queryKey: ['classes-list'],
+    queryFn: async () => {
+      const res = await fetch('/api/classes?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch classes');
+      return res.json();
+    },
+    staleTime: 10 * 60 * 1000, // 10 min — classes change rarely
+  });
+  const classes: LookupItem[] = (classesResponse?.data || []).map((c: Record<string, unknown>) => ({
+    id: c.id as number,
+    name: (c.name as string) || '',
+  }));
+
+  // ── Fetch sections for filters ─────────────────────────
+  const { data: sectionsResponse } = useQuery({
+    queryKey: ['sections-list'],
+    queryFn: async () => {
+      const res = await fetch('/api/sections?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch sections');
+      return res.json();
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+  const sections: LookupItem[] = (sectionsResponse?.data || []).map((s: Record<string, unknown>) => ({
+    id: s.id as number,
+    name: (s.name as string) || '',
+  }));
+
+  // ── Fetch academic sessions for filters ────────────────
+  const { data: sessionsResponse } = useQuery({
+    queryKey: ['sessions-list'],
+    queryFn: async () => {
+      const res = await fetch('/api/academic-sessions?limit=50');
+      if (!res.ok) throw new Error('Failed to fetch sessions');
+      return res.json();
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+  const sessions: LookupItem[] = (sessionsResponse?.data || []).map((s: Record<string, unknown>) => ({
+    id: s.id as number,
+    name: (s.name as string) || '',
+  }));
+
+  // ── Delete mutation ─────────────────────────────────────
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => apiDelete(`/api/students/${id}`),
+    onSuccess: () => {
+      toast.success('Student deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to delete student');
+    },
+  });
+
+  const handleDelete = (student: Student) => {
+    if (confirm(`Are you sure you want to delete ${student.name}? This action cannot be undone.`)) {
+      deleteMutation.mutate(student.id);
     }
-    return result;
-  }, [students, filters.gender]);
+  };
 
-  // Columns
-  const columns: ColumnDef<Student, unknown>[] = React.useMemo(() => [
+  // ── Columns ─────────────────────────────────────────────
+  const columns: ColumnDef<Student, unknown>[] = [
     {
       accessorKey: 'name',
       header: 'Student',
@@ -136,22 +179,24 @@ export default function StudentsPage() {
       accessorKey: 'className',
       header: 'Class',
       cell: ({ row }) => (
-        <Badge variant="secondary" className="text-xs">{row.original.className}</Badge>
+        <Badge variant="secondary" className="text-xs">{row.original.className || '—'}</Badge>
       ),
     },
     {
       accessorKey: 'section',
       header: 'Section',
+      cell: ({ row }) => <span className="text-sm">{row.original.section || '—'}</span>,
     },
     {
       accessorKey: 'roll',
       header: 'Roll',
+      cell: ({ row }) => <span className="text-sm font-mono">{row.original.roll || '—'}</span>,
     },
     {
       accessorKey: 'phone',
       header: 'Guardian Phone',
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.original.phone}</span>
+        <span className="text-sm text-muted-foreground">{row.original.phone || '—'}</span>
       ),
     },
     {
@@ -178,14 +223,14 @@ export default function StudentsPage() {
             <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => setEditStudent(row.original)}>
               <Pencil className="h-4 w-4" /> Edit
             </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600" onClick={() => toast.info('Delete not available in preview')}>
+            <DropdownMenuItem className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600" onClick={() => handleDelete(row.original)}>
               <Trash2 className="h-4 w-4" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
     },
-  ], []);
+  ];
 
   // Mobile card renderer
   const renderCard = (student: Student) => (
@@ -199,6 +244,30 @@ export default function StudentsPage() {
     />
   );
 
+  // Handle form success — invalidate queries and close dialog
+  const handleFormSuccess = () => {
+    setFormOpen(false);
+    setEditStudent(null);
+    queryClient.invalidateQueries({ queryKey: ['students'] });
+  };
+
+  // Error state
+  if (studentsError) {
+    return (
+      <motion.div initial={slideUp.initial} animate={slideUp.animate} transition={transitions.normal} className="flex flex-col gap-6">
+        <PageHeader title="Students" description="Manage student admissions, enrollment, and academic records" />
+        <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+          <AlertCircle className="h-12 w-12 text-rose-500" />
+          <h3 className="text-lg font-semibold">Failed to load students</h3>
+          <p className="text-sm text-muted-foreground max-w-md">There was an error fetching student data. Please try again.</p>
+          <Button variant="outline" className="gap-2" onClick={() => refetchStudents()}>
+            <RefreshCw className="h-4 w-4" /> Retry
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={slideUp.initial}
@@ -210,7 +279,6 @@ export default function StudentsPage() {
       <PageHeader
         title="Students"
         description="Manage student admissions, enrollment, and academic records"
-
         actions={
           <div className="flex items-center gap-2">
             <ExportButton
@@ -232,21 +300,21 @@ export default function StudentsPage() {
       <StudentFilters
         values={filters}
         onChange={setFilters}
-        classes={sampleClasses}
-        sections={sampleSections}
-        sessions={sampleSessions}
+        classes={classes}
+        sections={sections}
+        sessions={sessions}
       />
 
       {/* Data table */}
       <DataTable
         columns={columns}
-        data={filteredStudents}
+        data={students}
         searchable
         searchPlaceholder="Search students..."
         sortable
         paginated
         pageSize={10}
-        isLoading={isLoading}
+        isLoading={studentsLoading}
         emptyMessage="No students found"
         emptyDescription="Admit your first student to get started."
         renderCard={renderCard}
@@ -268,13 +336,13 @@ export default function StudentsPage() {
               nameBn: editStudent.nameBn,
               gender: editStudent.gender,
               status: editStudent.status,
-              classId: String(editStudent.classId),
-              sectionId: String(editStudent.sectionId),
+              classId: editStudent.classId ? String(editStudent.classId) : undefined,
+              sectionId: editStudent.sectionId ? String(editStudent.sectionId) : undefined,
             } : undefined}
-            classes={sampleClasses}
-            sections={sampleSections}
-            sessions={sampleSessions}
-            onSuccess={() => { setFormOpen(false); setEditStudent(null); }}
+            classes={classes}
+            sections={sections}
+            sessions={sessions}
+            onSuccess={handleFormSuccess}
           />
         </DialogContent>
       </Dialog>
