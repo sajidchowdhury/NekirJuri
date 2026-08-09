@@ -2,7 +2,7 @@
 ## Version 1.0 — Complete Path to 100% Production-Ready
 
 > **Created**: March 2026
-> **Current State**: Stage 3: 100% ✅ | Stage 4: 70% | Stage 5: 0%
+> **Current State**: Stage 3: 100% ✅ | Stage 4: 80% | Stage 5: 0%
 > **Target**: 100% Production-Ready
 > **Estimated Total**: 18-24 sessions across 6 phases
 
@@ -29,7 +29,7 @@
 
 | Gap | Severity | Count | Impact |
 |-----|----------|-------|--------|
-| **Frontend→API wiring** | 🟡 HIGH | 4 pages still use hardcoded sample data (down from 13) | Most pages now show real data |
+| **Frontend→API wiring** | 🟡 HIGH | 2 pages still use hardcoded sample data (down from 13) | Most pages now show real data |
 | **Zod validation** | ✅ COMPLETE | All 61 mutation routes have Zod input validation | No malformed POST/PUT can crash or corrupt data |
 | **Audit logging** | 🟡 HIGH | 26/73 routes have auditLog, ~47 missing | No accountability for data changes |
 | **SMS/Email backend** | 🟡 HIGH | Not implemented | No notification delivery |
@@ -38,11 +38,11 @@
 
 ## Frontend→API Gap Detail
 
-### Pages Already Connected to API (19/27)
-- ✅ dashboard, students, teachers, employees, sessions, classes, donations, sales, gallery, promotions, fees, collections, expenses, payroll
+### Pages Already Connected to API (23/27)
+- ✅ dashboard, students, teachers, employees, sessions, classes, donations, sales, gallery, promotions, fees, collections, expenses, payroll, products, purchases, stock, journal-entries, chart-of-accounts
 
-### Pages Still on Sample Data (4/27)
-- ❌ notices, pages (CMS), stock, products, purchases, users, journal-entries, chart-of-accounts
+### Pages Still on Sample Data (2/27)
+- ❌ notices, pages (CMS), users
 
 ### Config Pages (5/27) — No List Data Needed
 - ⚪ settings, notifications, billing, activity-logs, backup
@@ -207,16 +207,32 @@
 
 **Lint**: 0 errors, 14 pre-existing warnings
 
-### Session 2.3: Inventory + Accounting Pages (3-4 hours)
+### Session 2.3: Inventory + Accounting Pages (3-4 hours) ✅ DONE
+**Completed**: March 2026
 **Tasks**:
-- [ ] Wire `products/page.tsx` — Product list + CRUD from API
-- [ ] Wire `purchases/page.tsx` — Purchase orders from API
-- [ ] Wire `stock/page.tsx` — Stock movements from API
-- [ ] Wire `chart-of-accounts/page.tsx` — Account tree from API
-- [ ] Wire `journal-entries/page.tsx` — Journal entries from API
-- [ ] Remove all sample data fallbacks
+- [x] Wire `products/page.tsx` — ProductList now uses useQuery('/api/products'); delete mutation; error/loading/empty states
+- [x] Wire `purchases/page.tsx` — PurchaseOrderList now uses useQuery('/api/purchases'); status filter via API; error/loading/empty states
+- [x] Wire `stock/page.tsx` — StockDashboard uses useQuery('/api/products'); StockMovementLog uses useQuery('/api/stock-movements'); computed summary stats; chart; low/out-of-stock alerts
+- [x] Wire `chart-of-accounts/page.tsx` — ChartOfAccountsTree now uses useQuery('/api/accounts'); parent/child hierarchy from API; create account via apiSubmit; error/loading/empty states
+- [x] Wire `journal-entries/page.tsx` — JournalEntryList now uses useQuery('/api/journal-entries'); post mutation via apiSubmit; view entry detail from API data; error/loading/empty states
+- [x] Remove all sample data fallbacks from inventory and accounting pages
 
-**Pages modified**: 5
+**Pages modified** (5 page files):
+- `src/app/(dashboard)/inventory/products/page.tsx` — Removed sample Product type; uses API-wired ProductList; delete via useMutation+apiDelete; query invalidation
+- `src/app/(dashboard)/inventory/purchases/page.tsx` — Removed sample PurchaseOrder type; uses API-wired PurchaseOrderList; view detail dialog from API data
+- `src/app/(dashboard)/inventory/stock/page.tsx` — Sub-components now API-driven
+- `src/app/(dashboard)/accounting/journal-entries/page.tsx` — Removed journalEntries import; uses API-wired JournalEntryList; post mutation; view entry from API data
+- `src/app/(dashboard)/accounting/chart-of-accounts/page.tsx` — Removed chartOfAccounts import; uses API-wired ChartOfAccountsTree; create account via apiSubmit
+
+**Sub-components modified** (5 files):
+- `src/components/inventory/product-list.tsx` — Replaced sampleProducts with useQuery('/api/products'); delete via useMutation+apiDelete; isLoading on DataTable; error+retry; empty state
+- `src/components/inventory/purchase-order-list.tsx` — Replaced samplePurchaseOrders with useQuery('/api/purchases'); status filter via API query param; isLoading; error+retry
+- `src/components/inventory/stock-dashboard.tsx` — Replaced sampleProducts with useQuery('/api/products'); computed summary (totalStockValue, lowStock, outOfStock); chart from API data; loading skeleton; error+retry
+- `src/components/inventory/stock-movement-log.tsx` — Replaced sampleStockMovements with useQuery('/api/stock-movements'); movementType filter via API; loading skeleton; empty state; error+retry
+- `src/components/accounting/journal-entry-list.tsx` — Replaced journalEntries with useQuery('/api/journal-entries'); status filter via API; isLoading on DataTable; error+retry; empty state
+- `src/components/accounting/chart-of-accounts-tree.tsx` — Replaced chartOfAccounts with useQuery('/api/accounts'); parent/child hierarchy computed from API; staleTime 10min; loading skeleton; error+retry; empty state
+
+**Lint**: 0 errors, 14 pre-existing warnings
 
 ### Session 2.4: System + CMS Pages (3-4 hours)
 **Tasks**:
@@ -495,18 +511,18 @@ If you need to launch sooner, the **minimum path to production** is:
 
 # 📋 Quick Reference: What To Do Next
 
-**RIGHT NOW → Start Phase 2, Session 2.3**
+**RIGHT NOW → Start Phase 2, Session 2.4**
 
-1. Wire `products/page.tsx` — Product list + CRUD from API
-2. Wire `purchases/page.tsx` — Purchase orders from API
-3. Wire `stock/page.tsx` — Stock movements from API
-4. Wire `chart-of-accounts/page.tsx` — Account tree from API
-5. Wire `journal-entries/page.tsx` — Journal entries from API
+1. Wire `users/page.tsx` — User list + management from API
+2. Wire `notices/page.tsx` — Notice board from API
+3. Wire `pages/page.tsx` (CMS) — Website pages from API
+4. Wire dashboard charts — Replace sample data in 6 chart components
+5. Wire accounting reports — income-statement, balance-sheet, ledger-view
 6. Commit + push
 
-Phase 1 (Validation & Audit) is COMPLETE. Sessions 2.1 + 2.2 are COMPLETE.
-19 of 27 pages are now wired to real API data.
-The next work is Session 2.3: **wiring Inventory + Accounting pages to real API data**.
+Phase 1 (Validation & Audit) is COMPLETE. Sessions 2.1 + 2.2 + 2.3 are COMPLETE.
+23 of 27 pages are now wired to real API data.
+The next work is Session 2.4: **wiring System + CMS pages and Dashboard charts to real API data**.
 
 ---
 

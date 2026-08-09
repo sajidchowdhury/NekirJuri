@@ -2,9 +2,11 @@
 
 // ============================================================
 // Purchase Order Management Page — PurchaseOrderList with add/edit/view dialogs
+// Fully wired to API — no sample data fallbacks
 // ============================================================
 
 import * as React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -16,32 +18,74 @@ import ExportButton from '@/components/molecules/export-button';
 import PurchaseOrderList from '@/components/inventory/purchase-order-list';
 import PurchaseOrderForm from '@/components/inventory/purchase-order-form';
 import {
-  type PurchaseOrder,
   formatTaka,
   poStatusClasses,
 } from '@/lib/inventory/sample-data';
 import { fadeIn, slideUp, transitions } from '@/lib/animations';
 
+// ── API Purchase type (matches PurchaseOrderList) ────────
+interface ApiPurchase {
+  id: number;
+  purchaseNo: string;
+  supplierId: number;
+  purchaseDate: string;
+  totalAmount: number;
+  discountAmount: number;
+  taxAmount: number;
+  netAmount: number;
+  paymentStatus: string;
+  paymentMethod?: string | null;
+  status: string;
+  remarks?: string | null;
+  supplier: { id: number; name: string; code: string; phone?: string | null };
+  purchaseItems: {
+    id: number;
+    productId: number;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    discountAmount?: number;
+    product: { id: number; name: string; code: string; unit?: string | null; currentStock?: number };
+  }[];
+  createdAt: string;
+}
+
+// ── Helper: map API status ───────────────────────────────
+type PurchaseOrderStatus = 'draft' | 'ordered' | 'partially-received' | 'received' | 'cancelled';
+const mapStatus = (status: string): PurchaseOrderStatus => {
+  if (status === 'draft' || status === 'ordered' || status === 'received' || status === 'cancelled') return status as PurchaseOrderStatus;
+  if (status === 'partially-received' || status === 'partially_received') return 'partially-received';
+  return 'draft';
+};
+
 export default function PurchasesPage() {
+  const queryClient = useQueryClient();
   const [addDialogOpen, setAddDialogOpen] = React.useState(false);
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
   const [viewDialogOpen, setViewDialogOpen] = React.useState(false);
-  const [selectedPO, setSelectedPO] = React.useState<PurchaseOrder | null>(null);
+  const [selectedPO, setSelectedPO] = React.useState<ApiPurchase | null>(null);
   const [statusFilter, setStatusFilter] = React.useState('all');
 
-  const handleView = (po: PurchaseOrder) => {
+  const handleView = (po: ApiPurchase) => {
     setSelectedPO(po);
     setViewDialogOpen(true);
   };
 
-  const handleEdit = (po: PurchaseOrder) => {
+  const handleEdit = (po: ApiPurchase) => {
     setSelectedPO(po);
     setEditDialogOpen(true);
   };
 
-  const handleReceive = (po: PurchaseOrder) => {
+  const handleReceive = (po: ApiPurchase) => {
     setSelectedPO(po);
     setViewDialogOpen(true);
+  };
+
+  const handleFormSuccess = () => {
+    setAddDialogOpen(false);
+    setEditDialogOpen(false);
+    setSelectedPO(null);
+    queryClient.invalidateQueries({ queryKey: ['purchases'] });
   };
 
   const statusFilters = [
@@ -63,7 +107,6 @@ export default function PurchasesPage() {
       <PageHeader
         title="Purchase Orders"
         description="Track purchases, suppliers, and manage purchase orders"
-
         actions={
           <div className="flex items-center gap-2">
             <ExportButton />
@@ -119,7 +162,7 @@ export default function PurchasesPage() {
             </DialogDescription>
           </DialogHeader>
           <PurchaseOrderForm
-            onSubmit={() => setAddDialogOpen(false)}
+            onSubmit={() => handleFormSuccess()}
             onCancel={() => setAddDialogOpen(false)}
           />
         </DialogContent>
@@ -131,12 +174,11 @@ export default function PurchasesPage() {
           <DialogHeader>
             <DialogTitle>Edit Purchase Order</DialogTitle>
             <DialogDescription>
-              {selectedPO?.poNumber || 'Loading...'}
+              {selectedPO?.purchaseNo || 'Loading...'}
             </DialogDescription>
           </DialogHeader>
           <PurchaseOrderForm
-            purchaseOrder={selectedPO}
-            onSubmit={() => setEditDialogOpen(false)}
+            onSubmit={() => handleFormSuccess()}
             onCancel={() => setEditDialogOpen(false)}
           />
         </DialogContent>
@@ -148,7 +190,7 @@ export default function PurchasesPage() {
           <DialogHeader>
             <DialogTitle>Purchase Order Details</DialogTitle>
             <DialogDescription>
-              {selectedPO?.poNumber || 'Loading...'}
+              {selectedPO?.purchaseNo || 'Loading...'}
             </DialogDescription>
           </DialogHeader>
           {selectedPO && (
@@ -157,31 +199,31 @@ export default function PurchasesPage() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">Supplier:</span>
-                  <p className="font-medium">{selectedPO.supplierName}</p>
+                  <p className="font-medium">{selectedPO.supplier?.name || '—'}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Status:</span>
                   <div className="mt-0.5">
-                    <Badge variant="secondary" className={`${poStatusClasses[selectedPO.status].bg} ${poStatusClasses[selectedPO.status].text} gap-1`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${poStatusClasses[selectedPO.status].dot}`} />
-                      {poStatusClasses[selectedPO.status].label}
+                    <Badge variant="secondary" className={`${poStatusClasses[mapStatus(selectedPO.status)].bg} ${poStatusClasses[mapStatus(selectedPO.status)].text} gap-1`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${poStatusClasses[mapStatus(selectedPO.status)].dot}`} />
+                      {poStatusClasses[mapStatus(selectedPO.status)].label}
                     </Badge>
                   </div>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Order Date:</span>
-                  <p className="font-medium">{new Date(selectedPO.orderDate).toLocaleDateString('en-GB')}</p>
+                  <p className="font-medium">{new Date(selectedPO.purchaseDate).toLocaleDateString('en-GB')}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Expected Delivery:</span>
-                  <p className="font-medium">{new Date(selectedPO.expectedDeliveryDate).toLocaleDateString('en-GB')}</p>
+                  <span className="text-muted-foreground">Payment Status:</span>
+                  <p className="font-medium capitalize">{selectedPO.paymentStatus}</p>
                 </div>
               </div>
 
-              {selectedPO.notes && (
+              {selectedPO.remarks && (
                 <div className="text-sm">
                   <span className="text-muted-foreground">Notes:</span>
-                  <p>{selectedPO.notes}</p>
+                  <p>{selectedPO.remarks}</p>
                 </div>
               )}
 
@@ -201,12 +243,12 @@ export default function PurchasesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedPO.items.map((item, i) => (
-                        <tr key={i} className="border-t border-border">
-                          <td className="px-3 py-2">{item.productName}</td>
-                          <td className="px-3 py-2 text-right">{item.quantity}</td>
-                          <td className="px-3 py-2 text-right">{formatTaka(item.unitPrice)}</td>
-                          <td className="px-3 py-2 text-right font-medium">{formatTaka(item.total)}</td>
+                      {selectedPO.purchaseItems?.map((item) => (
+                        <tr key={item.id} className="border-t border-border">
+                          <td className="px-3 py-2">{item.product?.name || '—'}</td>
+                          <td className="px-3 py-2 text-right">{Number(item.quantity)}</td>
+                          <td className="px-3 py-2 text-right">{formatTaka(Number(item.unitPrice))}</td>
+                          <td className="px-3 py-2 text-right font-medium">{formatTaka(Number(item.totalPrice))}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -220,24 +262,24 @@ export default function PurchasesPage() {
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatTaka(selectedPO.subtotal)}</span>
+                  <span>{formatTaka(Number(selectedPO.totalAmount))}</span>
                 </div>
-                {selectedPO.taxPercent > 0 && (
+                {Number(selectedPO.discountAmount) > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tax ({selectedPO.taxPercent}%)</span>
-                    <span>{formatTaka(selectedPO.taxAmount)}</span>
+                    <span className="text-muted-foreground">Discount</span>
+                    <span className="text-rose-600">-{formatTaka(Number(selectedPO.discountAmount))}</span>
                   </div>
                 )}
-                {selectedPO.shipping > 0 && (
+                {Number(selectedPO.taxAmount) > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span>{formatTaka(selectedPO.shipping)}</span>
+                    <span className="text-muted-foreground">Tax</span>
+                    <span>{formatTaka(Number(selectedPO.taxAmount))}</span>
                   </div>
                 )}
                 <Separator />
                 <div className="flex justify-between font-semibold text-base">
                   <span>Grand Total</span>
-                  <span className="text-amber-600 dark:text-amber-400">{formatTaka(selectedPO.grandTotal)}</span>
+                  <span className="text-amber-600 dark:text-amber-400">{formatTaka(Number(selectedPO.netAmount))}</span>
                 </div>
               </div>
             </div>

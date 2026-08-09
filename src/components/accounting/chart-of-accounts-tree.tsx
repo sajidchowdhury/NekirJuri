@@ -2,11 +2,13 @@
 
 // ============================================================
 // ChartOfAccountsTree — Hierarchical tree view of accounts
+// Fully wired to API — no sample data fallbacks
 // Collapsible sections by type, parent/child hierarchy,
 // click-to-view-ledger, type color badges, balance display
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight,
@@ -18,6 +20,8 @@ import {
   TrendingUp,
   TrendingDown,
   Scale,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,20 +33,38 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import {
-  chartOfAccounts,
   accountTypeColors,
   accountTypeLabels,
   formatTaka,
-  calculateAccountBalance,
-  getTopLevelAccounts,
-  getChildAccounts,
-  type Account,
-  type AccountType,
 } from '@/lib/accounting/sample-data';
+
+// ── API Account type ─────────────────────────────────────
+interface ApiAccount {
+  id: number;
+  code: string;
+  name: string;
+  accountType: string;
+  parentId: number | null;
+  openingBalance: number;
+  currentBalance: number;
+  description?: string | null;
+  isActive: boolean;
+  parent?: { id: number; code: string; name: string } | null;
+  children?: { id: number; code: string; name: string; accountType: string }[];
+  _count?: { journalItems: number };
+}
+
+type AccountType = 'Asset' | 'Liability' | 'Income' | 'Expense' | 'Equity';
+
+const mapAccountType = (type: string): AccountType => {
+  const t = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+  if (t === 'Asset' || t === 'Liability' || t === 'Income' || t === 'Expense' || t === 'Equity') return t as AccountType;
+  return 'Asset';
+};
 
 export interface ChartOfAccountsTreeProps {
   /** Callback when an account is clicked to view ledger */
-  onViewLedger: (account: Account) => void;
+  onViewLedger: (account: ApiAccount) => void;
   /** Callback when "Add Account" is clicked for a type */
   onAddAccount?: (type?: AccountType) => void;
   /** Additional CSS classes */
@@ -62,17 +84,19 @@ const typeOrder: AccountType[] = ['Asset', 'Liability', 'Income', 'Expense', 'Eq
 function AccountRow({
   account,
   level,
+  allAccounts,
   onViewLedger,
 }: {
-  account: Account;
+  account: ApiAccount;
   level: number;
-  onViewLedger: (account: Account) => void;
+  allAccounts: ApiAccount[];
+  onViewLedger: (account: ApiAccount) => void;
 }) {
   const [expanded, setExpanded] = React.useState(true);
-  const children = getChildAccounts(account.id);
+  const children = allAccounts.filter(a => a.parentId === account.id);
   const hasChildren = children.length > 0;
-  const currentBalance = calculateAccountBalance(account.id);
-  const colors = accountTypeColors[account.type];
+  const currentBalance = Number(account.currentBalance);
+  const colors = accountTypeColors[mapAccountType(account.accountType)];
 
   return (
     <div>
@@ -131,13 +155,13 @@ function AccountRow({
               colors.text
             )}
           >
-            {account.type}
+            {mapAccountType(account.accountType)}
           </Badge>
         )}
 
         {/* Opening Balance */}
         <span className="text-xs text-muted-foreground w-24 text-right shrink-0 hidden sm:block">
-          {formatTaka(account.openingBalance)}
+          {formatTaka(Number(account.openingBalance))}
         </span>
 
         {/* Current Balance */}
@@ -180,6 +204,7 @@ function AccountRow({
                 key={child.id}
                 account={child}
                 level={level + 1}
+                allAccounts={allAccounts}
                 onViewLedger={onViewLedger}
               />
             ))}
@@ -195,6 +220,68 @@ export default function ChartOfAccountsTree({
   onAddAccount,
   className,
 }: ChartOfAccountsTreeProps) {
+  // ── Fetch accounts from API ─────────────────────────────
+  const {
+    data: accountsResponse,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['chart-of-accounts'],
+    queryFn: async () => {
+      const res = await fetch('/api/accounts?limit=200');
+      if (!res.ok) throw new Error('Failed to fetch accounts');
+      return res.json();
+    },
+    staleTime: 10 * 60 * 1000, // 10 min — accounts change rarely
+  });
+
+  const accounts: ApiAccount[] = accountsResponse?.data || [];
+
+  // ── Error state ────────────────────────────────────────
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+        <AlertCircle className="h-12 w-12 text-rose-500" />
+        <h3 className="text-lg font-semibold">Failed to load accounts</h3>
+        <p className="text-sm text-muted-foreground max-w-md">There was an error fetching chart of accounts. Please try again.</p>
+        <Button variant="outline" className="gap-2" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4" /> Retry
+        </Button>
+      </div>
+    );
+  }
+
+  // ── Loading state ──────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {['Asset', 'Liability', 'Income', 'Expense', 'Equity'].map(type => (
+          <div key={type} className="border border-border rounded-lg p-4 animate-pulse">
+            <div className="h-5 bg-muted rounded w-32 mb-2" />
+            <div className="h-3 bg-muted rounded w-48" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // ── Empty state ────────────────────────────────────────
+  if (accounts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Wallet className="h-12 w-12 text-muted-foreground/30 mb-4" />
+        <h3 className="text-lg font-medium text-muted-foreground">No accounts found</h3>
+        <p className="text-sm text-muted-foreground mt-1">Create your first account to get started.</p>
+      </div>
+    );
+  }
+
+  // ── Helper: get top-level accounts by type ─────────────
+  const getTopLevelAccounts = (type: AccountType) => {
+    return accounts.filter(a => mapAccountType(a.accountType) === type && a.parentId === null);
+  };
+
   return (
     <div className={cn('space-y-2', className)}>
       <Accordion type="multiple" defaultValue={typeOrder}>
@@ -203,7 +290,7 @@ export default function ChartOfAccountsTree({
           const topLevelAccounts = getTopLevelAccounts(type);
           const colors = accountTypeColors[type];
           const typeTotal = topLevelAccounts.reduce((sum, acc) => {
-            return sum + calculateAccountBalance(acc.id);
+            return sum + Number(acc.currentBalance);
           }, 0);
 
           return (
@@ -246,6 +333,7 @@ export default function ChartOfAccountsTree({
                     key={account.id}
                     account={account}
                     level={0}
+                    allAccounts={accounts}
                     onViewLedger={onViewLedger}
                   />
                 ))}

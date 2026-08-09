@@ -5,11 +5,14 @@
 // CR-8: Simplified Accounting Mode
 // Double-entry: Full tree + Ledger + Reports
 // Simplified: Income/Expense lists only
+// Fully wired to API — no sample data fallbacks
 // ============================================================
 
 import * as React from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { Plus, BookOpen, ScrollText, BarChart3, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,12 +28,6 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/atoms/page-header';
 import ExportButton from '@/components/molecules/export-button';
@@ -43,24 +40,44 @@ import BalanceSheet from '@/components/accounting/balance-sheet';
 import SimplifiedChartOfAccounts from '@/components/accounting/simplified-chart-of-accounts';
 import SimplifiedAccountingSummary from '@/components/accounting/simplified-accounting-summary';
 import { useAccountingMode } from '@/hooks/use-accounting-mode';
-import {
-  chartOfAccounts,
-  type Account,
-  type AccountType,
-} from '@/lib/accounting/sample-data';
 import { slideUp } from '@/lib/animations';
+import { apiSubmit } from '@/lib/api-client';
+
+// ── API Account type ─────────────────────────────────────
+interface ApiAccount {
+  id: number;
+  code: string;
+  name: string;
+  accountType: string;
+  parentId: number | null;
+  openingBalance: number;
+  currentBalance: number;
+  description?: string | null;
+  isActive: boolean;
+  parent?: { id: number; code: string; name: string } | null;
+  children?: { id: number; code: string; name: string; accountType: string }[];
+}
+
+type AccountType = 'Asset' | 'Liability' | 'Income' | 'Expense' | 'Equity';
+
+const mapAccountType = (type: string): AccountType => {
+  const t = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+  if (t === 'Asset' || t === 'Liability' || t === 'Income' || t === 'Expense' || t === 'Equity') return t as AccountType;
+  return 'Asset';
+};
 
 export default function ChartOfAccountsPage() {
   const t = useTranslations('accounting');
   const { isSimplified, loading } = useAccountingMode();
+  const queryClient = useQueryClient();
 
   const [accountDialogOpen, setAccountDialogOpen] = React.useState(false);
   const [selectedAccountType, setSelectedAccountType] = React.useState<AccountType | undefined>();
-  const [selectedAccount, setSelectedAccount] = React.useState<Account | null>(null);
+  const [selectedAccount, setSelectedAccount] = React.useState<ApiAccount | null>(null);
   const [ledgerDialogOpen, setLedgerDialogOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('chart');
 
-  const handleViewLedger = (account: Account) => {
+  const handleViewLedger = (account: ApiAccount) => {
     setSelectedAccount(account);
     setLedgerDialogOpen(true);
   };
@@ -70,9 +87,22 @@ export default function ChartOfAccountsPage() {
     setAccountDialogOpen(true);
   };
 
-  const handleAccountSubmit = (values: Record<string, unknown>) => {
-    console.log('Account created:', values);
-    setAccountDialogOpen(false);
+  const handleAccountSubmit = async (values: Record<string, unknown>) => {
+    try {
+      await apiSubmit('/api/accounts', 'POST', {
+        code: values.code,
+        name: values.name,
+        accountType: values.accountType || values.type,
+        parentId: values.parentId || null,
+        openingBalance: values.openingBalance || 0,
+        description: values.description || null,
+      });
+      toast.success('Account created successfully');
+      setAccountDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['chart-of-accounts'] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create account');
+    }
   };
 
   if (loading) {
@@ -208,32 +238,32 @@ export default function ChartOfAccountsPage() {
         </TabsContent>
 
         <TabsContent value="reports" className="mt-4">
-          <Accordion type="single" collapsible defaultValue="trial-balance" className="space-y-3">
-            <AccordionItem value="trial-balance" className="border border-border rounded-lg overflow-hidden">
-              <AccordionTrigger className="px-4 py-3 hover:bg-muted/30">
+          <div className="space-y-3">
+            <div className="border border-border rounded-lg overflow-hidden">
+              <div className="px-4 py-3 bg-muted/30">
                 <span className="font-semibold text-sm">{t('trialBalance')}</span>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
+              </div>
+              <div className="px-4 pb-4">
                 <TrialBalance />
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="income-statement" className="border border-border rounded-lg overflow-hidden">
-              <AccordionTrigger className="px-4 py-3 hover:bg-muted/30">
+              </div>
+            </div>
+            <div className="border border-border rounded-lg overflow-hidden">
+              <div className="px-4 py-3 bg-muted/30">
                 <span className="font-semibold text-sm">{t('incomeStatement')}</span>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
+              </div>
+              <div className="px-4 pb-4">
                 <IncomeStatement />
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="balance-sheet" className="border border-border rounded-lg overflow-hidden">
-              <AccordionTrigger className="px-4 py-3 hover:bg-muted/30">
+              </div>
+            </div>
+            <div className="border border-border rounded-lg overflow-hidden">
+              <div className="px-4 py-3 bg-muted/30">
                 <span className="font-semibold text-sm">{t('balanceSheet')}</span>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
+              </div>
+              <div className="px-4 pb-4">
                 <BalanceSheet />
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+              </div>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -259,13 +289,13 @@ export default function ChartOfAccountsPage() {
               {selectedAccount ? `${selectedAccount.code} — ${selectedAccount.name}` : ''}
             </DialogDescription>
           </DialogHeader>
-          {selectedAccount && <LedgerView account={selectedAccount} />}
+          {selectedAccount && <LedgerView account={selectedAccount as never} />}
         </DialogContent>
       </Dialog>
     </motion.div>
   );
 }
 
-function LedViewWrapper({ account }: { account: Account }) {
-  return <LedgerView account={account} />;
+function LedViewWrapper({ account }: { account: ApiAccount }) {
+  return <LedgerView account={account as never} />;
 }

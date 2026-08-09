@@ -2,9 +2,11 @@
 
 // ============================================================
 // Product Management Page — ProductList with add/edit dialog
+// Fully wired to API — no sample data fallbacks
 // ============================================================
 
 import * as React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -13,22 +15,44 @@ import PageHeader from '@/components/atoms/page-header';
 import ExportButton from '@/components/molecules/export-button';
 import ProductList from '@/components/inventory/product-list';
 import ProductForm from '@/components/inventory/product-form';
-import { type Product } from '@/lib/inventory/sample-data';
 import { fadeIn, slideUp, transitions } from '@/lib/animations';
 
+// ── API Product type (matches what ProductList uses) ─────
+interface ApiProduct {
+  id: number;
+  name: string;
+  code: string;
+  description?: string | null;
+  unit?: string | null;
+  purchasePrice: number;
+  salePrice: number;
+  currentStock: number;
+  minStockLevel: number;
+  maxStockLevel?: number | null;
+  hasExpiry?: boolean;
+  isActive: boolean;
+  categoryId: number;
+  category: { id: number; name: string; code: string };
+  createdAt: string;
+}
+
 export default function ProductsPage() {
+  const queryClient = useQueryClient();
   const [addDialogOpen, setAddDialogOpen] = React.useState(false);
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
-  const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = React.useState<ApiProduct | null>(null);
   const [filter, setFilter] = React.useState('all');
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = (product: ApiProduct) => {
     setSelectedProduct(product);
     setEditDialogOpen(true);
   };
 
-  const handleDelete = (_product: Product) => {
-    // In a real app, this would call an API
+  const handleFormSuccess = () => {
+    setAddDialogOpen(false);
+    setEditDialogOpen(false);
+    setSelectedProduct(null);
+    queryClient.invalidateQueries({ queryKey: ['products'] });
   };
 
   const filterTabs = [
@@ -47,7 +71,6 @@ export default function ProductsPage() {
       <PageHeader
         title="Product Management"
         description="Manage inventory products, categories, and stock levels"
-
         actions={
           <div className="flex items-center gap-2">
             <ExportButton />
@@ -88,7 +111,6 @@ export default function ProductsPage() {
         <ProductList
           filter={filter}
           onEdit={handleEdit}
-          onDelete={handleDelete}
         />
       </motion.div>
 
@@ -102,7 +124,7 @@ export default function ProductsPage() {
             </DialogDescription>
           </DialogHeader>
           <ProductForm
-            onSubmit={() => setAddDialogOpen(false)}
+            onSubmit={() => handleFormSuccess()}
             onCancel={() => setAddDialogOpen(false)}
           />
         </DialogContent>
@@ -118,8 +140,20 @@ export default function ProductsPage() {
             </DialogDescription>
           </DialogHeader>
           <ProductForm
-            product={selectedProduct}
-            onSubmit={() => setEditDialogOpen(false)}
+            product={selectedProduct ? {
+              id: String(selectedProduct.id),
+              name: selectedProduct.name,
+              category: (selectedProduct.category?.name || 'Misc') as 'Stationery' | 'Books' | 'Uniform' | 'Food' | 'Cleaning' | 'Furniture' | 'Electronics' | 'Misc',
+              sku: selectedProduct.code,
+              purchasePrice: Number(selectedProduct.purchasePrice),
+              salePrice: Number(selectedProduct.salePrice),
+              currentStock: selectedProduct.currentStock,
+              minStockLevel: selectedProduct.minStockLevel,
+              maxStockLevel: selectedProduct.maxStockLevel || 0,
+              unit: (selectedProduct.unit || 'Piece') as 'Piece' | 'Kg' | 'Liter' | 'Box' | 'Pack' | 'Dozen' | 'Set',
+              description: selectedProduct.description || undefined,
+            } : undefined}
+            onSubmit={() => handleFormSuccess()}
             onCancel={() => setEditDialogOpen(false)}
           />
         </DialogContent>

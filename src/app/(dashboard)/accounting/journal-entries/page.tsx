@@ -5,13 +5,16 @@
 // CR-8: Simplified Accounting Mode
 // Double-entry: Full journal entry table + debit/credit
 // Simplified: Simple income/expense entry form
+// Fully wired to API — no sample data fallbacks
 // ============================================================
 
 import * as React from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import {
-  Plus, Eye, FileText, CheckCircle2, XCircle, Send, Settings2,
+  Plus, FileText, CheckCircle2, XCircle, Send, Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,7 +25,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -57,48 +59,83 @@ import JournalEntryForm from '@/components/accounting/journal-entry-form';
 import SimplifiedJournalEntryForm from '@/components/accounting/simplified-journal-entry-form';
 import SimplifiedAccountingSummary from '@/components/accounting/simplified-accounting-summary';
 import { useAccountingMode } from '@/hooks/use-accounting-mode';
-import {
-  journalEntries,
-  formatTaka,
-  type JournalEntry,
-  type JournalEntryStatus,
-} from '@/lib/accounting/sample-data';
+import { formatTaka } from '@/lib/accounting/sample-data';
+import { apiSubmit } from '@/lib/api-client';
 import { slideUp } from '@/lib/animations';
+
+// ── API Journal Entry type ───────────────────────────────
+interface ApiJournalEntry {
+  id: number;
+  entryNo: string;
+  entryDate: string;
+  narration?: string | null;
+  referenceType?: string | null;
+  referenceId?: number | null;
+  totalDebit: number;
+  totalCredit: number;
+  status: string;
+  journalItems: {
+    id: number;
+    accountId: number;
+    debit: number;
+    credit: number;
+    narration?: string | null;
+    account: { id: number; code: string; name: string; accountType: string };
+  }[];
+  createdAt: string;
+}
 
 export default function JournalEntriesPage() {
   const t = useTranslations('accounting');
   const { isSimplified, loading } = useAccountingMode();
+  const queryClient = useQueryClient();
 
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'draft' | 'posted'>('all');
   const [newEntryDialogOpen, setNewEntryDialogOpen] = React.useState(false);
-  const [viewEntry, setViewEntry] = React.useState<JournalEntry | null>(null);
-  const [editEntry, setEditEntry] = React.useState<JournalEntry | null>(null);
-  const [postEntry, setPostEntry] = React.useState<JournalEntry | null>(null);
+  const [viewEntry, setViewEntry] = React.useState<ApiJournalEntry | null>(null);
+  const [editEntry, setEditEntry] = React.useState<ApiJournalEntry | null>(null);
+  const [postEntry, setPostEntry] = React.useState<ApiJournalEntry | null>(null);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  const handleView = (entry: JournalEntry) => setViewEntry(entry);
-  const handleEdit = (entry: JournalEntry) => setEditEntry(entry);
-  const handlePost = (entry: JournalEntry) => setPostEntry(entry);
+  const handleView = (entry: ApiJournalEntry) => setViewEntry(entry);
+  const handleEdit = (entry: ApiJournalEntry) => setEditEntry(entry);
+  const handlePost = (entry: ApiJournalEntry) => setPostEntry(entry);
 
-  const handleSaveDraft = (values: Record<string, unknown>) => {
-    console.log('Save as draft:', values);
+  // ── Post journal entry mutation ─────────────────────────
+  const postMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiSubmit(`/api/journal-entries/${id}`, 'PUT', { status: 'posted' });
+    },
+    onSuccess: () => {
+      toast.success('Journal entry posted successfully');
+      queryClient.invalidateQueries({ queryKey: ['journal-entries'] });
+      setPostEntry(null);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to post journal entry');
+    },
+  });
+
+  const handleSaveDraft = () => {
     setNewEntryDialogOpen(false);
     setEditEntry(null);
+    queryClient.invalidateQueries({ queryKey: ['journal-entries'] });
   };
 
-  const handlePostEntry = (values: Record<string, unknown>) => {
-    console.log('Post entry:', values);
+  const handlePostEntry = () => {
     setNewEntryDialogOpen(false);
     setEditEntry(null);
+    queryClient.invalidateQueries({ queryKey: ['journal-entries'] });
   };
 
   const confirmPost = () => {
-    console.log('Confirmed post:', postEntry?.entryNo);
-    setPostEntry(null);
+    if (postEntry) {
+      postMutation.mutate(postEntry.id);
+    }
   };
 
   if (loading) {
@@ -147,7 +184,10 @@ export default function JournalEntriesPage() {
               <DialogDescription>{t('newSimplifiedEntryDescription')}</DialogDescription>
             </DialogHeader>
             <SimplifiedJournalEntryForm
-              onSave={() => setNewEntryDialogOpen(false)}
+              onSave={() => {
+                setNewEntryDialogOpen(false);
+                queryClient.invalidateQueries({ queryKey: ['journal-entries'] });
+              }}
               onCancel={() => setNewEntryDialogOpen(false)}
             />
           </DialogContent>
@@ -211,9 +251,9 @@ export default function JournalEntriesPage() {
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('editJournalEntry')}</DialogTitle>
-            <DialogDescription>{editEntry?.entryNo} — {editEntry?.description}</DialogDescription>
+            <DialogDescription>{editEntry?.entryNo} — {editEntry?.narration}</DialogDescription>
           </DialogHeader>
-          <JournalEntryForm defaultValues={editEntry ?? undefined} isEditing onSaveDraft={handleSaveDraft} onPostEntry={handlePostEntry} onCancel={() => setEditEntry(null)} />
+          <JournalEntryForm isEditing onSaveDraft={handleSaveDraft} onPostEntry={handlePostEntry} onCancel={() => setEditEntry(null)} />
         </DialogContent>
       </Dialog>
 
@@ -224,14 +264,14 @@ export default function JournalEntriesPage() {
               <FileText className="h-5 w-5" />
               <span className="font-mono">{viewEntry?.entryNo}</span>
             </DialogTitle>
-            <DialogDescription>{viewEntry?.description}</DialogDescription>
+            <DialogDescription>{viewEntry?.narration}</DialogDescription>
           </DialogHeader>
           {viewEntry && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">{t('date')}:</span>{' '}
-                  <span className="font-medium">{formatDate(viewEntry.date)}</span>
+                  <span className="font-medium">{formatDate(viewEntry.entryDate)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">{t('status')}:</span>{' '}
@@ -239,10 +279,10 @@ export default function JournalEntriesPage() {
                     {viewEntry.status === 'posted' ? t('posted') : t('draft')}
                   </Badge>
                 </div>
-                {viewEntry.reference && (
+                {viewEntry.referenceType && (
                   <div>
                     <span className="text-muted-foreground">{t('reference')}:</span>{' '}
-                    <span className="font-mono text-xs">{viewEntry.reference}</span>
+                    <span className="font-mono text-xs">{viewEntry.referenceType}#{viewEntry.referenceId}</span>
                   </div>
                 )}
               </div>
@@ -258,12 +298,12 @@ export default function JournalEntriesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {viewEntry.lineItems.map((line, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell className="font-mono text-xs">{line.accountCode}</TableCell>
-                        <TableCell className="text-xs">{line.accountName}</TableCell>
-                        <TableCell className="text-right font-mono text-xs">{line.debit > 0 ? formatTaka(line.debit) : '—'}</TableCell>
-                        <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400">{line.credit > 0 ? formatTaka(line.credit) : '—'}</TableCell>
+                    {viewEntry.journalItems.map((line) => (
+                      <TableRow key={line.id}>
+                        <TableCell className="font-mono text-xs">{line.account?.code}</TableCell>
+                        <TableCell className="text-xs">{line.account?.name}</TableCell>
+                        <TableCell className="text-right font-mono text-xs">{Number(line.debit) > 0 ? formatTaka(Number(line.debit)) : '—'}</TableCell>
+                        <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400">{Number(line.credit) > 0 ? formatTaka(Number(line.credit)) : '—'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -271,9 +311,9 @@ export default function JournalEntriesPage() {
               </div>
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
                 {(() => {
-                  const totalD = viewEntry.lineItems.reduce((s, l) => s + l.debit, 0);
-                  const totalC = viewEntry.lineItems.reduce((s, l) => s + l.credit, 0);
-                  const balanced = totalD === totalC;
+                  const totalD = Number(viewEntry.totalDebit);
+                  const totalC = Number(viewEntry.totalCredit);
+                  const balanced = Math.abs(totalD - totalC) < 0.01;
                   return (
                     <>
                       <div className="flex items-center gap-4">

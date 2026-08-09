@@ -1442,3 +1442,36 @@ Stage Summary:
 - Stage 4 progress: 55% → 70%
 - Frontend→API gap reduced from 🔴 CRITICAL (8 pages) to 🟡 HIGH (4 pages)
 - Next: Session 2.3 — Inventory + Accounting Pages
+
+---
+Task ID: 2.3
+Agent: Main
+Task: Session 2.3: Inventory + Accounting Pages — Wire products, purchases, stock, journal-entries, chart-of-accounts pages to real API data
+
+Work Log:
+- Explored all 6 inventory/accounting page files and their sub-components
+- Read all corresponding API routes (products, purchases, stock-movements, accounts, journal-entries)
+- Read the existing api-client.ts and the pattern from Session 2.1 (students page)
+- Wired product-list.tsx: Replaced sampleProducts with useQuery('/api/products'); added delete mutation via useMutation+apiDelete; error state with AlertCircle+RefreshCw retry; loading via DataTable isLoading; empty state
+- Wired products/page.tsx: Removed sample Product type import; uses API-wired ProductList; query invalidation on form success
+- Wired purchase-order-list.tsx: Replaced samplePurchaseOrders with useQuery('/api/purchases'); status filter via API query param; error+retry state; loading via DataTable isLoading; empty state
+- Wired purchases/page.tsx: Removed sample PurchaseOrder type; uses API-wired PurchaseOrderList; view detail dialog renders API data
+- Wired stock-dashboard.tsx: Replaced sampleProducts with useQuery('/api/products'); computed summary stats from API data (totalStockValue, lowStock, outOfStock); chart from API data; loading skeleton cards; error+retry state
+- Wired stock-movement-log.tsx: Replaced sampleStockMovements with useQuery('/api/stock-movements'); movementType filter via API; loading skeleton; empty state; error+retry state
+- Wired stock/page.tsx: Sub-components now API-driven (no changes needed to page itself)
+- Wired journal-entry-list.tsx: Replaced journalEntries sample data with useQuery('/api/journal-entries'); status filter via API; isLoading on DataTable; error+retry; empty state
+- Wired journal-entries/page.tsx: Removed journalEntries import; uses API-wired JournalEntryList; added post mutation via apiSubmit; view entry dialog renders API data; query invalidation
+- Wired chart-of-accounts-tree.tsx: Replaced chartOfAccounts sample data with useQuery('/api/accounts'); parent/child hierarchy computed from API; staleTime 10min; loading skeleton; error+retry; empty state
+- Wired chart-of-accounts/page.tsx: Removed chartOfAccounts import; uses API-wired ChartOfAccountsTree; create account via apiSubmit; query invalidation
+- Ran lint: 0 errors, 14 pre-existing warnings (all React Compiler + React Hook Form watch())
+- Updated PRODUCTION_ROADMAP.md: Session 2.3 marked ✅ DONE, Stage 4 at 80%, 23/27 pages now API-wired
+
+Stage Summary:
+- 5 pages + 6 sub-components fully wired to real API data
+- 0 sample data imports remain in inventory/accounting modules
+- All pages have: loading states, error states with retry, empty states
+- All list components use useQuery from @tanstack/react-query
+- Delete/post mutations use useMutation with query invalidation
+- Supporting data cached with staleTime where appropriate
+- Lint: 0 errors, 14 pre-existing warnings
+- Next: Session 2.4 (System + CMS Pages + Dashboard charts)

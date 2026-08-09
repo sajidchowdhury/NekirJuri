@@ -2,13 +2,15 @@
 
 // ============================================================
 // JournalEntryList — DataTable of journal entries
+// Fully wired to API — no sample data fallbacks
 // Entry #, Date, Description, Debit, Credit, Balanced indicator,
 // Status badge, Actions
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ColumnDef } from '@tanstack/react-table';
-import { CheckCircle2, XCircle, Eye, Edit3, Send, MoreHorizontal } from 'lucide-react';
+import { CheckCircle2, XCircle, Eye, Edit3, Send, MoreHorizontal, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,22 +21,39 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DataTable } from '@/components/organisms/data-table';
-import {
-  journalEntries,
-  formatTaka,
-  type JournalEntry,
-  type JournalEntryStatus,
-} from '@/lib/accounting/sample-data';
+import { formatTaka } from '@/lib/accounting/sample-data';
+
+// ── API Journal Entry type ───────────────────────────────
+interface ApiJournalEntry {
+  id: number;
+  entryNo: string;
+  entryDate: string;
+  narration?: string | null;
+  referenceType?: string | null;
+  referenceId?: number | null;
+  totalDebit: number;
+  totalCredit: number;
+  status: string;
+  journalItems: {
+    id: number;
+    accountId: number;
+    debit: number;
+    credit: number;
+    narration?: string | null;
+    account: { id: number; code: string; name: string; accountType: string };
+  }[];
+  createdAt: string;
+}
 
 export interface JournalEntryListProps {
   /** Filter by status */
   statusFilter?: 'all' | 'draft' | 'posted';
   /** View entry callback */
-  onView?: (entry: JournalEntry) => void;
+  onView?: (entry: ApiJournalEntry) => void;
   /** Edit entry callback (only draft entries) */
-  onEdit?: (entry: JournalEntry) => void;
+  onEdit?: (entry: ApiJournalEntry) => void;
   /** Post entry callback (only draft entries) */
-  onPost?: (entry: JournalEntry) => void;
+  onPost?: (entry: ApiJournalEntry) => void;
   /** Additional CSS classes */
   className?: string;
 }
@@ -46,11 +65,25 @@ export default function JournalEntryList({
   onPost,
   className,
 }: JournalEntryListProps) {
-  // Filter data
-  const filteredData = React.useMemo(() => {
-    if (statusFilter === 'all') return journalEntries;
-    return journalEntries.filter((e) => e.status === statusFilter);
-  }, [statusFilter]);
+  // ── Fetch journal entries from API ──────────────────────
+  const {
+    data: entriesResponse,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['journal-entries', statusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set('limit', '100');
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      const res = await fetch(`/api/journal-entries?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch journal entries');
+      return res.json();
+    },
+  });
+
+  const entries: ApiJournalEntry[] = entriesResponse?.data || [];
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -61,7 +94,7 @@ export default function JournalEntryList({
     });
   };
 
-  const columns: ColumnDef<JournalEntry, unknown>[] = [
+  const columns: ColumnDef<ApiJournalEntry, unknown>[] = [
     {
       accessorKey: 'entryNo',
       header: 'Entry #',
@@ -70,46 +103,42 @@ export default function JournalEntryList({
       ),
     },
     {
-      accessorKey: 'date',
+      accessorKey: 'entryDate',
       header: 'Date',
       cell: ({ row }) => (
-        <span className="text-xs">{formatDate(row.original.date)}</span>
+        <span className="text-xs">{formatDate(row.original.entryDate)}</span>
       ),
     },
     {
-      accessorKey: 'description',
+      accessorKey: 'narration',
       header: 'Description',
       cell: ({ row }) => (
-        <span className="text-xs truncate max-w-[200px] block">{row.original.description}</span>
+        <span className="text-xs truncate max-w-[200px] block">{row.original.narration || '—'}</span>
       ),
     },
     {
       id: 'totalDebit',
       header: 'Total Debit',
-      cell: ({ row }) => {
-        const total = row.original.lineItems.reduce((s, l) => s + l.debit, 0);
-        return <span className="text-xs font-mono">{formatTaka(total)}</span>;
-      },
+      cell: ({ row }) => (
+        <span className="text-xs font-mono">{formatTaka(Number(row.original.totalDebit))}</span>
+      ),
     },
     {
       id: 'totalCredit',
       header: 'Total Credit',
-      cell: ({ row }) => {
-        const total = row.original.lineItems.reduce((s, l) => s + l.credit, 0);
-        return (
-          <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400">
-            {formatTaka(total)}
-          </span>
-        );
-      },
+      cell: ({ row }) => (
+        <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400">
+          {formatTaka(Number(row.original.totalCredit))}
+        </span>
+      ),
     },
     {
       id: 'balanced',
       header: 'Balanced',
       cell: ({ row }) => {
-        const totalD = row.original.lineItems.reduce((s, l) => s + l.debit, 0);
-        const totalC = row.original.lineItems.reduce((s, l) => s + l.credit, 0);
-        const isBalanced = totalD === totalC;
+        const totalD = Number(row.original.totalDebit);
+        const totalC = Number(row.original.totalCredit);
+        const isBalanced = Math.abs(totalD - totalC) < 0.01;
         return isBalanced ? (
           <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
             <CheckCircle2 className="h-3.5 w-3.5" /> ✓
@@ -175,10 +204,10 @@ export default function JournalEntryList({
   ];
 
   // Mobile card renderer
-  const renderCard = (entry: JournalEntry) => {
-    const totalD = entry.lineItems.reduce((s, l) => s + l.debit, 0);
-    const totalC = entry.lineItems.reduce((s, l) => s + l.credit, 0);
-    const isBalanced = totalD === totalC;
+  const renderCard = (entry: ApiJournalEntry) => {
+    const totalD = Number(entry.totalDebit);
+    const totalC = Number(entry.totalCredit);
+    const isBalanced = Math.abs(totalD - totalC) < 0.01;
 
     return (
       <div className="space-y-2">
@@ -196,9 +225,9 @@ export default function JournalEntryList({
             {entry.status === 'posted' ? 'Posted' : 'Draft'}
           </Badge>
         </div>
-        <p className="text-sm font-medium">{entry.description}</p>
+        <p className="text-sm font-medium">{entry.narration || '—'}</p>
         <div className="flex items-center justify-between text-xs">
-          <span>{formatDate(entry.date)}</span>
+          <span>{formatDate(entry.entryDate)}</span>
           <span className="font-mono">
             Dr: {formatTaka(totalD)} / Cr:{' '}
             <span className="text-emerald-600 dark:text-emerald-400">{formatTaka(totalC)}</span>
@@ -218,10 +247,24 @@ export default function JournalEntryList({
     );
   };
 
+  // ── Error state ────────────────────────────────────────
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+        <AlertCircle className="h-12 w-12 text-rose-500" />
+        <h3 className="text-lg font-semibold">Failed to load journal entries</h3>
+        <p className="text-sm text-muted-foreground max-w-md">There was an error fetching journal entry data. Please try again.</p>
+        <Button variant="outline" className="gap-2" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4" /> Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <DataTable
       columns={columns}
-      data={filteredData}
+      data={entries}
       searchable
       searchPlaceholder="Search entries..."
       sortable
@@ -229,6 +272,9 @@ export default function JournalEntryList({
       pageSize={10}
       className={className}
       renderCard={renderCard}
+      isLoading={isLoading}
+      emptyMessage="No journal entries found"
+      emptyDescription="Create your first journal entry to get started."
     />
   );
 }

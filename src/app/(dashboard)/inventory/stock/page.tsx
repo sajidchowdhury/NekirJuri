@@ -2,6 +2,7 @@
 
 // ============================================================
 // Stock Dashboard & Movement Log Page — Two tabs
+// Fully wired to API — no sample data fallbacks
 // ============================================================
 
 import * as React from 'react';
@@ -25,7 +26,6 @@ export default function StockPage() {
       <PageHeader
         title="Stock Management"
         description="Monitor stock levels, movements, and inventory status"
-
         actions={
           <div className="flex items-center gap-2">
             <ExportButton />
