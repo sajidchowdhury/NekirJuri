@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, unauthorized, paginated, getPaginationParams, getTenantId, getUserId } from '@/lib/api-utils'
 import { createAuditLog } from '@/lib/audit'
+import { teacherCreateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/teachers — List teachers with pagination, search, and status filter */
 export async function GET(request: NextRequest) {
@@ -64,40 +65,39 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.employeeIdNo) return error('employeeIdNo is required')
-    if (!body.name) return error('name is required')
-    if (!body.phone) return error('phone is required')
+    // Validate with Zod
+    const parsed = teacherCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
 
     // Check duplicate employeeIdNo within tenant
     const existing = await db.teacher.findFirst({
-      where: { tenantId, employeeIdNo: body.employeeIdNo, deletedAt: null },
+      where: { tenantId, employeeIdNo: parsed.data.employeeIdNo, deletedAt: null },
     })
     if (existing) return error('Teacher with this employeeIdNo already exists')
 
     const teacher = await db.teacher.create({
       data: {
         tenantId,
-        employeeIdNo: body.employeeIdNo,
-        name: body.name,
-        nameBn: body.nameBn || null,
-        fatherName: body.fatherName || null,
-        motherName: body.motherName || null,
-        dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : null,
-        gender: body.gender || null,
-        bloodGroup: body.bloodGroup || null,
-        nationality: body.nationality || null,
-        religion: body.religion || null,
-        photoUrl: body.photoUrl || null,
-        phone: body.phone,
-        email: body.email || null,
-        address: body.address || null,
-        city: body.city || null,
-        qualification: body.qualification || null,
-        specialization: body.specialization || null,
-        joiningDate: body.joiningDate ? new Date(body.joiningDate) : null,
-        leavingDate: body.leavingDate ? new Date(body.leavingDate) : null,
-        status: body.status || 'active',
+        employeeIdNo: parsed.data.employeeIdNo,
+        name: parsed.data.name,
+        nameBn: parsed.data.nameBn || null,
+        fatherName: parsed.data.fatherName || null,
+        motherName: parsed.data.motherName || null,
+        dateOfBirth: parsed.data.dateOfBirth ? new Date(parsed.data.dateOfBirth) : null,
+        gender: parsed.data.gender || null,
+        bloodGroup: parsed.data.bloodGroup || null,
+        nationality: parsed.data.nationality || null,
+        religion: parsed.data.religion || null,
+        photoUrl: parsed.data.photoUrl || null,
+        phone: parsed.data.phone,
+        email: parsed.data.email || null,
+        address: parsed.data.address || null,
+        city: parsed.data.city || null,
+        qualification: parsed.data.qualification || null,
+        specialization: parsed.data.specialization || null,
+        joiningDate: parsed.data.joiningDate ? new Date(parsed.data.joiningDate) : null,
+        leavingDate: parsed.data.leavingDate ? new Date(parsed.data.leavingDate) : null,
+        status: parsed.data.status || 'active',
         createdBy: userId,
       },
     })

@@ -15,6 +15,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { classCreateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/classes — List classes for tenant with search & filters */
 export async function GET(request: NextRequest) {
@@ -85,22 +86,20 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.name) return error('Name is required')
-    if (!body.code) return error('Code is required')
-    if (!body.orderSequence) return error('Order sequence is required')
-    if (!body.academicSessionId) return error('Academic session ID is required')
+    // Validate with Zod
+    const parsed = classCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
 
     // Verify academic session belongs to tenant
     const session = await db.academicSession.findFirst({
-      where: { id: Number(body.academicSessionId), tenantId },
+      where: { id: parsed.data.academicSessionId, tenantId },
     })
     if (!session) return error('Academic session not found or does not belong to this tenant')
 
     // Verify teacher belongs to tenant if provided
-    if (body.teacherId) {
+    if (parsed.data.teacherId) {
       const teacher = await db.teacher.findFirst({
-        where: { id: Number(body.teacherId), tenantId, deletedAt: null },
+        where: { id: parsed.data.teacherId, tenantId, deletedAt: null },
       })
       if (!teacher) return error('Teacher not found or does not belong to this tenant')
     }
@@ -109,8 +108,8 @@ export async function POST(request: NextRequest) {
     const existing = await db.class.findFirst({
       where: {
         tenantId,
-        code: body.code,
-        academicSessionId: Number(body.academicSessionId),
+        code: parsed.data.code,
+        academicSessionId: parsed.data.academicSessionId,
       },
     })
     if (existing) return error('Class with this code already exists in this academic session')
@@ -118,14 +117,14 @@ export async function POST(request: NextRequest) {
     const data = await db.class.create({
       data: {
         tenantId,
-        name: body.name,
-        code: body.code,
-        orderSequence: Number(body.orderSequence),
-        academicSessionId: Number(body.academicSessionId),
-        teacherId: body.teacherId ? Number(body.teacherId) : null,
-        capacity: body.capacity ? Number(body.capacity) : null,
-        description: body.description || null,
-        status: body.status || 'active',
+        name: parsed.data.name,
+        code: parsed.data.code,
+        orderSequence: parsed.data.orderSequence,
+        academicSessionId: parsed.data.academicSessionId,
+        teacherId: parsed.data.teacherId ?? null,
+        capacity: parsed.data.capacity ?? null,
+        description: parsed.data.description || null,
+        status: parsed.data.status || 'active',
       },
     })
 

@@ -13,6 +13,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { classUpdateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/classes/[id] — Get single class */
 export async function GET(
@@ -72,18 +73,22 @@ export async function PUT(
 
     const body = await request.json()
 
+    // Validate with Zod
+    const parsed = classUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     // Verify teacher belongs to tenant if changing
-    if (body.teacherId) {
+    if (parsed.data.teacherId) {
       const teacher = await db.teacher.findFirst({
-        where: { id: Number(body.teacherId), tenantId, deletedAt: null },
+        where: { id: parsed.data.teacherId, tenantId, deletedAt: null },
       })
       if (!teacher) return error('Teacher not found or does not belong to this tenant')
     }
 
     // Check unique code+session if changing code or academicSessionId
-    const newCode = body.code || existing.code
-    const newSessionId = body.academicSessionId ? Number(body.academicSessionId) : existing.academicSessionId
-    if ((body.code && body.code !== existing.code) || (body.academicSessionId && Number(body.academicSessionId) !== existing.academicSessionId)) {
+    const newCode = parsed.data.code || existing.code
+    const newSessionId = parsed.data.academicSessionId || existing.academicSessionId
+    if ((parsed.data.code && parsed.data.code !== existing.code) || (parsed.data.academicSessionId && parsed.data.academicSessionId !== existing.academicSessionId)) {
       const codeExists = await db.class.findFirst({
         where: {
           tenantId,
@@ -96,9 +101,9 @@ export async function PUT(
     }
 
     // Verify academic session belongs to tenant if changing
-    if (body.academicSessionId) {
+    if (parsed.data.academicSessionId) {
       const session = await db.academicSession.findFirst({
-        where: { id: Number(body.academicSessionId), tenantId },
+        where: { id: parsed.data.academicSessionId, tenantId },
       })
       if (!session) return error('Academic session not found or does not belong to this tenant')
     }
@@ -106,14 +111,14 @@ export async function PUT(
     const data = await db.class.update({
       where: { id: classId },
       data: {
-        ...(body.name && { name: body.name }),
-        ...(body.code && { code: body.code }),
-        ...(body.orderSequence && { orderSequence: Number(body.orderSequence) }),
-        ...(body.academicSessionId && { academicSessionId: Number(body.academicSessionId) }),
-        ...(body.teacherId !== undefined && { teacherId: body.teacherId ? Number(body.teacherId) : null }),
-        ...(body.capacity !== undefined && { capacity: body.capacity ? Number(body.capacity) : null }),
-        ...(body.description !== undefined && { description: body.description }),
-        ...(body.status && { status: body.status }),
+        ...(parsed.data.name && { name: parsed.data.name }),
+        ...(parsed.data.code && { code: parsed.data.code }),
+        ...(parsed.data.orderSequence !== undefined && { orderSequence: parsed.data.orderSequence }),
+        ...(parsed.data.academicSessionId && { academicSessionId: parsed.data.academicSessionId }),
+        ...(parsed.data.teacherId !== undefined && { teacherId: parsed.data.teacherId ?? null }),
+        ...(parsed.data.capacity !== undefined && { capacity: parsed.data.capacity ?? null }),
+        ...(parsed.data.description !== undefined && { description: parsed.data.description }),
+        ...(parsed.data.status && { status: parsed.data.status }),
       },
     })
 

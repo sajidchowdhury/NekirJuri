@@ -15,6 +15,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { sectionCreateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/sections — List sections for tenant, filter by classId */
 export async function GET(request: NextRequest) {
@@ -89,20 +90,20 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.classId) return error('Class ID is required')
-    if (!body.name) return error('Name is required')
+    // Validate with Zod
+    const parsed = sectionCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
 
     // Verify class belongs to tenant
     const cls = await db.class.findFirst({
-      where: { id: Number(body.classId), tenantId },
+      where: { id: parsed.data.classId, tenantId },
     })
     if (!cls) return error('Class not found or does not belong to this tenant')
 
     // Verify teacher belongs to tenant if provided
-    if (body.teacherId) {
+    if (parsed.data.teacherId) {
       const teacher = await db.teacher.findFirst({
-        where: { id: Number(body.teacherId), tenantId, deletedAt: null },
+        where: { id: parsed.data.teacherId, tenantId, deletedAt: null },
       })
       if (!teacher) return error('Teacher not found or does not belong to this tenant')
     }
@@ -111,8 +112,8 @@ export async function POST(request: NextRequest) {
     const existing = await db.section.findFirst({
       where: {
         tenantId,
-        classId: Number(body.classId),
-        name: body.name,
+        classId: parsed.data.classId,
+        name: parsed.data.name,
       },
     })
     if (existing) return error('Section with this name already exists in this class')
@@ -120,11 +121,11 @@ export async function POST(request: NextRequest) {
     const data = await db.section.create({
       data: {
         tenantId,
-        classId: Number(body.classId),
-        name: body.name,
-        teacherId: body.teacherId ? Number(body.teacherId) : null,
-        capacity: body.capacity ? Number(body.capacity) : null,
-        status: body.status || 'active',
+        classId: parsed.data.classId,
+        name: parsed.data.name,
+        teacherId: parsed.data.teacherId ?? null,
+        capacity: parsed.data.capacity ?? null,
+        status: parsed.data.status || 'active',
       },
     })
 

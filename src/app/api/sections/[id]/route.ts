@@ -13,6 +13,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { sectionUpdateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/sections/[id] — Get single section */
 export async function GET(
@@ -73,26 +74,30 @@ export async function PUT(
 
     const body = await request.json()
 
+    // Validate with Zod
+    const parsed = sectionUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     // Verify class belongs to tenant if changing
-    if (body.classId) {
+    if (parsed.data.classId) {
       const cls = await db.class.findFirst({
-        where: { id: Number(body.classId), tenantId },
+        where: { id: parsed.data.classId, tenantId },
       })
       if (!cls) return error('Class not found or does not belong to this tenant')
     }
 
     // Verify teacher belongs to tenant if changing
-    if (body.teacherId) {
+    if (parsed.data.teacherId) {
       const teacher = await db.teacher.findFirst({
-        where: { id: Number(body.teacherId), tenantId, deletedAt: null },
+        where: { id: parsed.data.teacherId, tenantId, deletedAt: null },
       })
       if (!teacher) return error('Teacher not found or does not belong to this tenant')
     }
 
     // Check unique (tenantId + classId + name) if name or classId is changing
-    const newName = body.name || existing.name
-    const newClassId = body.classId ? Number(body.classId) : existing.classId
-    if ((body.name && body.name !== existing.name) || (body.classId && Number(body.classId) !== existing.classId)) {
+    const newName = parsed.data.name || existing.name
+    const newClassId = parsed.data.classId || existing.classId
+    if ((parsed.data.name && parsed.data.name !== existing.name) || (parsed.data.classId && parsed.data.classId !== existing.classId)) {
       const nameExists = await db.section.findFirst({
         where: {
           tenantId,
@@ -107,11 +112,11 @@ export async function PUT(
     const data = await db.section.update({
       where: { id: sectionId },
       data: {
-        ...(body.classId && { classId: Number(body.classId) }),
-        ...(body.name && { name: body.name }),
-        ...(body.teacherId !== undefined && { teacherId: body.teacherId ? Number(body.teacherId) : null }),
-        ...(body.capacity !== undefined && { capacity: body.capacity ? Number(body.capacity) : null }),
-        ...(body.status && { status: body.status }),
+        ...(parsed.data.classId && { classId: parsed.data.classId }),
+        ...(parsed.data.name && { name: parsed.data.name }),
+        ...(parsed.data.teacherId !== undefined && { teacherId: parsed.data.teacherId ?? null }),
+        ...(parsed.data.capacity !== undefined && { capacity: parsed.data.capacity ?? null }),
+        ...(parsed.data.status && { status: parsed.data.status }),
       },
     })
 

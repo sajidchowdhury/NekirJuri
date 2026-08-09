@@ -15,6 +15,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { academicSessionCreateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/academic-sessions — List academic sessions for tenant */
 export async function GET(request: NextRequest) {
@@ -74,26 +75,25 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.name) return error('Name is required')
-    if (!body.startDate) return error('Start date is required')
-    if (!body.endDate) return error('End date is required')
+    // Validate with Zod
+    const parsed = academicSessionCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
 
     // Check date order
-    if (new Date(body.startDate) >= new Date(body.endDate)) {
+    if (new Date(parsed.data.startDate) >= new Date(parsed.data.endDate)) {
       return error('Start date must be before end date')
     }
 
     // Check unique name within tenant
     const existing = await db.academicSession.findFirst({
-      where: { tenantId, name: body.name },
+      where: { tenantId, name: parsed.data.name },
     })
     if (existing) {
       return error('Academic session with this name already exists')
     }
 
     // If setting as current, unset others
-    if (body.isCurrent) {
+    if (parsed.data.isCurrent) {
       await db.academicSession.updateMany({
         where: { tenantId, isCurrent: true },
         data: { isCurrent: false },
@@ -103,11 +103,11 @@ export async function POST(request: NextRequest) {
     const data = await db.academicSession.create({
       data: {
         tenantId,
-        name: body.name,
-        startDate: new Date(body.startDate),
-        endDate: new Date(body.endDate),
-        isCurrent: body.isCurrent || false,
-        status: body.status || 'upcoming',
+        name: parsed.data.name,
+        startDate: new Date(parsed.data.startDate),
+        endDate: new Date(parsed.data.endDate),
+        isCurrent: parsed.data.isCurrent || false,
+        status: parsed.data.status || 'upcoming',
       },
     })
 

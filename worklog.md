@@ -1166,3 +1166,76 @@ Stage Summary:
 - Prisma mock strategy: Global mock in setup.ts with per-test vi.clearAllMocks()
 - Key insight: subscription.ts is 100% pure functions — highest test ROI
 - Commands: `bun run test`, `bun run test:watch`, `bun run test:coverage`
+
+---
+Task ID: 4
+Agent: Zod Validation Agent
+Task: Wire Zod validation schemas into remaining 6 core entity API routes (teachers, employees, guardians, classes, sections, academic-sessions)
+
+Work Log:
+- Added `teacherCreateSchema` to POST /api/teachers — replaced manual `if (!body.field)` checks with `teacherCreateSchema.safeParse(body)`, replaced all `body.*` with `parsed.data.*` in Prisma create call
+- Added `teacherUpdateSchema` to PUT /api/teachers/[id] — added Zod validation after `request.json()`, replaced `body.*` with `parsed.data.*` in fieldMap loop and date field handling
+- Added `employeeCreateSchema` to POST /api/employees — same pattern as teachers
+- Added `employeeUpdateSchema` to PUT /api/employees/[id] — same pattern as teachers
+- Added `guardianCreateSchema` to POST /api/guardians — replaced manual required-field checks with Zod, replaced `body.*` with `parsed.data.*`
+- Added `guardianUpdateSchema` to PUT /api/guardians/[id] — added Zod validation, replaced `body[field]` with `parsed.data[field as keyof typeof parsed.data]` in updatableFields loop
+- Added `classCreateSchema` to POST /api/classes — replaced manual required-field checks, replaced `Number(body.*)` with `parsed.data.*` (schemas already enforce int types), updated FK validation and duplicate checks
+- Added `classUpdateSchema` to PUT /api/classes/[id] — added Zod validation, replaced all `body.*` references including teacher FK check, code+session uniqueness check, academic session FK check, and update data object
+- Added `sectionCreateSchema` to POST /api/sections — replaced manual required-field checks, updated class FK lookup, teacher FK lookup, duplicate check, and create data
+- Added `sectionUpdateSchema` to PUT /api/sections/[id] — added Zod validation, updated class FK check, teacher FK check, name+classId uniqueness check, and update data object
+- Added `academicSessionCreateSchema` to POST /api/academic-sessions — replaced manual required-field checks, updated date order check, name uniqueness check, isCurrent logic, and create data
+- Added `academicSessionUpdateSchema` to PUT /api/academic-sessions/[id] — added Zod validation, updated date order check, name uniqueness check, isCurrent logic, and update data object
+- All imports use `import { <schema>, formatZodError } from '@/lib/validations'` pattern
+- Verified: ESLint passes with 0 errors (14 pre-existing warnings only)
+- Verified: TypeScript compilation — no new errors introduced (pre-existing `params.page/limit` warnings in GET handlers are unrelated)
+- Preserved all existing business logic: duplicate checks, FK validation, audit logging, response format
+
+Files Modified (12):
+1. src/app/api/teachers/route.ts
+2. src/app/api/teachers/[id]/route.ts
+3. src/app/api/employees/route.ts
+4. src/app/api/employees/[id]/route.ts
+5. src/app/api/guardians/route.ts
+6. src/app/api/guardians/[id]/route.ts
+7. src/app/api/classes/route.ts
+8. src/app/api/classes/[id]/route.ts
+9. src/app/api/sections/route.ts
+10. src/app/api/sections/[id]/route.ts
+11. src/app/api/academic-sessions/route.ts
+12. src/app/api/academic-sessions/[id]/route.ts
+
+Stage Summary:
+- 12 API route files updated with Zod validation
+- 6 entity pairs covered: teachers, employees, guardians, classes, sections, academic-sessions
+- All schemas sourced from @/lib/validations (defined in academic.ts, re-exported from index.ts)
+- Pattern: safeParse → formatZodError → parsed.data throughout
+- No changes to Prisma queries, audit logging, or response format
+- Zero new lint errors or TypeScript errors
+---
+Task ID: 1.1
+Agent: Main
+Task: Session 1.1 — Core Entity Validation (Zod schemas + audit logging)
+
+Work Log:
+- Created src/lib/validations/academic.ts — 7 entity Zod schemas (14 total: create + update per entity)
+  - Student: 20+ fields with gender/bloodGroup enums, date validation, guardianIds array
+  - Teacher: 18+ fields with teacher-specific enums (active/inactive/on_leave/resigned)
+  - Employee: 14+ fields with employee-specific enums
+  - Guardian: 11+ fields with relationship enum (Father/Mother/Guardian/etc.)
+  - Class: 7 fields with class-specific enums and orderSequence validation
+  - Section: 5 fields with section-specific enums
+  - AcademicSession: 5 fields with date order validation and status enum
+- Created src/lib/validations/index.ts — Central export + formatZodError() helper
+- Wired Zod validation into 14 route files:
+  - POST routes: studentCreateSchema, teacherCreateSchema, employeeCreateSchema, guardianCreateSchema, classCreateSchema, sectionCreateSchema, academicSessionCreateSchema
+  - PUT routes: studentUpdateSchema, teacherUpdateSchema, employeeUpdateSchema, guardianUpdateSchema, classUpdateSchema, sectionUpdateSchema, academicSessionUpdateSchema
+- Pattern: safeParse() + formatZodError() — returns 400 with field-level error messages
+- Verified all 7 entities have audit logging (students/teachers/employees/guardians use createAuditLog, classes/sections/academic-sessions use db.activityLog.create)
+- Tests: 108/108 passing (6/6 suites)
+- Lint: 0 errors, 14 pre-existing warnings
+
+Stage Summary:
+- 14 API routes now have Zod validation (was 0)
+- 47 mutation routes still need validation (Session 1.2 + 1.3)
+- Validation module pattern established — all future schemas go in src/lib/validations/
+- formatZodError() helper provides structured error messages for API responses

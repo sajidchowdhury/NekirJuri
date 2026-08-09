@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, unauthorized, paginated, getPaginationParams, getTenantId, getUserId } from '@/lib/api-utils'
 import { createAuditLog } from '@/lib/audit'
+import { guardianCreateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/guardians — List guardians with pagination and search */
 export async function GET(request: NextRequest) {
@@ -62,25 +63,24 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.name) return error('name is required')
-    if (!body.relationship) return error('relationship is required')
-    if (!body.phone) return error('phone is required')
+    // Validate with Zod
+    const parsed = guardianCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
 
     const guardian = await db.guardian.create({
       data: {
         tenantId,
-        name: body.name,
-        nameBn: body.nameBn || null,
-        relationship: body.relationship,
-        phone: body.phone,
-        phoneAlt: body.phoneAlt || null,
-        email: body.email || null,
-        occupation: body.occupation || null,
-        address: body.address || null,
-        city: body.city || null,
-        photoUrl: body.photoUrl || null,
-        nidNo: body.nidNo || null,
+        name: parsed.data.name,
+        nameBn: parsed.data.nameBn || null,
+        relationship: parsed.data.relationship,
+        phone: parsed.data.phone,
+        phoneAlt: parsed.data.phoneAlt || null,
+        email: parsed.data.email || null,
+        occupation: parsed.data.occupation || null,
+        address: parsed.data.address || null,
+        city: parsed.data.city || null,
+        photoUrl: parsed.data.photoUrl || null,
+        nidNo: parsed.data.nidNo || null,
       },
     })
 

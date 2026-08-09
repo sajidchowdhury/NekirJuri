@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, unauthorized, paginated, getPaginationParams, getTenantId, getUserId } from '@/lib/api-utils'
 import { createAuditLog } from '@/lib/audit'
+import { studentCreateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/students — List students with pagination, search, and filters */
 export async function GET(request: NextRequest) {
@@ -74,15 +75,13 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.registrationNo) return error('registrationNo is required')
-    if (!body.name) return error('name is required')
-    if (!body.classId) return error('classId is required')
-    if (!body.academicSessionId) return error('academicSessionId is required')
+    // Validate with Zod
+    const parsed = studentCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
 
     // Check duplicate registrationNo within tenant
     const existing = await db.student.findFirst({
-      where: { tenantId, registrationNo: body.registrationNo, deletedAt: null },
+      where: { tenantId, registrationNo: parsed.data.registrationNo, deletedAt: null },
     })
     if (existing) return error('Student with this registrationNo already exists')
 
@@ -114,7 +113,7 @@ export async function POST(request: NextRequest) {
       previousSchool,
       rollNo,
       status,
-    } = body
+    } = parsed.data
 
     const student = await db.student.create({
       data: {

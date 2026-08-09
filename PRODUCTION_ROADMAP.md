@@ -30,7 +30,7 @@
 | Gap | Severity | Count | Impact |
 |-----|----------|-------|--------|
 | **Frontend→API wiring** | 🔴 CRITICAL | 13 pages + 62 components use hardcoded sample data | Users see fake data instead of real records |
-| **Zod validation** | 🔴 CRITICAL | 61 mutation routes lack input validation | Any malformed POST/PUT will crash or corrupt data |
+| **Zod validation** | 🔴 CRITICAL | 47 mutation routes still lack input validation (61 - 14 done) | Any malformed POST/PUT will crash or corrupt data |
 | **Audit logging** | 🟡 HIGH | 26/73 routes have auditLog, ~47 missing | No accountability for data changes |
 | **SMS/Email backend** | 🟡 HIGH | Not implemented | No notification delivery |
 | **Seed data with i18n** | 🟢 MEDIUM | No Bengali/Arabic seed data | Demo shows empty or English-only data |
@@ -56,36 +56,30 @@
 **Sessions**: 2-3
 **Priority**: 🔴 CRITICAL — Must be first. Without validation, any bad request can crash/corrupt data.
 
-### Session 1.1: Core Entity Validation (2-3 hours)
+### Session 1.1: Core Entity Validation (2-3 hours) ✅ DONE
+**Completed**: March 2026
 **Tasks**:
-- [ ] Add Zod schemas for: students, teachers, employees, guardians
-- [ ] Add Zod schemas for: classes, sections, academic-sessions
-- [ ] Add audit logging to all mutation routes in above
-- [ ] Run test suite to verify no regressions
+- [x] Add Zod schemas for: students, teachers, employees, guardians
+- [x] Add Zod schemas for: classes, sections, academic-sessions
+- [x] Add audit logging to all mutation routes in above (all already had it)
+- [x] Run test suite to verify no regressions (108/108 passing)
 
-**Files to modify** (~12 route files):
-- `src/app/api/students/route.ts` + `[id]/route.ts`
-- `src/app/api/teachers/route.ts` + `[id]/route.ts`
-- `src/app/api/employees/route.ts` + `[id]/route.ts`
-- `src/app/api/guardians/route.ts` + `[id]/route.ts`
-- `src/app/api/classes/route.ts` + `[id]/route.ts`
-- `src/app/api/sections/route.ts` + `[id]/route.ts`
-- `src/app/api/academic-sessions/route.ts` + `[id]/route.ts`
+**Files created** (2 new files):
+- `src/lib/validations/academic.ts` — 7 entity schemas (14 create + update schemas)
+- `src/lib/validations/index.ts` — Central export + `formatZodError()` helper
 
-**Pattern** (apply to all):
-```typescript
-import { z } from 'zod'
+**Files modified** (14 route files):
+- `src/app/api/students/route.ts` + `[id]/route.ts` — studentCreateSchema + studentUpdateSchema
+- `src/app/api/teachers/route.ts` + `[id]/route.ts` — teacherCreateSchema + teacherUpdateSchema
+- `src/app/api/employees/route.ts` + `[id]/route.ts` — employeeCreateSchema + employeeUpdateSchema
+- `src/app/api/guardians/route.ts` + `[id]/route.ts` — guardianCreateSchema + guardianUpdateSchema
+- `src/app/api/classes/route.ts` + `[id]/route.ts` — classCreateSchema + classUpdateSchema
+- `src/app/api/sections/route.ts` + `[id]/route.ts` — sectionCreateSchema + sectionUpdateSchema
+- `src/app/api/academic-sessions/route.ts` + `[id]/route.ts` — academicSessionCreateSchema + academicSessionUpdateSchema
 
-const StudentSchema = z.object({
-  name: z.string().min(1).max(200),
-  nameBn: z.string().optional(),
-  phone: z.string().optional(),
-  // ... all fields with proper types/constraints
-})
-
-// In POST handler:
-const body = StudentSchema.parse(await request.json())
-```
+**Validation approach**: `safeParse()` + `formatZodError()` returns 400 with field-level error messages
+**Audit status**: All 7 entities have audit logging (4 use `createAuditLog`, 3 use `db.activityLog.create`)
+**Lint**: 0 errors, 14 pre-existing warnings | **Tests**: 108/108 passing
 
 ### Session 1.2: Finance + Inventory Validation (2-3 hours)
 **Tasks**:

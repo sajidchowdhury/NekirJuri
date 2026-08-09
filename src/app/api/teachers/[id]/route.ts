@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, error, notFound, unauthorized, getTenantId, getUserId } from '@/lib/api-utils'
 import { createAuditLog } from '@/lib/audit'
+import { teacherUpdateSchema, formatZodError } from '@/lib/validations'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -55,6 +56,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     const body = await request.json()
 
+    // Validate with Zod
+    const parsed = teacherUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     // Build update object with only provided fields
     const data: Record<string, unknown> = { updatedBy: userId }
 
@@ -79,13 +84,13 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     for (const [bodyKey, schemaKey] of Object.entries(fieldMap)) {
-      if (body[bodyKey] !== undefined) data[schemaKey] = body[bodyKey]
+      if (parsed.data[bodyKey as keyof typeof parsed.data] !== undefined) data[schemaKey] = parsed.data[bodyKey as keyof typeof parsed.data]
     }
 
     // Date fields
-    if (body.dateOfBirth !== undefined) data.dateOfBirth = body.dateOfBirth ? new Date(body.dateOfBirth) : null
-    if (body.joiningDate !== undefined) data.joiningDate = body.joiningDate ? new Date(body.joiningDate) : null
-    if (body.leavingDate !== undefined) data.leavingDate = body.leavingDate ? new Date(body.leavingDate) : null
+    if (parsed.data.dateOfBirth !== undefined) data.dateOfBirth = parsed.data.dateOfBirth ? new Date(parsed.data.dateOfBirth) : null
+    if (parsed.data.joiningDate !== undefined) data.joiningDate = parsed.data.joiningDate ? new Date(parsed.data.joiningDate) : null
+    if (parsed.data.leavingDate !== undefined) data.leavingDate = parsed.data.leavingDate ? new Date(parsed.data.leavingDate) : null
 
     const teacher = await db.teacher.update({
       where: { id: teacherId },

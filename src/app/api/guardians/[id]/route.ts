@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, error, notFound, unauthorized, getTenantId, getUserId } from '@/lib/api-utils'
 import { createAuditLog } from '@/lib/audit'
+import { guardianUpdateSchema, formatZodError } from '@/lib/validations'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -65,6 +66,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     const body = await request.json()
 
+    // Validate with Zod
+    const parsed = guardianUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     // Build update object with only provided fields
     const data: Record<string, unknown> = {}
 
@@ -74,7 +79,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     ]
 
     for (const field of updatableFields) {
-      if (body[field] !== undefined) data[field] = body[field]
+      if (parsed.data[field as keyof typeof parsed.data] !== undefined) data[field] = parsed.data[field as keyof typeof parsed.data]
     }
 
     const guardian = await db.guardian.update({

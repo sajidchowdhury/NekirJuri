@@ -13,6 +13,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { academicSessionUpdateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/academic-sessions/[id] — Get single academic session */
 export async function GET(
@@ -69,23 +70,27 @@ export async function PUT(
 
     const body = await request.json()
 
+    // Validate with Zod
+    const parsed = academicSessionUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     // Validate date order if changing dates
-    const newStartDate = body.startDate ? new Date(body.startDate) : existing.startDate
-    const newEndDate = body.endDate ? new Date(body.endDate) : existing.endDate
+    const newStartDate = parsed.data.startDate ? new Date(parsed.data.startDate) : existing.startDate
+    const newEndDate = parsed.data.endDate ? new Date(parsed.data.endDate) : existing.endDate
     if (newStartDate >= newEndDate) {
       return error('Start date must be before end date')
     }
 
     // Check name uniqueness within tenant if changing name
-    if (body.name && body.name !== existing.name) {
+    if (parsed.data.name && parsed.data.name !== existing.name) {
       const nameExists = await db.academicSession.findFirst({
-        where: { tenantId, name: body.name, id: { not: sessionId } },
+        where: { tenantId, name: parsed.data.name, id: { not: sessionId } },
       })
       if (nameExists) return error('Academic session with this name already exists')
     }
 
     // If setting as current, unset others
-    if (body.isCurrent && !existing.isCurrent) {
+    if (parsed.data.isCurrent && !existing.isCurrent) {
       await db.academicSession.updateMany({
         where: { tenantId, isCurrent: true },
         data: { isCurrent: false },
@@ -95,11 +100,11 @@ export async function PUT(
     const data = await db.academicSession.update({
       where: { id: sessionId },
       data: {
-        ...(body.name && { name: body.name }),
-        ...(body.startDate && { startDate: new Date(body.startDate) }),
-        ...(body.endDate && { endDate: new Date(body.endDate) }),
-        ...(body.isCurrent !== undefined && { isCurrent: body.isCurrent }),
-        ...(body.status && { status: body.status }),
+        ...(parsed.data.name && { name: parsed.data.name }),
+        ...(parsed.data.startDate && { startDate: new Date(parsed.data.startDate) }),
+        ...(parsed.data.endDate && { endDate: new Date(parsed.data.endDate) }),
+        ...(parsed.data.isCurrent !== undefined && { isCurrent: parsed.data.isCurrent }),
+        ...(parsed.data.status && { status: parsed.data.status }),
       },
     })
 

@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, unauthorized, paginated, getPaginationParams, getTenantId, getUserId } from '@/lib/api-utils'
 import { createAuditLog } from '@/lib/audit'
+import { employeeCreateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/employees — List employees with pagination, search, and filters */
 export async function GET(request: NextRequest) {
@@ -64,35 +65,34 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.employeeIdNo) return error('employeeIdNo is required')
-    if (!body.name) return error('name is required')
-    if (!body.phone) return error('phone is required')
+    // Validate with Zod
+    const parsed = employeeCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
 
     // Check duplicate employeeIdNo within tenant
     const existing = await db.employee.findFirst({
-      where: { tenantId, employeeIdNo: body.employeeIdNo, deletedAt: null },
+      where: { tenantId, employeeIdNo: parsed.data.employeeIdNo, deletedAt: null },
     })
     if (existing) return error('Employee with this employeeIdNo already exists')
 
     const employee = await db.employee.create({
       data: {
         tenantId,
-        employeeIdNo: body.employeeIdNo,
-        name: body.name,
-        nameBn: body.nameBn || null,
-        fatherName: body.fatherName || null,
-        dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : null,
-        gender: body.gender || null,
-        phone: body.phone,
-        email: body.email || null,
-        address: body.address || null,
-        designation: body.designation || null,
-        department: body.department || null,
-        joiningDate: body.joiningDate ? new Date(body.joiningDate) : null,
-        leavingDate: body.leavingDate ? new Date(body.leavingDate) : null,
-        photoUrl: body.photoUrl || null,
-        status: body.status || 'active',
+        employeeIdNo: parsed.data.employeeIdNo,
+        name: parsed.data.name,
+        nameBn: parsed.data.nameBn || null,
+        fatherName: parsed.data.fatherName || null,
+        dateOfBirth: parsed.data.dateOfBirth ? new Date(parsed.data.dateOfBirth) : null,
+        gender: parsed.data.gender || null,
+        phone: parsed.data.phone,
+        email: parsed.data.email || null,
+        address: parsed.data.address || null,
+        designation: parsed.data.designation || null,
+        department: parsed.data.department || null,
+        joiningDate: parsed.data.joiningDate ? new Date(parsed.data.joiningDate) : null,
+        leavingDate: parsed.data.leavingDate ? new Date(parsed.data.leavingDate) : null,
+        photoUrl: parsed.data.photoUrl || null,
+        status: parsed.data.status || 'active',
         createdBy: userId,
       },
     })

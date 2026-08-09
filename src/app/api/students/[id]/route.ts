@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, error, notFound, unauthorized, getTenantId, getUserId } from '@/lib/api-utils'
 import { createAuditLog } from '@/lib/audit'
+import { studentUpdateSchema, formatZodError } from '@/lib/validations'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -65,6 +66,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     const body = await request.json()
 
+    // Validate with Zod
+    const parsed = studentUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     // Build update object with only provided fields
     const data: Record<string, unknown> = { updatedBy: userId }
 
@@ -93,17 +98,17 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     for (const [bodyKey, schemaKey] of Object.entries(fieldMap)) {
-      if (body[bodyKey] !== undefined) data[schemaKey] = body[bodyKey]
+      if (parsed.data[bodyKey as keyof typeof parsed.data] !== undefined) data[schemaKey] = parsed.data[bodyKey as keyof typeof parsed.data]
     }
 
     // Date fields
-    if (body.dateOfBirth !== undefined) data.dateOfBirth = body.dateOfBirth ? new Date(body.dateOfBirth) : null
-    if (body.admissionDate !== undefined) data.admissionDate = body.admissionDate ? new Date(body.admissionDate) : null
+    if (parsed.data.dateOfBirth !== undefined) data.dateOfBirth = parsed.data.dateOfBirth ? new Date(parsed.data.dateOfBirth) : null
+    if (parsed.data.admissionDate !== undefined) data.admissionDate = parsed.data.admissionDate ? new Date(parsed.data.admissionDate) : null
 
     // FK fields
-    if (body.classId !== undefined) data.classId = Number(body.classId)
-    if (body.sectionId !== undefined) data.sectionId = body.sectionId ? Number(body.sectionId) : null
-    if (body.academicSessionId !== undefined) data.academicSessionId = Number(body.academicSessionId)
+    if (parsed.data.classId !== undefined) data.classId = Number(parsed.data.classId)
+    if (parsed.data.sectionId !== undefined) data.sectionId = parsed.data.sectionId ? Number(parsed.data.sectionId) : null
+    if (parsed.data.academicSessionId !== undefined) data.academicSessionId = Number(parsed.data.academicSessionId)
 
     const student = await db.student.update({
       where: { id: studentId },
@@ -116,12 +121,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     })
 
     // Handle guardian links update if provided
-    if (body.guardianIds && Array.isArray(body.guardianIds)) {
+    if (parsed.data.guardianIds && Array.isArray(parsed.data.guardianIds)) {
       // Delete existing links and recreate
       await db.studentGuardian.deleteMany({ where: { studentId } })
-      if (body.guardianIds.length > 0) {
+      if (parsed.data.guardianIds.length > 0) {
         await db.studentGuardian.createMany({
-          data: body.guardianIds.map((g: { guardianId: number; isPrimary?: boolean }, index: number) => ({
+          data: parsed.data.guardianIds.map((g: { guardianId: number; isPrimary?: boolean }, index: number) => ({
             studentId,
             guardianId: Number(g.guardianId ?? g),
             isPrimary: g.isPrimary ?? index === 0,
