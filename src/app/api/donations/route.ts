@@ -15,6 +15,7 @@ import {
   requireTenantId,
   success,
 } from '@/lib/api-utils'
+import { donationCreateSchema, donationUpdateSchema, formatZodError } from '@/lib/validations'
 
 /** Generate the next donation receipt number: DON-{year}-{seq} */
 async function generateDonationReceiptNo(tenantId: number, year: number): Promise<string> {
@@ -131,6 +132,11 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Validate with Zod
+    const parsed = donationCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     const {
       donationCategoryId,
       donorId,
@@ -144,22 +150,10 @@ export async function POST(request: NextRequest) {
       recurringAmount,
       remarks,
       status,
-    } = body
-
-    if (!donationCategoryId || !amount || !paymentMethod || !paymentDate) {
-      return error('donationCategoryId, amount, paymentMethod, and paymentDate are required')
-    }
+    } = parsed.data
 
     if (Number(amount) <= 0) {
       return error('Amount must be positive')
-    }
-
-    // CR-5: Validate recurring fields
-    if (isRecurring && !recurringFrequency) {
-      return error('recurringFrequency is required for recurring donations (monthly or yearly)')
-    }
-    if (isRecurring && !['monthly', 'yearly'].includes(recurringFrequency)) {
-      return error('recurringFrequency must be "monthly" or "yearly"')
     }
 
     // Verify donation category belongs to tenant
@@ -255,11 +249,12 @@ export async function PATCH(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
-    const { id, amount, paymentDate, paymentMethod, transactionRef } = body
 
-    if (!id || !amount || !paymentDate) {
-      return error('id, amount, and paymentDate are required')
-    }
+    // Validate with Zod
+    const parsed = donationUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
+    const { id, amount, paymentDate, paymentMethod, transactionRef } = body
 
     // Find the recurring donation
     const donation = await db.donation.findFirst({

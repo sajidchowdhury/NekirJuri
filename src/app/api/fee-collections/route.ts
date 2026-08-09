@@ -13,6 +13,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { feeCollectionCreateSchema, formatZodError } from '@/lib/validations'
 
 /** Generate the next receipt number: RCT-{year}-{seq} */
 async function generateReceiptNo(tenantId: number, year: number): Promise<string> {
@@ -94,6 +95,11 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Validate with Zod
+    const parsed = feeCollectionCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     const {
       invoiceId,
       studentId,
@@ -104,15 +110,7 @@ export async function POST(request: NextRequest) {
       bankName,
       chequeNo,
       remarks,
-    } = body
-
-    if (!invoiceId || !studentId || !amount || !paymentMethod || !paymentDate) {
-      return error('invoiceId, studentId, amount, paymentMethod, and paymentDate are required')
-    }
-
-    if (Number(amount) <= 0) {
-      return error('Amount must be positive')
-    }
+    } = parsed.data
 
     // Verify invoice exists and belongs to tenant
     const invoice = await db.feeInvoice.findFirst({

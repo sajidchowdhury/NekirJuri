@@ -12,6 +12,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { feeDiscountCreateSchema, formatZodError } from '@/lib/validations'
 
 // --- GET: List fee discounts with pagination & filters ---
 export async function GET(request: NextRequest) {
@@ -77,6 +78,11 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Validate with Zod
+    const parsed = feeDiscountCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     const {
       studentId,
       invoiceId,
@@ -86,20 +92,10 @@ export async function POST(request: NextRequest) {
       reason,
       approvedBy,
       status,
-    } = body
-
-    if (!studentId || !discountType || discountValue === undefined) {
-      return error('studentId, discountType, and discountValue are required')
-    }
+    } = parsed.data
 
     if (Number(discountValue) <= 0) {
       return error('discountValue must be positive')
-    }
-
-    // Validate valid discount types
-    const validTypes = ['percentage', 'flat', 'waiver']
-    if (!validTypes.includes(discountType)) {
-      return error(`discountType must be one of: ${validTypes.join(', ')}`)
     }
 
     // If percentage, validate range

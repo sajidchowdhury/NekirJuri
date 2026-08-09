@@ -13,6 +13,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { feeInvoiceCreateSchema, formatZodError } from '@/lib/validations'
 
 /** Generate the next invoice number for a tenant in a given year */
 async function generateInvoiceNo(tenantId: number, year: number): Promise<string> {
@@ -106,21 +107,23 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Validate with Zod
+    const parsed = feeInvoiceCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     const {
       studentId,
       academicSessionId,
       classId,
       issueDate,
       dueDate,
-      items,
+      invoiceItems: items,
       feeMonth,
       feeYear,
       remarks,
-    } = body
+    } = parsed.data
 
-    if (!studentId || !academicSessionId || !classId || !issueDate || !dueDate) {
-      return error('studentId, academicSessionId, classId, issueDate, and dueDate are required')
-    }
     if (!items || !Array.isArray(items) || items.length === 0) {
       return error('At least one invoice item is required')
     }

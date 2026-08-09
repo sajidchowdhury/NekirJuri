@@ -13,6 +13,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { expenseCreateSchema, formatZodError } from '@/lib/validations'
 
 /** Generate the next expense voucher number: EXP-{year}-{seq} */
 async function generateVoucherNo(tenantId: number, year: number): Promise<string> {
@@ -100,6 +101,11 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Validate with Zod
+    const parsed = expenseCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     const {
       expenseCategoryId,
       amount,
@@ -110,11 +116,7 @@ export async function POST(request: NextRequest) {
       receiptAttachment,
       status,
       approvedBy,
-    } = body
-
-    if (!expenseCategoryId || !amount || !expenseDate || !paymentMethod) {
-      return error('expenseCategoryId, amount, expenseDate, and paymentMethod are required')
-    }
+    } = parsed.data
 
     if (Number(amount) <= 0) {
       return error('Amount must be positive')

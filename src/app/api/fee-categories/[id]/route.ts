@@ -11,6 +11,7 @@ import {
   requireTenantId,
   getUserId,
 } from '@/lib/api-utils'
+import { feeCategoryUpdateSchema, formatZodError } from '@/lib/validations'
 
 // --- PATCH: Update fee category ---
 export async function PATCH(
@@ -35,7 +36,12 @@ export async function PATCH(
     if (!existing) return notFound('Fee category')
 
     const body = await request.json()
-    const { name, code, description, amount, isRecurring, frequency, isActive } = body
+
+    // Validate with Zod
+    const parsed = feeCategoryUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
+    const { name, code, description, amount, isRecurring, frequency, isActive } = parsed.data
 
     // If code is being changed, check uniqueness
     if (code && code !== existing.code) {

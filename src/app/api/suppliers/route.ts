@@ -5,6 +5,7 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, paginated, getPaginationParams, getTenantId, getUserId } from '@/lib/api-utils'
+import { supplierCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -75,6 +76,11 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Validate with Zod
+    const parsed = supplierCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     const {
       name,
       code,
@@ -85,12 +91,7 @@ export async function POST(request: NextRequest) {
       contactPerson,
       nidNo,
       bankAccount,
-    } = body
-
-    // Validate required fields
-    if (!name) {
-      return error('Supplier name is required')
-    }
+    } = parsed.data
 
     // Check for duplicate code within tenant
     if (code) {

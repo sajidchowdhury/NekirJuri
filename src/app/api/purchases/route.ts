@@ -5,6 +5,7 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, paginated, getPaginationParams, getTenantId, getUserId } from '@/lib/api-utils'
+import { purchaseCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -80,6 +81,11 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Validate with Zod
+    const parsed = purchaseCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     const {
       purchaseNo,
       supplierId,
@@ -91,12 +97,8 @@ export async function POST(request: NextRequest) {
       paymentStatus = 'unpaid',
       status = 'received',
       remarks,
-    } = body
+    } = parsed.data
 
-    // Validate required fields
-    if (!purchaseNo || !supplierId || !purchaseDate) {
-      return error('purchaseNo, supplierId, and purchaseDate are required')
-    }
     if (!items || !Array.isArray(items) || items.length === 0) {
       return error('At least one purchase item is required')
     }

@@ -30,7 +30,7 @@
 | Gap | Severity | Count | Impact |
 |-----|----------|-------|--------|
 | **Frontend→API wiring** | 🔴 CRITICAL | 13 pages + 62 components use hardcoded sample data | Users see fake data instead of real records |
-| **Zod validation** | 🔴 CRITICAL | 47 mutation routes still lack input validation (61 - 14 done) | Any malformed POST/PUT will crash or corrupt data |
+| **Zod validation** | 🔴 CRITICAL | 29 mutation routes still lack input validation (61 - 32 done) | Any malformed POST/PUT will crash or corrupt data |
 | **Audit logging** | 🟡 HIGH | 26/73 routes have auditLog, ~47 missing | No accountability for data changes |
 | **SMS/Email backend** | 🟡 HIGH | Not implemented | No notification delivery |
 | **Seed data with i18n** | 🟢 MEDIUM | No Bengali/Arabic seed data | Demo shows empty or English-only data |
@@ -81,15 +81,24 @@
 **Audit status**: All 7 entities have audit logging (4 use `createAuditLog`, 3 use `db.activityLog.create`)
 **Lint**: 0 errors, 14 pre-existing warnings | **Tests**: 108/108 passing
 
-### Session 1.2: Finance + Inventory Validation (2-3 hours)
+### Session 1.2: Finance + Inventory Validation (2-3 hours) ✅ DONE
+**Completed**: March 2026
 **Tasks**:
-- [ ] Add Zod schemas for: fee-categories, fee-structures, fee-invoices, fee-collections, fee-discounts
-- [ ] Add Zod schemas for: donations, donors, donation-categories, expenses, expense-category
-- [ ] Add Zod schemas for: products, product-categories, purchases, sales, stock-movements, suppliers
-- [ ] Add audit logging to all above mutation routes
-- [ ] Run test suite
+- [x] Add Zod schemas for: fee-categories, fee-structures, fee-invoices, fee-collections, fee-discounts
+- [x] Add Zod schemas for: donations, donors, donation-categories, expenses, expense-category
+- [x] Add Zod schemas for: products, product-categories, purchases, sales, stock-movements, suppliers
+- [x] Add audit logging to all above mutation routes (all already had it)
+- [x] Run test suite (108/108 passing)
 
-**Files to modify** (~18 route files)
+**Files created** (2 new):
+- `src/lib/validations/finance.ts` — 16 schemas (10 finance entities: fee-category, fee-structure, fee-invoice, fee-collection, fee-discount, donation-category, donor, donation, expense-category, expense)
+- `src/lib/validations/inventory.ts` — 8 schemas (6 inventory entities: supplier, product-category, product, purchase, stock-movement, sales-invoice)
+
+**Files modified** (18 route files):
+- Finance: fee-categories, fee-structures, fee-invoices, fee-collections, fee-discounts, donations, donors, donation-categories, expenses, expense-categories
+- Inventory: products, product-categories, purchases, sales, stock-movements, suppliers
+
+**Lint**: 0 errors | **Tests**: 108/108 passing
 
 ### Session 1.3: System + Accounting Validation (2-3 hours)
 **Tasks**:

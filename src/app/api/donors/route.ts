@@ -12,6 +12,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { donorCreateSchema, formatZodError } from '@/lib/validations'
 
 // --- GET: List donors with pagination & multi-field search ---
 export async function GET(request: NextRequest) {
@@ -77,6 +78,11 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Validate with Zod
+    const parsed = donorCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     const {
       name,
       phone,
@@ -88,11 +94,7 @@ export async function POST(request: NextRequest) {
       isRegular,
       remarks,
       isActive,
-    } = body
-
-    if (!name) {
-      return error('name is required')
-    }
+    } = parsed.data
 
     const record = await db.donor.create({
       data: {

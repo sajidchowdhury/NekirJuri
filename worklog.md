@@ -1239,3 +1239,96 @@ Stage Summary:
 - 47 mutation routes still need validation (Session 1.2 + 1.3)
 - Validation module pattern established — all future schemas go in src/lib/validations/
 - formatZodError() helper provides structured error messages for API responses
+
+---
+Task ID: 1.2
+Agent: Main
+Task: Create Zod validation schemas for Finance + Inventory entities and wire them into API routes
+
+Work Log:
+- Created src/lib/validations/finance.ts — 10 entity Zod schemas (16 total: create + update per entity where applicable)
+  - FeeCategory: name, code, description?, amount (decimal), isRecurring, frequency enum, isActive, nameBn?
+  - FeeStructure: classId, feeCategoryId, academicSessionId, amount, isMandatory
+  - FeeInvoice: 15+ fields with invoiceItems array, status enum, date validation, feeMonth/feeYear
+  - FeeCollection: receiptNo, invoiceId, studentId, amount, paymentMethod enum, paymentDate, transaction details
+  - FeeDiscount: studentId, invoiceId?, feeCategoryId?, discountType enum, discountValue, status enum
+  - DonationCategory: name, description?, isActive?, nameBn?
+  - Donor: 12+ fields with email validation, reminderMethod enum, totalPledged (decimal)
+  - Donation: 13+ fields with recurring donation support, paymentMethod enum, recurringFrequency enum
+  - ExpenseCategory: name, code?, description?, isActive?
+  - Expense: voucherNo, expenseCategoryId, amount, date, paymentMethod enum, status enum, approvedBy?
+- Created src/lib/validations/inventory.ts — 6 entity Zod schemas (8 total: create + update per entity where applicable)
+  - Supplier: 10 fields with email validation, nidNo, bankAccount
+  - ProductCategory: name, code?, description?, parentId?, isActive?, nameBn?
+  - Product: 12+ fields with decimal prices, stock levels, hasExpiry flag
+  - Purchase: 9+ fields with items array (productId, quantity, unitPrice, totalPrice, discountAmount)
+  - StockMovement: productId, movementType enum (5 values), quantity, stockAfter
+  - SalesInvoice: 12+ fields with items array, addToFee flag, status enum
+- Updated src/lib/validations/index.ts — Added exports from finance and inventory modules
+- Wired Zod validation into 18 route files:
+  - Finance routes (12 files):
+    - fee-categories/route.ts (POST: feeCategoryCreateSchema)
+    - fee-categories/[id]/route.ts (PATCH: feeCategoryUpdateSchema)
+    - fee-structures/route.ts (POST: feeStructureCreateSchema)
+    - fee-invoices/route.ts (POST: feeInvoiceCreateSchema)
+    - fee-invoices/[id]/route.ts (PUT: feeInvoiceUpdateSchema)
+    - fee-collections/route.ts (POST: feeCollectionCreateSchema)
+    - fee-discounts/route.ts (POST: feeDiscountCreateSchema)
+    - donations/route.ts (POST: donationCreateSchema, PATCH: donationUpdateSchema)
+    - donors/route.ts (POST: donorCreateSchema)
+    - donation-categories/route.ts (POST: donationCategoryCreateSchema)
+    - expenses/route.ts (POST: expenseCreateSchema)
+    - expense-categories/route.ts (POST: expenseCategoryCreateSchema)
+  - Inventory routes (6 files):
+    - products/route.ts (POST: productCreateSchema)
+    - product-categories/route.ts (POST: productCategoryCreateSchema)
+    - purchases/route.ts (POST: purchaseCreateSchema)
+    - sales/route.ts (POST: salesCreateSchema)
+    - stock-movements/route.ts (POST: stockMovementCreateSchema)
+    - suppliers/route.ts (POST: supplierCreateSchema)
+- Pattern: safeParse() + formatZodError() — returns 400 with field-level error messages
+- Replaced all manual `if (!field)` checks with Zod validation; kept business logic (duplicate checks, FK validation, balance calculation)
+- Tests: 108/108 passing (6/6 suites)
+- Lint: 0 errors, 14 pre-existing warnings
+
+Stage Summary:
+- 32 API routes now have Zod validation (14 from Session 1.1 + 18 from Session 1.2)
+- 16 finance entity schemas + 8 inventory entity schemas created
+- All decimal fields support number or string regex (financial precision)
+- All enum fields validated at schema level (paymentMethod, status, movementType, etc.)
+- Date fields accept both ISO datetime and YYYY-MM-DD formats
+---
+Task ID: 1.2
+Agent: Main
+Task: Session 1.2 — Finance + Inventory Validation (Zod schemas + route wiring)
+
+Work Log:
+- Created src/lib/validations/finance.ts — 16 schemas for 10 finance entities
+  - FeeCategory: name, code, amount, isRecurring, frequency enum
+  - FeeStructure: classId, feeCategoryId, academicSessionId, amount
+  - FeeInvoice: 15+ fields with invoiceItems array, status enum
+  - FeeCollection: receiptNo, paymentMethod enum, transaction details
+  - FeeDiscount: discountType enum (percentage/flat), approval flow
+  - DonationCategory: name, description, nameBn
+  - Donor: 12+ fields with email validation, reminderMethod enum
+  - Donation: recurring support, paymentMethod enum, nextDueDate
+  - ExpenseCategory: name, code, description
+  - Expense: voucherNo, amount, paymentMethod enum, approval flow
+- Created src/lib/validations/inventory.ts — 8 schemas for 6 inventory entities
+  - Supplier: 10 fields with email validation
+  - ProductCategory: hierarchical with parentId, nameBn
+  - Product: 12+ fields with decimal prices/stock levels, nameBn
+  - Purchase: items array with per-item details
+  - StockMovement: 5 movement type enum values
+  - SalesInvoice: items array, addToFee flag, status enum
+- Updated src/lib/validations/index.ts — now exports from ./academic, ./finance, ./inventory
+- Wired Zod validation into 18 route files (replacing manual if(!field) checks)
+- Tests: 108/108 passing
+- Lint: 0 errors, 14 pre-existing warnings
+
+Stage Summary:
+- 32 API routes now have Zod validation (14 from 1.1 + 18 from 1.2)
+- 29 mutation routes still need validation (Session 1.3)
+- 3 validation module files: academic.ts, finance.ts, inventory.ts
+- All Decimal fields support both number and string inputs
+- All enum fields use z.enum() for strict validation

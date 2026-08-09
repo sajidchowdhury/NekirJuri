@@ -3,6 +3,8 @@
 // ============================================================
 
 export * from './academic'
+export * from './finance'
+export * from './inventory'
 
 // ── Validation Error Helper ───────────────────────────────
 

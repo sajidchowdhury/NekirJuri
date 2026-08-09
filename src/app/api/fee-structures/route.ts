@@ -15,6 +15,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { feeStructureCreateSchema, formatZodError } from '@/lib/validations'
 
 // --- GET: List fee structures with pagination, search & filters ---
 export async function GET(request: NextRequest) {
@@ -72,11 +73,12 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
-    const { classId, feeCategoryId, academicSessionId, amount, isMandatory } = body
 
-    if (!classId || !feeCategoryId || !academicSessionId || amount === undefined) {
-      return error('classId, feeCategoryId, academicSessionId, and amount are required')
-    }
+    // Validate with Zod
+    const parsed = feeStructureCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
+    const { classId, feeCategoryId, academicSessionId, amount, isMandatory } = parsed.data
 
     // Check unique constraint (tenantId + classId + feeCategoryId + academicSessionId)
     const existing = await db.feeStructure.findFirst({

@@ -14,6 +14,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { feeCategoryCreateSchema, formatZodError } from '@/lib/validations'
 
 // --- GET: List fee categories with pagination & search ---
 export async function GET(request: NextRequest) {
@@ -59,11 +60,12 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
-    const { name, code, description, amount, isRecurring, frequency } = body
 
-    if (!name || !code || amount === undefined) {
-      return error('name, code, and amount are required')
-    }
+    // Validate with Zod
+    const parsed = feeCategoryCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
+    const { name, code, description, amount, isRecurring, frequency } = parsed.data
 
     // Check unique code within tenant
     const existing = await db.feeCategory.findFirst({
@@ -78,6 +80,7 @@ export async function POST(request: NextRequest) {
         code,
         description: description || null,
         amount: Number(amount),
+        nameBn: parsed.data.nameBn || null,
         isRecurring: isRecurring ?? false,
         frequency: frequency || null,
       },

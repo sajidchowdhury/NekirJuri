@@ -11,6 +11,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { feeInvoiceUpdateSchema, formatZodError } from '@/lib/validations'
 
 // --- GET: Single invoice with full details ---
 export async function GET(
@@ -74,7 +75,12 @@ export async function PUT(
     if (!existing) return notFound('Fee invoice')
 
     const body = await request.json()
-    const { status, remarks, fineAmount, discountAmount } = body
+
+    // Validate with Zod
+    const parsed = feeInvoiceUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
+    const { status, remarks, fineAmount, discountAmount } = parsed.data
 
     // Build update data
     const updateData: Record<string, unknown> = { updatedBy: userId }

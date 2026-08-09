@@ -5,6 +5,7 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, paginated, getPaginationParams, getTenantId, getUserId } from '@/lib/api-utils'
+import { stockMovementCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -74,22 +75,17 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Validate with Zod
+    const parsed = stockMovementCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
     const {
       productId,
       movementType,
       quantity,
       remarks,
-    } = body
-
-    // Validate required fields
-    if (!productId || !movementType || quantity === undefined || quantity === null) {
-      return error('productId, movementType, and quantity are required')
-    }
-
-    const validMovementTypes = ['in', 'out', 'adjustment', 'transfer']
-    if (!validMovementTypes.includes(movementType)) {
-      return error(`movementType must be one of: ${validMovementTypes.join(', ')}`)
-    }
+    } = parsed.data
 
     // Validate product exists and belongs to tenant
     const product = await db.product.findFirst({

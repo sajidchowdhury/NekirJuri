@@ -12,6 +12,7 @@ import {
   getUserId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { donationCategoryCreateSchema, formatZodError } from '@/lib/validations'
 
 // --- GET: List donation categories with pagination & search ---
 export async function GET(request: NextRequest) {
@@ -57,11 +58,12 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
-    const { name, description, isActive } = body
 
-    if (!name) {
-      return error('name is required')
-    }
+    // Validate with Zod
+    const parsed = donationCategoryCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error))
+
+    const { name, description, isActive } = parsed.data
 
     const record = await db.donationCategory.create({
       data: {
