@@ -1617,3 +1617,135 @@ Stage Summary:
 - Supporting data cached with staleTime: 10min where appropriate
 - PRODUCTION_ROADMAP.md updated: Frontend→API wiring now ✅ COMPLETE (27/27 pages)
 - Stage 4 progress: 95% (SMS/Email backend still pending)
+
+---
+Task ID: 8
+Agent: Main
+Task: Wire inventory form components to use API data for product dropdowns instead of sample data
+
+Work Log:
+- Modified `src/components/inventory/purchase-order-form.tsx`:
+  - Added `import { useQuery } from '@tanstack/react-query'`
+  - Removed `sampleProducts` and `type Product` imports (kept `type PurchaseOrder` and `formatTaka`)
+  - Added `useQuery` hook with queryKey `['products-list-form']` fetching `GET /api/products?limit=200` with `staleTime: 5 * 60 * 1000`
+  - Mapped API response to `{ id: string, name: string, purchasePrice: number }` via `React.useMemo`
+  - Replaced `sampleProducts.find()` in `handleProductSelect` with `products.find()`
+  - Replaced `sampleProducts.map()` in product dropdown with `products.map()`
+- Modified `src/components/inventory/sales-form.tsx`:
+  - Added `import { useQuery } from '@tanstack/react-query'`
+  - Removed `sampleProducts` import (kept `formatTaka`)
+  - Replaced `useState` for products/productsLoading/productsError + `useEffect` fetch with `useQuery` hook
+  - Removed all `sampleProducts.map()` fallback code (both 401 fallback and catch fallback)
+  - Mapped API response to `ApiProduct[]` interface via `React.useMemo`
+  - Derived `productsError` string from useQuery's error object
+  - Kept all existing UI, loading states, error states, and student search logic intact
+- Ran lint: 0 errors in modified files (only pre-existing warnings in other files)
+
+Stage Summary:
+- Both inventory form components now fetch product dropdown data from `GET /api/products?limit=200` via `useQuery`
+- No sample data imports remain in either form component
+- `staleTime: 5min` prevents excessive refetches for form dropdown data
+- All existing UI, props, and form logic preserved
+
+---
+Task ID: 6
+Agent: Main
+Task: Remove sample data fallbacks from 6 dashboard chart components
+
+Work Log:
+- Modified `src/components/dashboard/fee-collection-chart.tsx`:
+  - Removed `const sampleData: MonthlyFeeData[]` (6 sample data points)
+  - Changed `data && data.length > 0 ? data : sampleData` → `data || []`
+  - Added empty state: centered "No data available yet" with `flex items-center justify-center min-h-[120px]` and `text-sm text-muted-foreground`
+- Modified `src/components/dashboard/student-distribution-chart.tsx`:
+  - Removed `const sampleData: StudentDistributionData[]` (4 sample data points)
+  - Changed data resolution to `data || []`
+  - Added empty state with same pattern
+- Modified `src/components/dashboard/dashboard-overview-chart.tsx`:
+  - Removed `const sampleData: RevenueExpenseData[]` (6 sample data points)
+  - Changed data resolution to `data || []`
+  - Added empty state with same pattern
+- Modified `src/components/dashboard/payment-status-chart.tsx`:
+  - Removed `const sampleData: PaymentStatusData[]` (6 sample data points)
+  - Changed data resolution to `data || []`
+  - Added empty state with same pattern
+- Modified `src/components/dashboard/upcoming-events.tsx`:
+  - Removed `const sampleEvents: UpcomingEvent[]` (4 sample events with dynamic dates)
+  - Changed `events && events.length > 0 ? events : sampleEvents` → `events || []`
+  - Already had empty state check (`items.length === 0`) — preserved as-is
+- Modified `src/components/dashboard/recent-activity.tsx`:
+  - Removed `const sampleActivities: ActivityItem[]` (6 sample activities with dynamic dates)
+  - Changed `activities && activities.length > 0 ? activities : sampleActivities` → `activities || []`
+  - Added empty state: "No data available yet" wrapping list + "View All" button in `<>` fragment so empty state replaces both
+- Ran lint: 0 new errors (3 pre-existing errors in unrelated files: donation-dashboard.tsx, fee-discount-form.tsx)
+
+Stage Summary:
+- All 6 dashboard chart components no longer use inline sample data fallbacks
+- Each chart component renders a centered "No data available yet" message when data array is empty
+- Each list component shows its existing or new empty state when items array is empty
+- Empty states use consistent styling: `flex items-center justify-center min-h-[120px]` + `text-sm text-muted-foreground`
+- All existing props, loading states, and UI structure preserved
+
+---
+Task ID: 7
+Agent: Main
+Task: Wire finance form components to use API data for dropdowns instead of sample data
+
+Work Log:
+- Modified 8 finance form/dashboard components to fetch data from API using React Query instead of importing sample data
+- All components now use `useQuery` from `@tanstack/react-query` with `staleTime: 5 * 60 * 1000` (5 min) for form dropdown data
+- Added `'use client'` was already present in all files; added `useQuery` import
+
+Components modified:
+
+1. **collect-payment-form.tsx** — Replaced `sampleInvoices` with `useQuery` to `GET /api/fee-invoices?status=unpaid&limit=100`
+2. **fee-discount-form.tsx** — Replaced `sampleInvoices` with `useQuery` to `GET /api/fee-invoices?limit=100`. Converted `React.useMemo` to IIFE to fix React Compiler memoization error.
+3. **donation-dashboard.tsx** — Replaced `sampleDonors`/`sampleDonations` with API queries to `GET /api/donors?limit=100` and `GET /api/donations?limit=100`. Removed `sampleDonationTrend` and `sampleDonationCategoryBreakdown` — shows empty state ("No trend/category data available yet") when no data. Made date filtering dynamic (uses current month/year instead of hardcoded '2025-02').
+4. **generate-invoice-wizard.tsx** — Wired sessions to `GET /api/academic-sessions?limit=50`, classes to `GET /api/classes?limit=100`, students to `GET /api/students?limit=500`, fee-categories to `GET /api/fee-categories?limit=50`, fee-structures to `GET /api/fee-structures?limit=100`. Maps API student fields to local shape.
+5. **donor-list.tsx** — Replaced `sampleDonors` with `useQuery` to `GET /api/donors?limit=100`
+6. **donation-form.tsx** — Replaced `sampleDonors` with `useQuery` to `GET /api/donors?limit=100`. Updated `handleDonorSelect` type from `typeof sampleDonors[0]` to `Donor`.
+7. **fee-structure-builder.tsx** — Wired fee-structures, fee-categories, classes, and sessions to API endpoints. Added `useEffect` to sync structure state when API data arrives.
+8. **expense-dashboard.tsx** — Replaced `sampleExpenses` with `useQuery` to `GET /api/expenses?limit=100`. Removed `sampleBudgetAllocations` — shows empty state "No budget allocation data available yet." Made date filtering dynamic.
+
+- Removed all sample data imports from each component, keeping only type imports and `formatTaka`
+- All existing UI components, props, and component interfaces preserved
+- Lint result: 0 errors, 14 warnings (all pre-existing, unrelated to our changes)
+
+Stage Summary:
+- All 8 finance form components now fetch dropdown data from API via React Query
+- Sample data imports removed (only types and formatTaka retained)
+- Chart components show empty states when no API data available
+- Budget allocation section shows empty state (no API exists for this yet)
+- Date filtering is now dynamic (uses current date instead of hardcoded months)
+- All components use `staleTime: 5 * 60 * 1000` for form dropdown data caching
+
+---
+Task ID: 2.5
+Agent: Main
+Task: Session 2.5 — Data Flow Verification + Polish
+
+Work Log:
+- Audited all page files for remaining sample data imports — found 0 sample data values in pages (only types)
+- Scanned all components for remaining sample data usage — found 16 components still using sample data:
+  - 6 dashboard chart components (sample data as chart fallbacks)
+  - 8 finance form components (sample data for dropdowns)
+  - 2 inventory form components (sample data for product dropdowns)
+- Added React Query devtools (installed @tanstack/react-query-devtools, added ReactQueryDevtools to query-provider.tsx)
+- Error boundary already existed in dashboard layout.tsx — confirmed working
+- Delegated dashboard chart cleanup to subagent — removed sample fallbacks from all 6 chart components, added empty states
+- Delegated finance form wiring to subagent — wired all 8 finance form components to API data via useQuery
+- Delegated inventory form wiring to subagent — wired 2 inventory form components to API data via useQuery
+- Final audit: 0 sample data references remain in any page file
+- Ran lint: 0 errors, 14 pre-existing warnings
+- Verified dev server: root returns 200, protected pages return 307 (auth redirect)
+- Updated PRODUCTION_ROADMAP.md: Session 2.5 marked ✅ DONE, Phase 2 COMPLETE
+
+Stage Summary:
+- Phase 2 (Backend Wiring) is now COMPLETE
+- All 27 pages use real API data (0 using sample data)
+- All 6 dashboard charts show empty states instead of fake data
+- All 10 form components (8 finance + 2 inventory) use API data for dropdowns
+- React Query devtools added for debugging
+- Error boundaries wrapping all dashboard pages
+- Stage 4 progress: 95% (only SMS/email backend remaining for 100%)
+- Next phase: Phase 3 — SMS/Email Notification Infrastructure

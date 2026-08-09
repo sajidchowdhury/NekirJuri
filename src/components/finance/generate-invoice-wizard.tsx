@@ -6,6 +6,7 @@
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Check, Search, Users, FileText, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,11 +26,8 @@ import FormWizard from '@/components/organisms/form-wizard';
 import {
   type AcademicSession,
   type ClassGroup,
-  sampleSessions,
-  sampleClasses,
-  sampleStudentsForInvoice,
-  sampleFeeCategories,
-  sampleFeeStructure,
+  type FeeCategory,
+  type FeeStructureCell,
   formatTaka,
 } from '@/lib/finance/sample-data';
 
@@ -38,6 +36,73 @@ interface GenerateInvoiceWizardProps {
 }
 
 export default function GenerateInvoiceWizard({ onComplete }: GenerateInvoiceWizardProps) {
+  // Fetch sessions from API
+  const { data: sessionsResponse } = useQuery({
+    queryKey: ['academic-sessions'],
+    queryFn: async () => {
+      const res = await fetch('/api/academic-sessions?limit=50');
+      if (!res.ok) throw new Error('Failed to fetch sessions');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch classes from API
+  const { data: classesResponse } = useQuery({
+    queryKey: ['classes'],
+    queryFn: async () => {
+      const res = await fetch('/api/classes?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch classes');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch students from API
+  const { data: studentsResponse } = useQuery({
+    queryKey: ['students'],
+    queryFn: async () => {
+      const res = await fetch('/api/students?limit=500');
+      if (!res.ok) throw new Error('Failed to fetch students');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch fee categories from API
+  const { data: feeCategoriesResponse } = useQuery({
+    queryKey: ['fee-categories'],
+    queryFn: async () => {
+      const res = await fetch('/api/fee-categories?limit=50');
+      if (!res.ok) throw new Error('Failed to fetch fee categories');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch fee structures from API
+  const { data: feeStructuresResponse } = useQuery({
+    queryKey: ['fee-structures'],
+    queryFn: async () => {
+      const res = await fetch('/api/fee-structures?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch fee structures');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const sessions: AcademicSession[] = sessionsResponse?.data || [];
+  const classes: ClassGroup[] = classesResponse?.data || [];
+  const studentsForInvoice = (studentsResponse?.data || []).map((s: Record<string, unknown>) => ({
+    id: String(s.id),
+    name: String(s.name || s.nameEn || ''),
+    nameBn: String(s.nameBn || ''),
+    className: String(s.className || ''),
+    roll: String(s.roll || s.rollNo || ''),
+  }));
+  const feeCategories: FeeCategory[] = feeCategoriesResponse?.data || [];
+  const feeStructure: FeeStructureCell[] = feeStructuresResponse?.data || [];
+
   // Step 1 state
   const [selectedSession, setSelectedSession] = React.useState('');
   const [selectedClass, setSelectedClass] = React.useState('');
@@ -47,10 +112,10 @@ export default function GenerateInvoiceWizard({ onComplete }: GenerateInvoiceWiz
   const [selectedStudentIds, setSelectedStudentIds] = React.useState<Set<string>>(new Set());
 
   // Derived
-  const currentSession = sampleSessions.find(s => s.id === selectedSession);
-  const currentClass = sampleClasses.find(c => c.id === selectedClass);
+  const currentSession = sessions.find(s => s.id === selectedSession);
+  const currentClass = classes.find(c => c.id === selectedClass);
 
-  const filteredStudents = sampleStudentsForInvoice.filter(s =>
+  const filteredStudents = studentsForInvoice.filter((s: { id: string; name: string; nameBn: string; className: string; roll: string }) =>
     s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
     s.nameBn.includes(studentSearch) ||
     s.roll.includes(studentSearch)
@@ -66,7 +131,7 @@ export default function GenerateInvoiceWizard({ onComplete }: GenerateInvoiceWiz
   };
 
   // Fee structure for selected class
-  const classFeeItems = sampleFeeStructure.filter(s => s.classId === selectedClass && s.isSet && s.amount > 0);
+  const classFeeItems = feeStructure.filter(s => s.classId === selectedClass && s.isSet && s.amount > 0);
   const totalPerStudent = classFeeItems.reduce((sum, item) => sum + item.amount, 0);
 
   // Step 1 component
@@ -81,7 +146,7 @@ export default function GenerateInvoiceWizard({ onComplete }: GenerateInvoiceWiz
               <SelectValue placeholder="Select session" />
             </SelectTrigger>
             <SelectContent>
-              {sampleSessions.map(s => (
+              {sessions.map(s => (
                 <SelectItem key={s.id} value={s.id}>
                   {s.name}
                 </SelectItem>
@@ -96,7 +161,7 @@ export default function GenerateInvoiceWizard({ onComplete }: GenerateInvoiceWiz
               <SelectValue placeholder="Select class" />
             </SelectTrigger>
             <SelectContent>
-              {sampleClasses.map(c => (
+              {classes.map(c => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.nameBn} ({c.name})
                 </SelectItem>
@@ -186,7 +251,7 @@ export default function GenerateInvoiceWizard({ onComplete }: GenerateInvoiceWiz
             </thead>
             <tbody>
               {classFeeItems.map(item => {
-                const cat = sampleFeeCategories.find(c => c.id === item.categoryId);
+                const cat = feeCategories.find(c => c.id === item.categoryId);
                 return (
                   <tr key={item.categoryId} className="border-b border-border last:border-b-0">
                     <td className="px-3 py-2">{cat?.nameEn || item.categoryId}</td>

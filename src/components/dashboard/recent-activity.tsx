@@ -63,16 +63,6 @@ function resolveIcon(activity: ActivityItem) {
   return iconMap[key] || iconMap.default;
 }
 
-/** Sample activities for empty state */
-const sampleActivities: ActivityItem[] = [
-  { id: 1, action: 'student', description: 'New student Ahmad Khan admitted to Class 5', createdAt: new Date(Date.now() - 2 * 60 * 1000).toISOString() },
-  { id: 2, action: 'fee', description: 'Fee payment of ₨ 5,000 received from Sara Ali', createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString() },
-  { id: 3, action: 'invoice', description: 'Fee invoice generated for Class 9 students', createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString() },
-  { id: 4, action: 'approve', description: 'Expense request approved for lab equipment', createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
-  { id: 5, action: 'alert', description: '3 students have overdue fee payments', createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() },
-  { id: 6, action: 'payment', description: 'Salary processed for teaching staff', createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() },
-];
-
 /**
  * RecentActivity displays a timeline of recent activities
  * with icons, descriptions, and relative timestamps.
@@ -83,7 +73,7 @@ export default function RecentActivity({
 }: RecentActivityProps) {
   const t = useTranslations('dashboard');
   const locale = useLocale();
-  const items = activities && activities.length > 0 ? activities : sampleActivities;
+  const items = activities || [];
 
   // Select date-fns locale for relative time formatting
   const dateLocale = locale === 'ar' ? ar : locale === 'bn' ? bn : undefined;
@@ -122,48 +112,56 @@ export default function RecentActivity({
           <CardTitle className="text-base">{t('recentActivity')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-            <div className="flex flex-col gap-1">
-              {items.slice(0, 10).map((activity, index) => {
-                const { icon: Icon, color } = resolveIcon(activity);
-                const timeAgo = activity.createdAt
-                  ? formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true, ...(dateLocale ? { locale: dateLocale } : {}) })
-                  : '';
-
-                return (
-                  <motion.div
-                    key={activity.id ?? index}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.2, delay: index * 0.05 }}
-                    className="flex items-start gap-3 rounded-lg p-2 hover:bg-muted/50 transition-colors"
-                  >
-                    {/* Icon */}
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted/80">
-                      <Icon className={`h-4 w-4 ${color}`} />
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground leading-snug truncate">
-                        {activity.description || t('activityRecorded')}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {timeAgo}
-                      </p>
-                    </div>
-                  </motion.div>
-                );
-              })}
+          {items.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[120px]">
+              <p className="text-sm text-muted-foreground">No data available yet</p>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+                <div className="flex flex-col gap-1">
+                  {items.slice(0, 10).map((activity, index) => {
+                    const { icon: Icon, color } = resolveIcon(activity);
+                    const timeAgo = activity.createdAt
+                      ? formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true, ...(dateLocale ? { locale: dateLocale } : {}) })
+                      : '';
 
-          {/* View All link */}
-          <div className="mt-3 pt-3 border-t border-border">
-            <Button variant="ghost" size="sm" className="w-full text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">
-              {t('viewAllActivity')}
-            </Button>
-          </div>
+                    return (
+                      <motion.div
+                        key={activity.id ?? index}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2, delay: index * 0.05 }}
+                        className="flex items-start gap-3 rounded-lg p-2 hover:bg-muted/50 transition-colors"
+                      >
+                        {/* Icon */}
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted/80">
+                          <Icon className={`h-4 w-4 ${color}`} />
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground leading-snug truncate">
+                            {activity.description || t('activityRecorded')}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {timeAgo}
+                          </p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* View All link */}
+              <div className="mt-3 pt-3 border-t border-border">
+                <Button variant="ghost" size="sm" className="w-full text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">
+                  {t('viewAllActivity')}
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </motion.div>

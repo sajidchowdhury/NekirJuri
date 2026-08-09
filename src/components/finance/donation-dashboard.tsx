@@ -5,6 +5,7 @@
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   HandHeart, TrendingUp, Users, CalendarDays, RefreshCw,
@@ -16,12 +17,12 @@ import {
 } from 'recharts';
 import StatCard from '@/components/molecules/stat-card';
 import {
-  sampleDonors,
-  sampleDonationTrend,
-  sampleDonationCategoryBreakdown,
-  sampleDonations,
   formatTaka,
   type DonationCategory,
+  type Donor,
+  type DonationRecord,
+  type DonationTrendPoint,
+  type DonationCategoryBreakdown,
 } from '@/lib/finance/sample-data';
 
 const categoryColors: Record<DonationCategory, string> = {
@@ -41,12 +42,38 @@ const categoryLabels: Record<DonationCategory, string> = {
 };
 
 export default function DonationDashboard() {
-  // Compute stats from sample data (defensive checks)
-  const donations = sampleDonations ?? [];
-  const donors = sampleDonors ?? [];
+  // Fetch donors from API
+  const { data: donorsResponse } = useQuery({
+    queryKey: ['donors'],
+    queryFn: async () => {
+      const res = await fetch('/api/donors?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch donors');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
+  // Fetch donations from API
+  const { data: donationsResponse } = useQuery({
+    queryKey: ['donations'],
+    queryFn: async () => {
+      const res = await fetch('/api/donations?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch donations');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Compute stats from API data
+  const donors: Donor[] = donorsResponse?.data || [];
+  const donations: DonationRecord[] = donationsResponse?.data || [];
+  const donationTrend: DonationTrendPoint[] = [];
+  const donationCategoryBreakdown: DonationCategoryBreakdown[] = [];
+
+  const now = new Date();
+  const thisMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const totalThisMonth = donations
-    .filter((d) => d.date?.startsWith('2025-02'))
+    .filter((d) => d.date?.startsWith(thisMonthPrefix))
     .reduce((sum, d) => sum + d.amount, 0);
 
   const totalThisYear = donations
@@ -107,8 +134,13 @@ export default function DonationDashboard() {
           </CardHeader>
           <CardContent>
             <div className="h-64">
+              {donationTrend.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                  No trend data available yet.
+                </div>
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={sampleDonationTrend} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                <AreaChart data={donationTrend} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
                   <defs>
                     <linearGradient id="donationGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
@@ -143,6 +175,7 @@ export default function DonationDashboard() {
                   />
                 </AreaChart>
               </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -189,8 +222,11 @@ export default function DonationDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {sampleDonationCategoryBreakdown.map((item, idx) => {
-              const maxAmount = Math.max(...sampleDonationCategoryBreakdown.map((b) => b.amount));
+            {donationCategoryBreakdown.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No category breakdown data available yet.</p>
+            ) : (
+            donationCategoryBreakdown.map((item, idx) => {
+              const maxAmount = Math.max(...donationCategoryBreakdown.map((b) => b.amount));
               const percentage = (item.amount / maxAmount) * 100;
               return (
                 <motion.div
@@ -224,7 +260,8 @@ export default function DonationDashboard() {
                   <p className="text-xs text-muted-foreground">{item.count} donations</p>
                 </motion.div>
               );
-            })}
+            })
+            )}
           </div>
         </CardContent>
       </Card>

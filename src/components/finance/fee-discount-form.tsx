@@ -6,6 +6,7 @@
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Percent, Banknote, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +28,6 @@ import {
 import StatusBadge from '@/components/atoms/status-badge';
 import {
   type FeeInvoice,
-  sampleInvoices,
   formatTaka,
 } from '@/lib/finance/sample-data';
 
@@ -45,17 +45,29 @@ export default function FeeDiscountForm({ onSuccess }: FeeDiscountFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);
 
+  // Fetch invoices from API
+  const { data: invoicesResponse } = useQuery({
+    queryKey: ['fee-invoices'],
+    queryFn: async () => {
+      const res = await fetch('/api/fee-invoices?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch invoices');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const invoices: FeeInvoice[] = invoicesResponse?.data || [];
+
   // Get invoices matching search (non-paid only)
-  const matchingInvoices = sampleInvoices.filter(inv =>
+  const matchingInvoices = invoices.filter(inv =>
     inv.status !== 'paid' &&
     (inv.studentName.toLowerCase().includes(studentSearch.toLowerCase()) ||
      inv.studentNameBn.includes(studentSearch) ||
      inv.invoiceNo.toLowerCase().includes(studentSearch.toLowerCase()))
   );
 
-  const selectedInvoice = sampleInvoices.find(inv => inv.id === selectedInvoiceId);
+  const selectedInvoice = invoices.find(inv => inv.id === selectedInvoiceId);
 
-  const discountAmount = React.useMemo(() => {
+  const discountAmount = (() => {
     if (!selectedInvoice || !discountValue) return 0;
     const val = parseFloat(discountValue);
     if (isNaN(val) || val <= 0) return 0;
@@ -63,7 +75,7 @@ export default function FeeDiscountForm({ onSuccess }: FeeDiscountFormProps) {
       return Math.round((val / 100) * selectedInvoice.balanceAmount);
     }
     return val;
-  }, [selectedInvoice, discountType, discountValue]);
+  })();
 
   const afterDiscount = selectedInvoice ? selectedInvoice.balanceAmount - discountAmount : 0;
 

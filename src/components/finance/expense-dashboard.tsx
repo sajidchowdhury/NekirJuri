@@ -5,6 +5,7 @@
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   ReceiptText, TrendingUp, TrendingDown, PieChart, ListChecks,
@@ -15,10 +16,9 @@ import {
 } from 'recharts';
 import StatCard from '@/components/molecules/stat-card';
 import {
-  sampleExpenses,
-  sampleBudgetAllocations,
   formatTaka,
   type ExpenseCategory,
+  type ExpenseRecord,
 } from '@/lib/finance/sample-data';
 
 const categoryColors: Record<ExpenseCategory, string> = {
@@ -42,22 +42,40 @@ const categoryLabels: Record<ExpenseCategory, string> = {
 };
 
 export default function ExpenseDashboard() {
-  // This month (Feb 2025)
-  const thisMonthExpenses = sampleExpenses.filter((e) => e.date.startsWith('2025-02'));
+  // Fetch expenses from API
+  const { data: expensesResponse } = useQuery({
+    queryKey: ['expenses'],
+    queryFn: async () => {
+      const res = await fetch('/api/expenses?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch expenses');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const expenses: ExpenseRecord[] = expensesResponse?.data || [];
+
+  // This month
+  const now = new Date();
+  const thisMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthPrefix = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
+  const thisMonthExpenses = expenses.filter((e) => e.date.startsWith(thisMonthPrefix));
   const thisMonthTotal = thisMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-  // Last month (Jan 2025)
-  const lastMonthExpenses = sampleExpenses.filter((e) => e.date.startsWith('2025-01'));
+  // Last month
+  const lastMonthExpenses = expenses.filter((e) => e.date.startsWith(lastMonthPrefix));
   const lastMonthTotal = lastMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   const trendPercent = lastMonthTotal > 0
     ? Math.round(((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100)
     : 0;
 
-  // Budget used %
-  const totalBudget = sampleBudgetAllocations.reduce((sum, b) => sum + b.budget, 0);
-  const totalSpent = sampleBudgetAllocations.reduce((sum, b) => sum + b.spent, 0);
-  const budgetUsedPercent = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+  // No budget allocation API yet — show empty state
+  const budgetAllocations: { category: ExpenseCategory; budget: number; spent: number }[] = [];
+  const totalBudget = 0;
+  const totalSpent = 0;
+  const budgetUsedPercent = 0;
 
   const numTransactions = thisMonthExpenses.length;
 
@@ -173,7 +191,10 @@ export default function ExpenseDashboard() {
             <CardTitle className="text-base">Budget vs Actual</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {sampleBudgetAllocations.map((item, idx) => {
+            {budgetAllocations.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">No budget allocation data available yet.</p>
+            ) : (
+            budgetAllocations.map((item, idx) => {
               const percent = item.budget > 0 ? Math.round((item.spent / item.budget) * 100) : 0;
               const isOverBudget = item.spent > item.budget;
               return (
@@ -215,7 +236,7 @@ export default function ExpenseDashboard() {
                   </p>
                 </motion.div>
               );
-            })}
+            }))}
           </CardContent>
         </Card>
       </div>

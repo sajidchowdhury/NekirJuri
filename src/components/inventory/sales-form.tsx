@@ -9,6 +9,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2, Loader2, AlertTriangle, GraduationCap, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { formatTaka, sampleProducts } from '@/lib/inventory/sample-data';
+import { formatTaka } from '@/lib/inventory/sample-data';
 
 // ==================== Types ====================
 
@@ -103,62 +104,39 @@ export interface SalesFormProps {
 }
 
 export default function SalesForm({ onSubmit, onCancel }: SalesFormProps) {
-  const [products, setProducts] = React.useState<ApiProduct[]>([]);
-  const [productsLoading, setProductsLoading] = React.useState(true);
-  const [productsError, setProductsError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+
+  // Fetch products from API via useQuery
+  const { data: productsResponse, isLoading: productsLoading, error: productsErrorObj } = useQuery({
+    queryKey: ['products-list-form'],
+    queryFn: async () => {
+      const res = await fetch('/api/products?limit=200');
+      if (!res.ok) throw new Error('Failed to fetch products');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const products: ApiProduct[] = React.useMemo(() => {
+    const raw = productsResponse?.data || [];
+    return raw.map((p: Record<string, unknown>) => ({
+      id: Number(p.id),
+      name: String(p.name ?? ''),
+      code: String(p.code ?? ''),
+      salePrice: Number(p.salePrice ?? 0),
+      currentStock: Number(p.currentStock ?? 0),
+      unit: p.unit ? String(p.unit) : null,
+      category: p.category && typeof p.category === 'object'
+        ? { id: Number((p.category as Record<string, unknown>).id ?? 0), name: String((p.category as Record<string, unknown>).name ?? ''), code: String((p.category as Record<string, unknown>).code ?? '') }
+        : undefined,
+    }));
+  }, [productsResponse]);
+  const productsError = productsErrorObj ? (productsErrorObj instanceof Error ? productsErrorObj.message : 'Failed to load products') : null;
 
   // Student search state
   const [students, setStudents] = React.useState<ApiStudent[]>([]);
   const [studentSearch, setStudentSearch] = React.useState('');
   const [studentsLoading, setStudentsLoading] = React.useState(false);
   const [studentSearchOpen, setStudentSearchOpen] = React.useState(false);
-
-  // Fetch products from API on mount, fall back to sample data on auth failure
-  React.useEffect(() => {
-    async function fetchProducts() {
-      try {
-        setProductsLoading(true);
-        const res = await fetch('/api/products?isActive=true&limit=200');
-        if (res.status === 401) {
-          // No auth/tenant context — fall back to sample data
-          console.warn('[SalesForm] API returned 401, using sample data');
-          const fallback: ApiProduct[] = sampleProducts.map(p => ({
-            id: Number(p.id.replace(/\D/g, '')) || 0,
-            name: p.name,
-            code: p.sku,
-            salePrice: p.salePrice,
-            currentStock: p.currentStock,
-            unit: p.unit,
-            category: { id: 0, name: p.category, code: p.category.toLowerCase() },
-          }));
-          setProducts(fallback);
-          setProductsLoading(false);
-          return;
-        }
-        if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
-        const json = await res.json();
-        const items = Array.isArray(json) ? json : (json.data || []);
-        setProducts(items);
-      } catch (err) {
-        console.error('[SalesForm] Failed to fetch products:', err);
-        // Fall back to sample data instead of showing an error
-        const fallback: ApiProduct[] = sampleProducts.map(p => ({
-          id: Number(p.id.replace(/\D/g, '')) || 0,
-          name: p.name,
-          code: p.sku,
-          salePrice: p.salePrice,
-          currentStock: p.currentStock,
-          unit: p.unit,
-          category: { id: 0, name: p.category, code: p.category.toLowerCase() },
-        }));
-        setProducts(fallback);
-      } finally {
-        setProductsLoading(false);
-      }
-    }
-    fetchProducts();
-  }, []);
 
   // Search students with debounce
   React.useEffect(() => {

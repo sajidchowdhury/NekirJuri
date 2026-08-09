@@ -6,6 +6,7 @@
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, CheckCircle2, CreditCard, Banknote, Smartphone, Building, FileText
@@ -31,7 +32,6 @@ import StatusBadge from '@/components/atoms/status-badge';
 import {
   type FeeInvoice,
   type PaymentMethod,
-  sampleInvoices,
   formatTaka,
 } from '@/lib/finance/sample-data';
 
@@ -55,15 +55,27 @@ export default function CollectPaymentForm({ onSuccess }: CollectPaymentFormProp
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);
 
+  // Fetch unpaid invoices from API
+  const { data: invoicesResponse } = useQuery({
+    queryKey: ['fee-invoices-unpaid'],
+    queryFn: async () => {
+      const res = await fetch('/api/fee-invoices?status=unpaid&limit=100');
+      if (!res.ok) throw new Error('Failed to fetch invoices');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const invoices: FeeInvoice[] = invoicesResponse?.data || [];
+
   // Get outstanding invoices matching search
-  const outstandingInvoices = sampleInvoices.filter(inv =>
+  const outstandingInvoices = invoices.filter(inv =>
     inv.status !== 'paid' &&
     (inv.studentName.toLowerCase().includes(studentSearch.toLowerCase()) ||
      inv.studentNameBn.includes(studentSearch) ||
      inv.invoiceNo.toLowerCase().includes(studentSearch.toLowerCase()))
   );
 
-  const selectedInvoice = sampleInvoices.find(inv => inv.id === selectedInvoiceId);
+  const selectedInvoice = invoices.find(inv => inv.id === selectedInvoiceId);
 
   const handleSubmit = async () => {
     if (!selectedInvoice || !paymentAmount) return;

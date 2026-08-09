@@ -7,6 +7,7 @@
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,7 +29,6 @@ import { MoreHorizontal, Eye, Pencil, Trash2, Bell, BellOff, RefreshCw, Mail, Sm
 import { DataTable } from '@/components/organisms/data-table';
 import { toast } from 'sonner';
 import {
-  sampleDonors,
   formatTaka,
   type Donor,
   type DonationCategory,
@@ -68,6 +68,18 @@ interface DonorListProps {
 export default function DonorList({ onView, onEdit, onDelete }: DonorListProps) {
   const [editingDonor, setEditingDonor] = React.useState<Donor | null>(null);
   const [showReminderDialog, setShowReminderDialog] = React.useState(false);
+
+  // Fetch donors from API
+  const { data: donorsResponse } = useQuery({
+    queryKey: ['donors'],
+    queryFn: async () => {
+      const res = await fetch('/api/donors?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch donors');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const donors: Donor[] = donorsResponse?.data || [];
 
   const handleToggleReminder = (donor: Donor, consent: boolean) => {
     toast.success(consent ? 'Reminders enabled' : 'Reminders disabled', {
@@ -235,7 +247,7 @@ export default function DonorList({ onView, onEdit, onDelete }: DonorListProps) 
     <>
       <DataTable
         columns={columns}
-        data={sampleDonors}
+        data={donors}
         searchable
         searchPlaceholder="Search donors..."
         sortable

@@ -8,6 +8,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,9 +24,7 @@ import {
 } from '@/components/ui/select';
 import {
   type PurchaseOrder,
-  type Product,
   formatTaka,
-  sampleProducts,
 } from '@/lib/inventory/sample-data';
 
 const lineItemSchema = z.object({
@@ -55,6 +54,25 @@ export interface PurchaseOrderFormProps {
 }
 
 export default function PurchaseOrderForm({ purchaseOrder, onSubmit, onCancel }: PurchaseOrderFormProps) {
+  // Fetch products from API for dropdown
+  const { data: productsResponse } = useQuery({
+    queryKey: ['products-list-form'],
+    queryFn: async () => {
+      const res = await fetch('/api/products?limit=200');
+      if (!res.ok) throw new Error('Failed to fetch products');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const products = React.useMemo(() => {
+    const raw = productsResponse?.data || [];
+    return raw.map((p: Record<string, unknown>) => ({
+      id: String(p.id),
+      name: String(p.name ?? ''),
+      purchasePrice: Number(p.purchasePrice ?? 0),
+    }));
+  }, [productsResponse]);
+
   const form = useForm<POFormData>({
     resolver: zodResolver(poSchema),
     defaultValues: {
@@ -79,7 +97,7 @@ export default function PurchaseOrderForm({ purchaseOrder, onSubmit, onCancel }:
   const grandTotal = subtotal + taxAmount + watchedShipping;
 
   const handleProductSelect = (index: number, productId: string) => {
-    const product: Product | undefined = sampleProducts.find(p => p.id === productId);
+    const product = products.find(p => p.id === productId);
     if (product) {
       form.setValue(`items.${index}.productId`, product.id);
       form.setValue(`items.${index}.productName`, product.name);
@@ -161,7 +179,7 @@ export default function PurchaseOrderForm({ purchaseOrder, onSubmit, onCancel }:
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {sampleProducts.map(p => (
+                    {products.map(p => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>

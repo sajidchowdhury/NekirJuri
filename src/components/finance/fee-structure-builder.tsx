@@ -6,6 +6,7 @@
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Check, X, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,10 +25,6 @@ import {
   type FeeCategory,
   type ClassGroup,
   type AcademicSession,
-  sampleFeeStructure,
-  sampleFeeCategories,
-  sampleClasses,
-  sampleSessions,
   formatTaka,
 } from '@/lib/finance/sample-data';
 
@@ -36,13 +33,67 @@ interface FeeStructureBuilderProps {
 }
 
 export default function FeeStructureBuilder({ className }: FeeStructureBuilderProps) {
-  const [session, setSession] = React.useState('s1');
-  const [structure, setStructure] = React.useState<FeeStructureCell[]>(sampleFeeStructure);
+  // Fetch fee structures from API
+  const { data: feeStructuresResponse } = useQuery({
+    queryKey: ['fee-structures'],
+    queryFn: async () => {
+      const res = await fetch('/api/fee-structures?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch fee structures');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch fee categories from API
+  const { data: feeCategoriesResponse } = useQuery({
+    queryKey: ['fee-categories'],
+    queryFn: async () => {
+      const res = await fetch('/api/fee-categories?limit=50');
+      if (!res.ok) throw new Error('Failed to fetch fee categories');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch classes from API
+  const { data: classesResponse } = useQuery({
+    queryKey: ['classes'],
+    queryFn: async () => {
+      const res = await fetch('/api/classes?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch classes');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch sessions from API
+  const { data: sessionsResponse } = useQuery({
+    queryKey: ['academic-sessions'],
+    queryFn: async () => {
+      const res = await fetch('/api/academic-sessions?limit=50');
+      if (!res.ok) throw new Error('Failed to fetch sessions');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const initialFeeStructure: FeeStructureCell[] = feeStructuresResponse?.data || [];
+  const feeCategories: FeeCategory[] = feeCategoriesResponse?.data || [];
+  const classesData: ClassGroup[] = classesResponse?.data || [];
+  const sessions: AcademicSession[] = sessionsResponse?.data || [];
+
+  const [session, setSession] = React.useState('');
+  const [structure, setStructure] = React.useState<FeeStructureCell[]>([]);
   const [editingCell, setEditingCell] = React.useState<string | null>(null); // "classId-categoryId"
   const [editValue, setEditValue] = React.useState<string>('');
 
-  const categories = sampleFeeCategories;
-  const classes = sampleClasses.filter(c =>
+  // Sync structure when API data arrives
+  React.useEffect(() => {
+    setStructure(initialFeeStructure);
+  }, [initialFeeStructure]);
+
+  const categories = feeCategories;
+  const classes = classesData.filter(c =>
     structure.some(s => s.classId === c.id)
   );
 
@@ -109,7 +160,7 @@ export default function FeeStructureBuilder({ className }: FeeStructureBuilderPr
                   <SelectValue placeholder="Select Session" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sampleSessions.map(s => (
+                  {sessions.map(s => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
                       {s.isCurrent && ' (Current)'}

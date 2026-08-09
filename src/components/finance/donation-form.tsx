@@ -10,6 +10,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,9 +28,9 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
-  sampleDonors,
   type DonationCategory,
   type PaymentMethod,
+  type Donor,
 } from '@/lib/finance/sample-data';
 
 const donationSchema = z.object({
@@ -86,6 +87,18 @@ export default function DonationForm({ onSuccess, editDefaults }: DonationFormPr
   const [donorSearch, setDonorSearch] = React.useState('');
   const [showDonorSuggestions, setShowDonorSuggestions] = React.useState(false);
 
+  // Fetch donors from API
+  const { data: donorsResponse } = useQuery({
+    queryKey: ['donors'],
+    queryFn: async () => {
+      const res = await fetch('/api/donors?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch donors');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const donors: Donor[] = donorsResponse?.data || [];
+
   const form = useForm<DonationFormValues>({
     resolver: zodResolver(donationSchema),
     defaultValues: {
@@ -108,11 +121,11 @@ export default function DonationForm({ onSuccess, editDefaults }: DonationFormPr
   const recurringAmount = form.watch('recurringAmount');
   const donationAmount = form.watch('amount');
 
-  const filteredDonors = sampleDonors.filter((d) =>
+  const filteredDonors = donors.filter((d) =>
     d.name.toLowerCase().includes(donorSearch.toLowerCase())
   );
 
-  const handleDonorSelect = (donor: typeof sampleDonors[0]) => {
+  const handleDonorSelect = (donor: Donor) => {
     form.setValue('donorName', donor.name);
     form.setValue('donorPhone', donor.phone);
     setDonorSearch(donor.name);

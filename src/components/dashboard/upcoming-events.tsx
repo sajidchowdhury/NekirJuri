@@ -46,34 +46,6 @@ const typeIcons: Record<string, React.ElementType> = {
   general: Calendar,
 };
 
-/** Sample events for empty/preview state */
-const sampleEvents: UpcomingEvent[] = [
-  {
-    title: '15 students have fees due tomorrow',
-    dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-    type: 'due_fees',
-    urgency: 'urgent',
-  },
-  {
-    title: 'Teacher salaries pending for this month',
-    dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-    type: 'pending_salary',
-    urgency: 'warning',
-  },
-  {
-    title: 'Stationery stock running low',
-    dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-    type: 'low_stock',
-    urgency: 'warning',
-  },
-  {
-    title: 'Parent-teacher meeting scheduled',
-    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    type: 'reminder',
-    urgency: 'normal',
-  },
-];
-
 /**
  * UpcomingEvents displays a list of upcoming events and alerts
  * with urgency-based badges and type-based icons.
@@ -82,7 +54,7 @@ export default function UpcomingEvents({
   events,
   loading = false,
 }: UpcomingEventsProps) {
-  const items = events && events.length > 0 ? events : sampleEvents;
+  const items = events || [];
 
   if (loading) {
     return (

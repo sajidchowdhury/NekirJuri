@@ -31,16 +31,6 @@ export interface FeeCollectionChartProps {
   loading?: boolean;
 }
 
-/** Sample data used when no real data is available */
-const sampleData: MonthlyFeeData[] = [
-  { month: 'Mar', collected: 45000, outstanding: 12000 },
-  { month: 'Apr', collected: 52000, outstanding: 8000 },
-  { month: 'May', collected: 48000, outstanding: 15000 },
-  { month: 'Jun', collected: 61000, outstanding: 9000 },
-  { month: 'Jul', collected: 55000, outstanding: 11000 },
-  { month: 'Aug', collected: 67000, outstanding: 7000 },
-];
-
 /** Custom tooltip formatter */
 function formatTooltipValue(value: number) {
   return `₨ ${value.toLocaleString()}`;
@@ -54,7 +44,7 @@ export default function FeeCollectionChart({
   data,
   loading = false,
 }: FeeCollectionChartProps) {
-  const chartData = data && data.length > 0 ? data : sampleData;
+  const chartData = data || [];
 
   if (loading) {
     return (
@@ -80,61 +70,67 @@ export default function FeeCollectionChart({
           <CardTitle className="text-base">Fee Collection Trend</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart
-              data={chartData}
-              margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="emeraldGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity={0.05} />
-                </linearGradient>
-                <linearGradient id="amberGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.5} />
-              <XAxis
-                dataKey="month"
-                tick={{ fontSize: 12, fill: 'var(--color-muted-foreground)' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 12, fill: 'var(--color-muted-foreground)' }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
-              />
-              <Tooltip
-                formatter={(value: number) => formatTooltipValue(value)}
-                contentStyle={{
-                  backgroundColor: 'var(--color-popover)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="collected"
-                name="Collected"
-                stroke="#10b981"
-                strokeWidth={2}
-                fill="url(#emeraldGradient)"
-              />
-              <Area
-                type="monotone"
-                dataKey="outstanding"
-                name="Outstanding"
-                stroke="#f59e0b"
-                strokeWidth={2}
-                fill="url(#amberGradient)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          {chartData.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[120px]">
+              <p className="text-sm text-muted-foreground">No data available yet</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart
+                data={chartData}
+                margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="emeraldGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="amberGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.5} />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 12, fill: 'var(--color-muted-foreground)' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: 'var(--color-muted-foreground)' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  formatter={(value: number) => formatTooltipValue(value)}
+                  contentStyle={{
+                    backgroundColor: 'var(--color-popover)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="collected"
+                  name="Collected"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fill="url(#emeraldGradient)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="outstanding"
+                  name="Outstanding"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  fill="url(#amberGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </motion.div>
