@@ -1,0 +1,452 @@
+# 🚀 Madrasha ERP SaaS — Production Readiness Roadmap
+## Version 1.0 — Complete Path to 100% Production-Ready
+
+> **Created**: March 2026
+> **Current State**: Stage 3: 85% | Stage 4: 40% | Stage 5: 0%
+> **Target**: 100% Production-Ready
+> **Estimated Total**: 18-24 sessions across 6 phases
+
+---
+
+# Current State Assessment (Verified Against Codebase)
+
+## What's Actually Built (Real Numbers)
+
+| Area | Status | Details |
+|------|--------|---------|
+| UI Components | ✅ 100% | 156+ components, 29 pages, 327 TypeScript files |
+| Prisma Schema | ✅ 100% | 51 models, 1,418 lines, all CRs aligned |
+| API Routes (Backend) | ✅ 95% | 69/73 routes wired to Prisma with real DB queries |
+| Tenant Isolation | ✅ 100% | All 69 Prisma routes enforce tenantId |
+| Auth System | ✅ 100% | NextAuth v4 + register + forgot-password |
+| Subscription Enforcement | ✅ 100% | Full lifecycle (active→grace→restricted→suspended→terminated) |
+| Unit Tests | ✅ Done | Vitest 4.1.10, 108 tests, 6 suites — all passing |
+| Migration System | ✅ Done | Baseline `0_init` + `scripts/migrate.sh` (12 subcommands) |
+| Cron Jobs | ✅ Done | Donation reminders (port 3031), Backup cron (port 3032) |
+| Backup & Restore | ✅ Done | Full lifecycle: trigger, list, download, delete, restore |
+
+## Critical Gaps (What's NOT Done)
+
+| Gap | Severity | Count | Impact |
+|-----|----------|-------|--------|
+| **Frontend→API wiring** | 🔴 CRITICAL | 13 pages + 62 components use hardcoded sample data | Users see fake data instead of real records |
+| **Zod validation** | 🔴 CRITICAL | 61 mutation routes lack input validation | Any malformed POST/PUT will crash or corrupt data |
+| **Audit logging** | 🟡 HIGH | 26/73 routes have auditLog, ~47 missing | No accountability for data changes |
+| **SMS/Email backend** | 🟡 HIGH | Not implemented | No notification delivery |
+| **Seed data with i18n** | 🟢 MEDIUM | No Bengali/Arabic seed data | Demo shows empty or English-only data |
+| **Production config** | 🔴 CRITICAL | No env setup, no Docker, no CI/CD | Cannot deploy |
+
+## Frontend→API Gap Detail
+
+### Pages Already Connected to API (9/27)
+- ✅ dashboard, students, teachers, employees, sessions, classes, donations, sales, gallery
+
+### Pages Still on Sample Data (13/27)
+- ❌ notices, pages (CMS), payroll, fees, collections, expenses, stock, products, purchases, users, journal-entries, chart-of-accounts, promotions
+
+### Config Pages (5/27) — No List Data Needed
+- ⚪ settings, notifications, billing, activity-logs, backup
+
+---
+
+# 🗺️ Phase-by-Phase Roadmap
+
+## Phase 1: Input Validation & Audit Logging (Stage 3 Completion)
+**Goal**: Every mutation route has Zod validation + audit logging
+**Sessions**: 2-3
+**Priority**: 🔴 CRITICAL — Must be first. Without validation, any bad request can crash/corrupt data.
+
+### Session 1.1: Core Entity Validation (2-3 hours)
+**Tasks**:
+- [ ] Add Zod schemas for: students, teachers, employees, guardians
+- [ ] Add Zod schemas for: classes, sections, academic-sessions
+- [ ] Add audit logging to all mutation routes in above
+- [ ] Run test suite to verify no regressions
+
+**Files to modify** (~12 route files):
+- `src/app/api/students/route.ts` + `[id]/route.ts`
+- `src/app/api/teachers/route.ts` + `[id]/route.ts`
+- `src/app/api/employees/route.ts` + `[id]/route.ts`
+- `src/app/api/guardians/route.ts` + `[id]/route.ts`
+- `src/app/api/classes/route.ts` + `[id]/route.ts`
+- `src/app/api/sections/route.ts` + `[id]/route.ts`
+- `src/app/api/academic-sessions/route.ts` + `[id]/route.ts`
+
+**Pattern** (apply to all):
+```typescript
+import { z } from 'zod'
+
+const StudentSchema = z.object({
+  name: z.string().min(1).max(200),
+  nameBn: z.string().optional(),
+  phone: z.string().optional(),
+  // ... all fields with proper types/constraints
+})
+
+// In POST handler:
+const body = StudentSchema.parse(await request.json())
+```
+
+### Session 1.2: Finance + Inventory Validation (2-3 hours)
+**Tasks**:
+- [ ] Add Zod schemas for: fee-categories, fee-structures, fee-invoices, fee-collections, fee-discounts
+- [ ] Add Zod schemas for: donations, donors, donation-categories, expenses, expense-category
+- [ ] Add Zod schemas for: products, product-categories, purchases, sales, stock-movements, suppliers
+- [ ] Add audit logging to all above mutation routes
+- [ ] Run test suite
+
+**Files to modify** (~18 route files)
+
+### Session 1.3: System + Accounting Validation (2-3 hours)
+**Tasks**:
+- [ ] Add Zod schemas for: accounts (chart-of-accounts), journal-entries
+- [ ] Add Zod schemas for: salary-structures, salary-payments
+- [ ] Add Zod schemas for: tenants, users, roles, notices, pages (CMS), settings
+- [ ] Add Zod schemas for: subscription-plans, subscriptions
+- [ ] Add Zod schemas for: galleries, backup/restore
+- [ ] Add audit logging to all above
+- [ ] Run test suite
+- [ ] **Stage 3 = 100% ✅**
+
+**Files to modify** (~15 route files)
+
+**Phase 1 Deliverables**:
+- 61 routes now have Zod validation
+- All mutation routes have audit logging
+- Zero unvalidated API endpoints
+- Stage 3: 100% COMPLETE
+
+---
+
+## Phase 2: Frontend→API Data Wiring (Stage 4 Core)
+**Goal**: Every page fetches real data from API routes instead of hardcoded sample data
+**Sessions**: 4-5
+**Priority**: 🔴 CRITICAL — Without this, users see fake data. This is the #1 user-facing gap.
+
+### Session 2.1: Academic Pages (3-4 hours)
+**Tasks**:
+- [ ] Wire `students/page.tsx` — Replace sampleStudents with `useQuery('/api/students')`
+- [ ] Wire `teachers/page.tsx` — Replace sampleTeachers with `useQuery('/api/teachers')`
+- [ ] Wire `employees/page.tsx` — Replace sampleEmployees with `useQuery('/api/employees')`
+- [ ] Wire `classes/page.tsx` — Replace sampleClasses with `useQuery('/api/classes')`
+- [ ] Wire `promotions/page.tsx` — Replace sample data with API-driven promotion list
+- [ ] Add loading skeletons, error states, empty states to each page
+- [ ] Verify CRUD flows: Create → Read → Update → Delete for each entity
+
+**Pages modified**: 5
+**Components to update**: StudentList, TeacherList, EmployeeList, ClassList, PromotionList
+
+### Session 2.2: Finance Pages (3-4 hours)
+**Tasks**:
+- [ ] Wire `fees/page.tsx` — Fee categories + structures from API
+- [ ] Wire `collections/page.tsx` — Fee collections list + recording from API
+- [ ] Wire `expenses/page.tsx` — Expense list + CRUD from API
+- [ ] Wire `payroll/page.tsx` — Salary structures + payments from API
+- [ ] Remove all sample data fallbacks
+- [ ] Add proper loading/error/empty states
+
+**Pages modified**: 4
+
+### Session 2.3: Inventory + Accounting Pages (3-4 hours)
+**Tasks**:
+- [ ] Wire `products/page.tsx` — Product list + CRUD from API
+- [ ] Wire `purchases/page.tsx` — Purchase orders from API
+- [ ] Wire `stock/page.tsx` — Stock movements from API
+- [ ] Wire `chart-of-accounts/page.tsx` — Account tree from API
+- [ ] Wire `journal-entries/page.tsx` — Journal entries from API
+- [ ] Remove all sample data fallbacks
+
+**Pages modified**: 5
+
+### Session 2.4: System + CMS Pages (3-4 hours)
+**Tasks**:
+- [ ] Wire `users/page.tsx` — User list + management from API
+- [ ] Wire `notices/page.tsx` — Notice board from API
+- [ ] Wire `pages/page.tsx` (CMS) — Website pages from API
+- [ ] Wire dashboard charts — Replace sample data in 6 dashboard chart components
+  - student-distribution-chart, fee-collection-chart, dashboard-overview-chart
+  - payment-status-chart, recent-activity, upcoming-events
+- [ ] Wire accounting reports — income-statement, balance-sheet, ledger-view
+- [ ] Remove all remaining sample data
+
+**Pages modified**: 3
+**Components modified**: 9 chart/report components
+
+### Session 2.5: Data Flow Verification + Polish (2-3 hours)
+**Tasks**:
+- [ ] End-to-end test: Create student → appears in list → edit → delete → gone
+- [ ] End-to-end test: Create fee invoice → record collection → balance updates
+- [ ] End-to-end test: Create product → add to sale → fee integration works
+- [ ] Verify all 27 pages load real data (no sample data anywhere)
+- [ ] Add React Query devtools for debugging
+- [ ] Add error boundary per page
+- [ ] **Stage 4 = 90% ✅** (SMS/email still pending)
+
+**Phase 2 Deliverables**:
+- 13 pages switched from sample data to real API calls
+- 62 components using real data instead of hardcoded values
+- Full CRUD verified end-to-end for all entities
+- Loading skeletons, error states, empty states on all pages
+
+---
+
+## Phase 3: SMS/Email Backend + Notifications (Stage 4 Completion)
+**Goal**: Real notification delivery via SMS and Email providers
+**Sessions**: 2-3
+**Priority**: 🟡 HIGH — Needed for production notifications (fee reminders, donation reminders, alerts)
+
+### Session 3.1: Notification Infrastructure (3-4 hours)
+**Tasks**:
+- [ ] Create `src/lib/notifications/` module
+  - `providers/sms.ts` — Twilio/MSG91 integration
+  - `providers/email.ts` — Resend/SendGrid integration
+  - `templates/` — Fee reminder, donation reminder, welcome, receipt templates
+  - `queue.ts` — Notification queue (in-memory for now, Redis later)
+  - `index.ts` — Unified send() function
+- [ ] Create API routes:
+  - `POST /api/notifications/send-sms` — Send SMS
+  - `POST /api/notifications/send-email` — Send email
+  - `GET /api/notifications/logs` — Delivery log
+- [ ] Add `NotificationLog` model to Prisma schema (provider, type, status, recipient, content, sentAt, error)
+
+### Session 3.2: Notification Templates + Integration (3-4 hours)
+**Tasks**:
+- [ ] Build notification templates:
+  - Fee payment reminder (SMS + Email)
+  - Donation receipt (Email)
+  - Recurring donation reminder (SMS + Email)
+  - Welcome email for new tenants
+  - Subscription expiry warning
+- [ ] Integrate with existing cron jobs:
+  - Donation reminder cron → now sends real SMS/Email (not just in-app notifications)
+  - Backup failure → sends admin email
+- [ ] Add notification preferences to Settings page
+- [ ] Wire subscription enforcement → email on grace period entry
+- [ ] **Stage 4 = 100% ✅**
+
+**Phase 3 Deliverables**:
+- SMS sending via Twilio/MSG91
+- Email sending via Resend/SendGrid
+- 5 notification templates
+- Notification preferences UI
+- Cron jobs send real notifications
+
+---
+
+## Phase 4: Production Configuration & DevOps (Stage 5)
+**Goal**: Application can be deployed to production with proper config, monitoring, and CI/CD
+**Sessions**: 3-4
+**Priority**: 🔴 CRITICAL — Without this, cannot go live
+
+### Session 4.1: Environment & Database Config (3-4 hours)
+**Tasks**:
+- [ ] Create `.env.example` with all required variables documented
+- [ ] Create `.env.production` template
+- [ ] Verify PostgreSQL production schema works (`scripts/switch-to-prod.sh`)
+- [ ] Run `prisma migrate deploy` against PostgreSQL
+- [ ] Create Docker setup:
+  - `Dockerfile` (multi-stage: build + production)
+  - `docker-compose.yml` (app + PostgreSQL + Redis)
+  - `.dockerignore`
+- [ ] Add health check endpoint: `GET /api/health` (db connection, memory, uptime)
+- [ ] Add graceful shutdown handling
+
+### Session 4.2: Security Hardening (3-4 hours)
+**Tasks**:
+- [ ] Add rate limiting to API routes (upstash/redis or in-memory)
+- [ ] Add CORS configuration for production
+- [ ] Add CSRF protection
+- [ ] Add request size limits (prevent large payload attacks)
+- [ ] Review and rotate any exposed secrets
+- [ ] Add `Helmet`-like security headers
+- [ ] Configure Content Security Policy
+- [ ] Verify all passwords are bcrypt hashed (not plaintext)
+- [ ] Add brute-force protection on login route
+
+### Session 4.3: Monitoring & Error Handling (3-4 hours)
+**Tasks**:
+- [ ] Add structured logging (pino or winston)
+- [ ] Add error tracking (Sentry integration)
+- [ ] Add performance monitoring (Web Vitals)
+- [ ] Create `GET /api/admin/metrics` endpoint (DB connections, API latency, error rates)
+- [ ] Add global error boundary with error reporting
+- [ ] Add API response time headers
+- [ ] Set up log rotation
+
+### Session 4.4: CI/CD + Seed Data (3-4 hours)
+**Tasks**:
+- [ ] Create GitHub Actions workflow:
+  - `.github/workflows/ci.yml` — lint + test + type-check on PR
+  - `.github/workflows/deploy.yml` — deploy on merge to main
+- [ ] Create production seed script:
+  - `prisma/seed.ts` — Realistic sample data with Bengali/Arabic i18n content
+  - 3 tenants, 50 students, 10 teachers, fee structures, donations
+- [ ] Create deployment script: `scripts/deploy.sh`
+- [ ] Test full deployment flow locally with Docker
+
+**Phase 4 Deliverables**:
+- Docker setup (app + PostgreSQL)
+- CI/CD pipeline (GitHub Actions)
+- Security hardening (rate limit, CSRF, CORS, CSP)
+- Health checks + monitoring
+- Production seed data with i18n
+- Structured logging + error tracking
+
+---
+
+## Phase 5: Integration Testing + Performance (Hardening)
+**Goal**: Confidence that everything works end-to-end under load
+**Sessions**: 2-3
+**Priority**: 🟡 HIGH — Required before real users
+
+### Session 5.1: Integration Tests (3-4 hours)
+**Tasks**:
+- [ ] Add integration tests for critical flows:
+  - Student CRUD with tenant isolation
+  - Fee invoice → collection → receipt flow
+  - Sale → student fee integration (CR-4)
+  - Donation recurring → reminder → payment (CR-5)
+  - Subscription enforcement state machine (CR-7)
+  - Accounting mode switch → auto-journal (CR-8)
+  - Backup → restore flow
+- [ ] Add API route tests for all 50+ routes (request → validate → response)
+- [ ] Add multi-tenant isolation test (tenant A cannot see tenant B data)
+- [ ] Target: 200+ integration tests
+
+### Session 5.2: Performance Optimization (3-4 hours)
+**Tasks**:
+- [ ] Add database indexes audit (check slow queries with EXPLAIN)
+- [ ] Add React Query caching strategy (staleTime, gcTime per route type)
+- [ ] Add pagination to all list endpoints (already partially done)
+- [ ] Add API response compression
+- [ ] Optimize bundle size (dynamic imports for heavy components)
+- [ ] Add image optimization (next/image for all product/student photos)
+- [ ] Load test with 100 concurrent users
+- [ ] Target: <2s page load, <200ms API response
+
+**Phase 5 Deliverables**:
+- 200+ integration tests passing
+- Performance benchmarks documented
+- All pages <2s load time
+- All API responses <200ms
+
+---
+
+## Phase 6: Launch Readiness + Documentation (Final)
+**Goal**: Everything documented, trained, and ready for real users
+**Sessions**: 1-2
+**Priority**: 🟢 MEDIUM — Important for handover but not blocking
+
+### Session 6.1: Documentation + Admin Guide (3-4 hours)
+**Tasks**:
+- [ ] Update all DEPT tracker files — mark everything 100% DONE
+- [ ] Create `ADMIN_GUIDE.md` — How to manage tenants, users, subscriptions
+- [ ] Create `API_REFERENCE.md` — All endpoints documented with examples
+- [ ] Create `DEPLOYMENT_GUIDE.md` — Step-by-step production deployment
+- [ ] Update `README.md` with current architecture, stack, and setup
+- [ ] Create `CHANGELOG.md` — All 10 CRs + Module 28 + hardening documented
+
+### Session 6.2: Final Verification + Go-Live (2-3 hours)
+**Tasks**:
+- [ ] Full regression test — every page, every CRUD flow
+- [ ] Verify multi-tenant isolation end-to-end
+- [ ] Verify subscription enforcement end-to-end
+- [ ] Verify backup/restore works with real data
+- [ ] Verify notifications deliver (send test SMS + email)
+- [ ] Security audit checklist
+- [ ] Performance audit checklist
+- [ ] **🎉 PRODUCTION READY — 100%**
+
+**Phase 6 Deliverables**:
+- Complete documentation
+- All trackers at 100%
+- Full verification passed
+- Go-live approved
+
+---
+
+# 📊 Summary Timeline
+
+| Phase | Name | Sessions | Hours | Priority | Dependency |
+|-------|------|----------|-------|----------|------------|
+| **1** | Validation & Audit | 3 | 6-9 | 🔴 Critical | None |
+| **2** | Frontend→API Wiring | 5 | 15-20 | 🔴 Critical | After Phase 1 |
+| **3** | SMS/Email Backend | 2 | 6-8 | 🟡 High | Can parallel with Phase 2 |
+| **4** | Production Config | 4 | 12-16 | 🔴 Critical | After Phase 2 |
+| **5** | Integration Testing | 2 | 6-8 | 🟡 High | After Phase 4 |
+| **6** | Launch Readiness | 2 | 5-7 | 🟢 Medium | After Phase 5 |
+| | **TOTAL** | **18** | **50-68** | | |
+
+## Parallelization Opportunities
+
+```
+Session 1.1 ──→ 1.2 ──→ 1.3 ──┐
+                                 ├──→ 2.1 ──→ 2.2 ──→ 2.3 ──→ 2.4 ──→ 2.5 ──┐
+Session 3.1 ──→ 3.2 ──────────────────────────────────────────────────────────┤
+                                                                              ├──→ 4.1 ──→ 4.2 ──→ 4.3 ──→ 4.4 ──→ 5.1 ──→ 5.2 ──→ 6.1 ──→ 6.2
+```
+
+**Phase 3 (SMS/Email) can run in parallel with Phase 2** since they're independent work.
+
+## Minimum Viable Production (MVP Path)
+
+If you need to launch sooner, the **minimum path to production** is:
+
+| Phase | Required? | Reason |
+|-------|-----------|--------|
+| 1 | ✅ YES | No validation = data corruption risk |
+| 2 | ✅ YES | Sample data = unusable product |
+| 3 | ⚪ OPTIONAL | Can launch without SMS/Email, add later |
+| 4 | ✅ YES | No Docker/config = can't deploy |
+| 5 | ⚪ PARTIAL | Core flow tests only (Session 5.1) |
+| 6 | ⚪ PARTIAL | Documentation only (Session 6.1) |
+
+**MVP Sessions**: 12-14 (Phases 1 + 2 + 4 + partial 5)
+
+---
+
+# 🏁 Stage Completion Criteria
+
+## Stage 3: Production Hardening — 100% when:
+- [x] Migration system in place
+- [x] Unit test framework + 108 tests passing
+- [x] Data deletion cron implemented
+- [x] computeEnforcement() bug fixed
+- [x] Schema fully aligned (CR-7 + CR-8)
+- [ ] **All 61 mutation routes have Zod validation** ← Phase 1
+- [ ] **All mutation routes have audit logging** ← Phase 1
+
+## Stage 4: Real Backend Wiring — 100% when:
+- [ ] **All 13 pages use real API data (no sample data)** ← Phase 2
+- [ ] **All 62 components use real data** ← Phase 2
+- [ ] **Full CRUD verified end-to-end** ← Phase 2
+- [ ] **SMS/Email backend implemented** ← Phase 3
+
+## Stage 5: Production Deploy — 100% when:
+- [ ] **Docker setup working** ← Phase 4
+- [ ] **CI/CD pipeline active** ← Phase 4
+- [ ] **Security hardening complete** ← Phase 4
+- [ ] **Integration tests passing (200+)** ← Phase 5
+- [ ] **Performance benchmarks met** ← Phase 5
+- [ ] **Documentation complete** ← Phase 6
+- [ ] **Full verification passed** ← Phase 6
+
+---
+
+# 📋 Quick Reference: What To Do Next
+
+**RIGHT NOW → Start Phase 1, Session 1.1**
+
+1. Create `src/lib/validations/` directory
+2. Add Zod schema for Student entity
+3. Wire it into `src/app/api/students/route.ts` POST handler
+4. Add audit logging to the same route
+5. Run `bun run test` to verify
+6. Repeat for teachers, employees, guardians
+7. Commit + push
+
+This gives you the highest-impact improvement per session: **input validation prevents data corruption**, which is the #1 production risk.
+
+---
+
+*Last updated: March 2026 | Total estimated sessions: 18 | Total estimated hours: 50-68*
