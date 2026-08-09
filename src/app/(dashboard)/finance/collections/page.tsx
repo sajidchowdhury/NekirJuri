@@ -2,12 +2,14 @@
 
 // ============================================================
 // Fee Collections Page — Collect Payment + Collection Report + Recent Collections
+// Fully wired to API — no sample data fallbacks
 // ============================================================
 
 import * as React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
-  Plus, Percent, Receipt, Eye, Calendar, CreditCard
+  Plus, Percent, Receipt, Eye, Calendar, CreditCard, AlertCircle, RefreshCw
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,7 +26,6 @@ import { DataTable } from '@/components/organisms/data-table';
 import {
   type CollectionRecord,
   type PaymentMethod,
-  sampleCollections,
   formatTaka,
 } from '@/lib/finance/sample-data';
 import { fadeIn, slideUp, staggerChildren, transitions } from '@/lib/animations';
@@ -43,10 +44,45 @@ const methodColors: Record<PaymentMethod, string> = {
   cheque: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
 };
 
+// Map API fee-collection to CollectionRecord shape
+function mapApiCollection(raw: Record<string, unknown>): CollectionRecord {
+  const student = (raw.student as Record<string, unknown>) || {};
+  const invoice = (raw.invoice as Record<string, unknown>) || {};
+  return {
+    id: raw.id as number,
+    receiptNo: (raw.receiptNo as string) || '',
+    studentName: (student.name as string) || (raw.studentName as string) || '',
+    studentNameBn: (student.nameBn as string) || (raw.studentNameBn as string) || '',
+    className: (student.className as string) || (raw.className as string) || '',
+    amount: Number(raw.amount || 0),
+    method: ((raw.paymentMethod as string) || (raw.method as string) || 'cash') as PaymentMethod,
+    date: (raw.paymentDate as string) || (raw.date as string) || '',
+    invoiceNo: (invoice.invoiceNo as string) || (raw.invoiceNo as string) || '',
+  };
+}
+
 export default function CollectionsPage() {
+  const queryClient = useQueryClient();
   const [discountDialogOpen, setDiscountDialogOpen] = React.useState(false);
   const [receiptDialogOpen, setReceiptDialogOpen] = React.useState(false);
   const [selectedCollection, setSelectedCollection] = React.useState<CollectionRecord | null>(null);
+
+  // Fetch collections from API
+  const {
+    data: collectionsResponse,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['fee-collections'],
+    queryFn: async () => {
+      const res = await fetch('/api/fee-collections?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch collections');
+      return res.json();
+    },
+  });
+
+  const collections: CollectionRecord[] = (collectionsResponse?.data || []).map(mapApiCollection);
 
   const handleViewReceipt = (collection: CollectionRecord) => {
     setSelectedCollection(collection);
@@ -78,7 +114,7 @@ export default function CollectionsPage() {
       accessorKey: 'className',
       header: 'Class',
       cell: ({ row }) => (
-        <Badge variant="outline" className="text-xs font-normal">{row.original.className}</Badge>
+        <Badge variant="outline" className="text-xs font-normal">{row.original.className || '—'}</Badge>
       ),
     },
     {
@@ -110,7 +146,7 @@ export default function CollectionsPage() {
       accessorKey: 'invoiceNo',
       header: 'Invoice',
       cell: ({ row }) => (
-        <span className="font-mono text-xs text-muted-foreground">{row.original.invoiceNo}</span>
+        <span className="font-mono text-xs text-muted-foreground">{row.original.invoiceNo || '—'}</span>
       ),
     },
     {
@@ -129,6 +165,23 @@ export default function CollectionsPage() {
     },
   ];
 
+  // Error state
+  if (isError) {
+    return (
+      <motion.div initial={fadeIn.initial} animate={fadeIn.animate} transition={transitions.normal} className="space-y-6">
+        <PageHeader title="Fee Collections" description="Collect payments, view receipts, and manage discounts" />
+        <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+          <AlertCircle className="h-12 w-12 text-rose-500" />
+          <h3 className="text-lg font-semibold">Failed to load collections</h3>
+          <p className="text-sm text-muted-foreground max-w-md">There was an error fetching collection data. Please try again.</p>
+          <Button variant="outline" className="gap-2" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4" /> Retry
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={fadeIn.initial}
@@ -139,7 +192,6 @@ export default function CollectionsPage() {
       <PageHeader
         title="Fee Collections"
         description="Collect payments, view receipts, and manage discounts"
-
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -171,7 +223,9 @@ export default function CollectionsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <CollectPaymentForm />
+              <CollectPaymentForm onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ['fee-collections'] });
+              }} />
             </CardContent>
           </Card>
         </motion.div>
@@ -206,12 +260,15 @@ export default function CollectionsPage() {
               >
                 <DataTable
                   columns={columns}
-                  data={sampleCollections}
+                  data={collections}
                   searchable
                   searchPlaceholder="Search collections..."
                   sortable
                   paginated
                   pageSize={10}
+                  isLoading={isLoading}
+                  emptyMessage="No collections found"
+                  emptyDescription="Record your first payment collection."
                   renderCard={(col: CollectionRecord) => (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -271,7 +328,7 @@ export default function CollectionsPage() {
               amount={selectedCollection.amount}
               method={selectedCollection.method}
               invoiceNo={selectedCollection.invoiceNo}
-              receivedBy="Ustad Karim"
+              receivedBy="System"
             />
           )}
         </DialogContent>

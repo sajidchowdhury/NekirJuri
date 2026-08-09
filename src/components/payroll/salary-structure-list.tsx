@@ -2,9 +2,11 @@
 
 // ============================================================
 // SalaryStructureList — DataTable of salary structures with filter tabs
+// Data fetched from /api/salary-structures via useQuery
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   type ColumnDef,
@@ -22,8 +24,8 @@ import { Eye, Edit, MoreHorizontal } from 'lucide-react';
 import { DataTable } from '@/components/organisms/data-table';
 import {
   formatTaka,
-  salaryStructures,
   type SalaryStructure,
+  type Employee,
 } from '@/lib/payroll/sample-data';
 import { fadeIn } from '@/lib/animations';
 
@@ -40,13 +42,72 @@ function getInitials(name: string): string {
   return parts[0]?.[0]?.toUpperCase() ?? '?';
 }
 
+/** Map API salary-structure response to SalaryStructure shape */
+function mapApiSalaryStructure(raw: Record<string, unknown>): SalaryStructure {
+  const teacherOrEmployee = (raw.teacher ?? raw.employee) as Record<string, unknown> | undefined;
+  const empName = String(teacherOrEmployee?.name ?? '');
+  const empType = (teacherOrEmployee?.type ?? 'employee') as 'teacher' | 'employee';
+
+  const employee: Employee = {
+    id: String(teacherOrEmployee?.id ?? raw.teacherId ?? raw.employeeId ?? ''),
+    name: empName,
+    nameBn: String(teacherOrEmployee?.nameBn ?? ''),
+    type: empType,
+    department: String(teacherOrEmployee?.department ?? ''),
+    designation: String(teacherOrEmployee?.designation ?? ''),
+    employeeId: String(teacherOrEmployee?.employeeId ?? teacherOrEmployee?.employee_id ?? ''),
+    photoUrl: teacherOrEmployee?.photoUrl as string | undefined,
+  };
+
+  const basicSalary = Number(raw.basicSalary ?? 0);
+  const houseRent = Number(raw.houseRent ?? 0);
+  const medicalAllowance = Number(raw.medicalAllowance ?? 0);
+  const transportAllowance = Number(raw.transportAllowance ?? 0);
+  const specialAllowance = Number(raw.specialAllowance ?? raw.otherAllowance ?? 0);
+  const providentFund = Number(raw.pfDeduction ?? raw.providentFund ?? 0);
+  const taxDeduction = Number(raw.taxDeduction ?? 0);
+  const otherDeduction = Number(raw.otherDeduction ?? 0);
+
+  const grossSalary = Number(raw.grossSalary ?? raw.totalSalary ?? (basicSalary + houseRent + medicalAllowance + transportAllowance + specialAllowance));
+  const totalDeductions = Number(raw.totalDeductions ?? (providentFund + taxDeduction + otherDeduction));
+  const netSalary = Number(raw.netSalary ?? (grossSalary - totalDeductions));
+
+  return {
+    id: String(raw.id ?? ''),
+    employeeId: String(raw.employeeId ?? raw.teacherId ?? ''),
+    employee,
+    basicSalary,
+    houseRent,
+    medicalAllowance,
+    transportAllowance,
+    specialAllowance,
+    providentFund,
+    taxDeduction,
+    otherDeduction,
+    grossSalary,
+    totalDeductions,
+    netSalary,
+  };
+}
+
 export default function SalaryStructureList({ onView, onEdit }: SalaryStructureListProps) {
   const [filter, setFilter] = React.useState<'all' | 'teacher' | 'employee'>('all');
+
+  const { data: salaryStructures = [], isLoading } = useQuery<SalaryStructure[]>({
+    queryKey: ['salary-structures'],
+    queryFn: async () => {
+      const res = await fetch('/api/salary-structures?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch salary structures');
+      const json = await res.json();
+      const rawList: unknown[] = json.data ?? json;
+      return rawList.map((r) => mapApiSalaryStructure(r as Record<string, unknown>));
+    },
+  });
 
   const filteredData = React.useMemo(() => {
     if (filter === 'all') return salaryStructures;
     return salaryStructures.filter((s) => s.employee.type === filter);
-  }, [filter]);
+  }, [salaryStructures, filter]);
 
   const columns: ColumnDef<SalaryStructure, unknown>[] = React.useMemo(
     () => [
@@ -218,6 +279,7 @@ export default function SalaryStructureList({ onView, onEdit }: SalaryStructureL
       <DataTable
         columns={columns}
         data={filteredData}
+        isLoading={isLoading}
         searchable
         searchPlaceholder="Search salary structures..."
         sortable

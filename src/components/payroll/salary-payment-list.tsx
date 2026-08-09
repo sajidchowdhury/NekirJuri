@@ -2,9 +2,11 @@
 
 // ============================================================
 // SalaryPaymentList — DataTable of processed salary payments
+// Data fetched from /api/salary-payments via useQuery
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { type ColumnDef } from '@tanstack/react-table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -28,8 +30,8 @@ import { DataTable } from '@/components/organisms/data-table';
 import {
   formatTaka,
   getMonthName,
-  salaryPayments,
   type SalaryPayment,
+  type Employee,
 } from '@/lib/payroll/sample-data';
 import { fadeIn } from '@/lib/animations';
 
@@ -41,6 +43,40 @@ function getInitials(name: string): string {
   return parts[0]?.[0]?.toUpperCase() ?? '?';
 }
 
+/** Map API salary-payment response to SalaryPayment shape */
+function mapApiSalaryPayment(raw: Record<string, unknown>): SalaryPayment {
+  const structureOrEmployee = (raw.salaryStructure ?? raw.teacher ?? raw.employee) as Record<string, unknown> | undefined;
+  const empSource = (structureOrEmployee?.teacher ?? structureOrEmployee?.employee ?? structureOrEmployee) as Record<string, unknown> | undefined;
+  const empName = String(empSource?.name ?? '');
+  const empType = (empSource?.type ?? 'employee') as 'teacher' | 'employee';
+
+  const employee: Employee = {
+    id: String(empSource?.id ?? ''),
+    name: empName,
+    nameBn: String(empSource?.nameBn ?? ''),
+    type: empType,
+    department: String(empSource?.department ?? ''),
+    designation: String(empSource?.designation ?? ''),
+    employeeId: String(empSource?.employeeId ?? empSource?.employee_id ?? ''),
+    photoUrl: empSource?.photoUrl as string | undefined,
+  };
+
+  return {
+    id: String(raw.id ?? ''),
+    salaryStructureId: String(raw.salaryStructureId ?? raw.salary_structure_id ?? (raw.salaryStructure as Record<string, unknown> | undefined)?.id ?? ''),
+    employee,
+    month: Number(raw.month ?? 1),
+    year: Number(raw.year ?? new Date().getFullYear()),
+    grossSalary: Number(raw.grossSalary ?? raw.gross_salary ?? 0),
+    totalDeductions: Number(raw.totalDeductions ?? raw.total_deductions ?? 0),
+    netSalary: Number(raw.netSalary ?? raw.net_salary ?? 0),
+    absentDays: Number(raw.absentDays ?? raw.absent_days ?? 0),
+    absentDeduction: Number(raw.absentDeduction ?? raw.absent_deduction ?? 0),
+    paymentDate: String(raw.paymentDate ?? raw.payment_date ?? ''),
+    status: (raw.status as 'paid' | 'pending') ?? 'pending',
+  };
+}
+
 interface SalaryPaymentListProps {
   onViewPayslip?: (payment: SalaryPayment) => void;
 }
@@ -49,6 +85,17 @@ export default function SalaryPaymentList({ onViewPayslip }: SalaryPaymentListPr
   const now = new Date();
   const [filterMonth, setFilterMonth] = React.useState<string>(String(now.getMonth() + 1));
   const [filterStatus, setFilterStatus] = React.useState<string>('all');
+
+  const { data: salaryPayments = [], isLoading } = useQuery<SalaryPayment[]>({
+    queryKey: ['salary-payments'],
+    queryFn: async () => {
+      const res = await fetch('/api/salary-payments?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch salary payments');
+      const json = await res.json();
+      const rawList: unknown[] = json.data ?? json;
+      return rawList.map((r) => mapApiSalaryPayment(r as Record<string, unknown>));
+    },
+  });
 
   const filteredData = React.useMemo(() => {
     let data = salaryPayments;
@@ -59,7 +106,7 @@ export default function SalaryPaymentList({ onViewPayslip }: SalaryPaymentListPr
       data = data.filter((p) => p.status === filterStatus);
     }
     return data;
-  }, [filterMonth, filterStatus]);
+  }, [salaryPayments, filterMonth, filterStatus]);
 
   const columns: ColumnDef<SalaryPayment, unknown>[] = React.useMemo(
     () => [
@@ -138,7 +185,7 @@ export default function SalaryPaymentList({ onViewPayslip }: SalaryPaymentListPr
             </Badge>
           );
         },
-      },
+    },
       {
         id: 'actions',
         header: '',
@@ -237,6 +284,7 @@ export default function SalaryPaymentList({ onViewPayslip }: SalaryPaymentListPr
       <DataTable
         columns={columns}
         data={filteredData}
+        isLoading={isLoading}
         searchable
         searchPlaceholder="Search payments..."
         sortable

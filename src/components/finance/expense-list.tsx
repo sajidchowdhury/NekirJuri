@@ -2,9 +2,11 @@
 
 // ============================================================
 // ExpenseList — DataTable of expenses with category badges and actions
+// Data fetched from /api/expenses via useQuery
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,7 +14,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Pencil, Trash2, FileText } from 'lucide-react';
 import { DataTable } from '@/components/organisms/data-table';
 import {
-  sampleExpenses,
   formatTaka,
   type ExpenseRecord,
   type ExpenseCategory,
@@ -55,12 +56,49 @@ function CategoryBadge({ category }: { category: ExpenseCategory }) {
   );
 }
 
+/** Map API expense response to ExpenseRecord shape */
+function mapApiExpense(raw: Record<string, unknown>): ExpenseRecord {
+  // API may return expenseCategory object or a string category
+  const categoryRaw = raw.expenseCategory ?? raw.category ?? raw.expense_category;
+  let category: ExpenseCategory = 'misc';
+  if (typeof categoryRaw === 'string') {
+    category = categoryRaw as ExpenseCategory;
+  } else if (typeof categoryRaw === 'object' && categoryRaw !== null) {
+    category = (categoryRaw as Record<string, unknown>).name as ExpenseCategory ?? 'misc';
+  }
+
+  const methodRaw = raw.paymentMethod ?? raw.method ?? raw.payment_method;
+  const method = (typeof methodRaw === 'string' ? methodRaw : 'cash') as PaymentMethod;
+
+  return {
+    id: String(raw.id ?? ''),
+    category,
+    description: String(raw.description ?? ''),
+    amount: Number(raw.amount ?? 0),
+    date: String(raw.expenseDate ?? raw.date ?? raw.expense_date ?? ''),
+    method,
+    receiptRef: String(raw.receiptRef ?? raw.receipt_ref ?? ''),
+    note: String(raw.note ?? ''),
+  };
+}
+
 interface ExpenseListProps {
   onEdit?: (expense: ExpenseRecord) => void;
   onDelete?: (expense: ExpenseRecord) => void;
 }
 
 export default function ExpenseList({ onEdit, onDelete }: ExpenseListProps) {
+  const { data: expenses = [], isLoading } = useQuery<ExpenseRecord[]>({
+    queryKey: ['expenses'],
+    queryFn: async () => {
+      const res = await fetch('/api/expenses?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch expenses');
+      const json = await res.json();
+      const rawList: unknown[] = json.data ?? json;
+      return rawList.map((r) => mapApiExpense(r as Record<string, unknown>));
+    },
+  });
+
   const columns: ColumnDef<ExpenseRecord, unknown>[] = React.useMemo(() => [
     {
       accessorKey: 'date',
@@ -159,7 +197,8 @@ export default function ExpenseList({ onEdit, onDelete }: ExpenseListProps) {
   return (
     <DataTable
       columns={columns}
-      data={sampleExpenses}
+      data={expenses}
+      isLoading={isLoading}
       searchable
       searchPlaceholder="Search expenses..."
       sortable

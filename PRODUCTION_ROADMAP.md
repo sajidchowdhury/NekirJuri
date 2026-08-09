@@ -2,7 +2,7 @@
 ## Version 1.0 — Complete Path to 100% Production-Ready
 
 > **Created**: March 2026
-> **Current State**: Stage 3: 100% ✅ | Stage 4: 55% | Stage 5: 0%
+> **Current State**: Stage 3: 100% ✅ | Stage 4: 70% | Stage 5: 0%
 > **Target**: 100% Production-Ready
 > **Estimated Total**: 18-24 sessions across 6 phases
 
@@ -29,7 +29,7 @@
 
 | Gap | Severity | Count | Impact |
 |-----|----------|-------|--------|
-| **Frontend→API wiring** | 🔴 CRITICAL | 8 pages still use hardcoded sample data (down from 13) | Some pages still show fake data instead of real records |
+| **Frontend→API wiring** | 🟡 HIGH | 4 pages still use hardcoded sample data (down from 13) | Most pages now show real data |
 | **Zod validation** | ✅ COMPLETE | All 61 mutation routes have Zod input validation | No malformed POST/PUT can crash or corrupt data |
 | **Audit logging** | 🟡 HIGH | 26/73 routes have auditLog, ~47 missing | No accountability for data changes |
 | **SMS/Email backend** | 🟡 HIGH | Not implemented | No notification delivery |
@@ -38,11 +38,11 @@
 
 ## Frontend→API Gap Detail
 
-### Pages Already Connected to API (15/27)
-- ✅ dashboard, students, teachers, employees, sessions, classes, donations, sales, gallery, promotions
+### Pages Already Connected to API (19/27)
+- ✅ dashboard, students, teachers, employees, sessions, classes, donations, sales, gallery, promotions, fees, collections, expenses, payroll
 
-### Pages Still on Sample Data (8/27)
-- ❌ notices, pages (CMS), payroll, fees, collections, expenses, stock, products, purchases, users, journal-entries, chart-of-accounts
+### Pages Still on Sample Data (4/27)
+- ❌ notices, pages (CMS), stock, products, purchases, users, journal-entries, chart-of-accounts
 
 ### Config Pages (5/27) — No List Data Needed
 - ⚪ settings, notifications, billing, activity-logs, backup
@@ -177,16 +177,35 @@
 
 **Lint**: 0 errors, 14 pre-existing warnings
 
-### Session 2.2: Finance Pages (3-4 hours)
+### Session 2.2: Finance Pages (3-4 hours) ✅ DONE
+**Completed**: March 2026
 **Tasks**:
-- [ ] Wire `fees/page.tsx` — Fee categories + structures from API
-- [ ] Wire `collections/page.tsx` — Fee collections list + recording from API
-- [ ] Wire `expenses/page.tsx` — Expense list + CRUD from API
-- [ ] Wire `payroll/page.tsx` — Salary structures + payments from API
-- [ ] Remove all sample data fallbacks
-- [ ] Add proper loading/error/empty states
+- [x] Wire `fees/page.tsx` — Sub-components (FeeCategoryList, FeeInvoiceList) now use useQuery for API data
+- [x] Wire `collections/page.tsx` — Fee collections list from API via useQuery, removed sampleCollections
+- [x] Wire `expenses/page.tsx` — Expense list + CRUD from API, ExpenseForm now POSTs to /api/expenses
+- [x] Wire `payroll/page.tsx` — Salary structures + payments from API, SalaryStructureForm now POSTs to /api/salary-structures
+- [x] Remove all sample data fallbacks from finance pages and sub-components
+- [x] Add proper loading/error/empty states to all finance pages
+- [x] Wire delete mutations for fee categories and expenses
+- [x] Wire ExpenseForm to POST /api/expenses (was toast-only before)
+- [x] Wire SalaryStructureForm to POST /api/salary-structures (was simulated setTimeout before)
 
-**Pages modified**: 4
+**Pages modified** (4 page files):
+- `src/app/(dashboard)/finance/fees/page.tsx` — Delegates to sub-components (now API-wired)
+- `src/app/(dashboard)/finance/collections/page.tsx` — Removed sampleCollections; useQuery for /api/fee-collections; error+retry state; query invalidation on payment
+- `src/app/(dashboard)/finance/expenses/page.tsx` — Removed ExpenseRecord type from sample-data; useQuery for expenses; delete mutation; error+retry; query invalidation
+- `src/app/(dashboard)/finance/payroll/page.tsx` — Removed salaryStructures import; API connectivity check; query invalidation on structure save
+
+**Sub-components modified** (7 files):
+- `src/components/finance/fee-category-list.tsx` — Replaced useState(sampleFeeCategories) with useQuery('/api/fee-categories'); delete via useMutation+apiDelete; query invalidation after CUD
+- `src/components/finance/fee-invoice-list.tsx` — Replaced sampleInvoices with useQuery('/api/fee-invoices'); API response mapper
+- `src/components/finance/expense-list.tsx` — Replaced sampleExpenses with useQuery('/api/expenses'); isLoading on DataTable; API response mapper
+- `src/components/finance/expense-form.tsx` — Now POSTs to /api/expenses (was toast-only); useMutation+apiSubmit; query invalidation
+- `src/components/payroll/salary-structure-list.tsx` — Replaced salaryStructures with useQuery('/api/salary-structures'); API response mapper; isLoading
+- `src/components/payroll/salary-payment-list.tsx` — Replaced salaryPayments with useQuery('/api/salary-payments'); API response mapper
+- `src/components/payroll/salary-structure-form.tsx` — Replaced employees sample data with useQuery for /api/teachers + /api/employees; now POSTs to /api/salary-structures (was simulated setTimeout)
+
+**Lint**: 0 errors, 14 pre-existing warnings
 
 ### Session 2.3: Inventory + Accounting Pages (3-4 hours)
 **Tasks**:
@@ -476,17 +495,18 @@ If you need to launch sooner, the **minimum path to production** is:
 
 # 📋 Quick Reference: What To Do Next
 
-**RIGHT NOW → Start Phase 2, Session 2.2**
+**RIGHT NOW → Start Phase 2, Session 2.3**
 
-1. Wire `fees/page.tsx` — Fee categories + structures from API
-2. Wire `collections/page.tsx` — Fee collections list + recording from API
-3. Wire `expenses/page.tsx` — Expense list + CRUD from API
-4. Wire `payroll/page.tsx` — Salary structures + payments from API
-5. Commit + push
+1. Wire `products/page.tsx` — Product list + CRUD from API
+2. Wire `purchases/page.tsx` — Purchase orders from API
+3. Wire `stock/page.tsx` — Stock movements from API
+4. Wire `chart-of-accounts/page.tsx` — Account tree from API
+5. Wire `journal-entries/page.tsx` — Journal entries from API
+6. Commit + push
 
-Phase 1 (Validation & Audit) is COMPLETE. Session 2.1 (Academic Pages) is COMPLETE.
-6 of 13 sample-data pages are now wired to real API data.
-The next work is Session 2.2: **wiring Finance pages to real API data**.
+Phase 1 (Validation & Audit) is COMPLETE. Sessions 2.1 + 2.2 are COMPLETE.
+19 of 27 pages are now wired to real API data.
+The next work is Session 2.3: **wiring Inventory + Accounting pages to real API data**.
 
 ---
 

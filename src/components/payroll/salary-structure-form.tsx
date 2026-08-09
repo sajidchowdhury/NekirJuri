@@ -2,13 +2,17 @@
 
 // ============================================================
 // SalaryStructureForm — Add/Edit salary structure with auto-calculation
+// Employee dropdown fetched from /api/teachers + /api/employees
+// Submit POSTs to /api/salary-structures
 // ============================================================
 
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiSubmit } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,11 +25,11 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import {
-  employees,
   formatTaka,
   type SalaryStructure,
+  type Employee,
 } from '@/lib/payroll/sample-data';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 const schema = z.object({
   employeeId: z.string().min(1, 'Select an employee'),
@@ -46,13 +50,60 @@ interface SalaryStructureFormProps {
   onSuccess?: () => void;
 }
 
+/** Normalize an API teacher/employee object to our Employee shape */
+function normalizeEmployee(raw: Record<string, unknown>, type: 'teacher' | 'employee'): Employee {
+  return {
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? ''),
+    nameBn: String(raw.nameBn ?? raw.name_bn ?? ''),
+    type,
+    department: String(raw.department ?? ''),
+    designation: String(raw.designation ?? ''),
+    employeeId: String(raw.employeeId ?? raw.employee_id ?? ''),
+    photoUrl: raw.photoUrl as string | undefined,
+  };
+}
+
 export default function SalaryStructureForm({
   editDefaults,
   onSuccess,
 }: SalaryStructureFormProps) {
-  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [allowancesOpen, setAllowancesOpen] = React.useState(true);
   const [deductionsOpen, setDeductionsOpen] = React.useState(true);
+
+  // Fetch teachers from API
+  const { data: teachers = [] } = useQuery<Employee[]>({
+    queryKey: ['teachers'],
+    queryFn: async () => {
+      const res = await fetch('/api/teachers?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch teachers');
+      const json = await res.json();
+      const rawList: unknown[] = json.data ?? json;
+      return rawList.map((r) => normalizeEmployee(r as Record<string, unknown>, 'teacher'));
+    },
+  });
+
+  // Fetch employees from API
+  const { data: staff = [] } = useQuery<Employee[]>({
+    queryKey: ['employees'],
+    queryFn: async () => {
+      const res = await fetch('/api/employees?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch employees');
+      const json = await res.json();
+      const rawList: unknown[] = json.data ?? json;
+      return rawList.map((r) => normalizeEmployee(r as Record<string, unknown>, 'employee'));
+    },
+  });
+
+  // Combine teachers and employees for the dropdown
+  const employees = React.useMemo(() => [...teachers, ...staff], [teachers, staff]);
+
+  // Determine employee type for a given employeeId
+  const getEmployeeType = (id: string): 'teacher' | 'employee' | null => {
+    const emp = employees.find((e) => e.id === id);
+    return emp?.type ?? null;
+  };
 
   const defaultEmployee = editDefaults
     ? employees.find((e) => e.id === editDefaults.employeeId)
@@ -120,15 +171,56 @@ export default function SalaryStructureForm({
     setValue('providentFund', Math.round(val * 0.1));
   };
 
-  const onSubmit = async (_data: FormData) => {
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 500));
-    toast({
-      title: editDefaults ? 'Salary Structure Updated' : 'Salary Structure Created',
-      description: `Salary structure for ${selectedEmployee?.name ?? 'employee'} has been ${editDefaults ? 'updated' : 'created'} successfully.`,
-    });
-    onSuccess?.();
+  // Create/Update mutation
+  const saveMutation = useMutation({
+    mutationFn: (data: FormData) => {
+      const employeeType = getEmployeeType(data.employeeId);
+      const body: Record<string, unknown> = {
+        employeeType,
+        basicSalary: data.basicSalary,
+        houseRent: data.houseRent,
+        medicalAllowance: data.medicalAllowance,
+        transportAllowance: data.transportAllowance,
+        otherAllowance: data.specialAllowance,
+        pfDeduction: data.providentFund,
+        taxDeduction: data.taxDeduction,
+        otherDeduction: data.otherDeduction,
+        effectiveFrom: new Date().toISOString().split('T')[0],
+      };
+
+      // Set teacherId or employeeId depending on type
+      if (employeeType === 'teacher') {
+        body.teacherId = data.employeeId;
+      } else {
+        body.employeeId = data.employeeId;
+      }
+
+      if (editDefaults) {
+        return apiSubmit(`/api/salary-structures/${editDefaults.id}`, 'PUT', body);
+      }
+      return apiSubmit('/api/salary-structures', 'POST', body);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['salary-structures'] });
+      toast.success(
+        editDefaults ? 'Salary Structure Updated' : 'Salary Structure Created',
+        {
+          description: `Salary structure for ${selectedEmployee?.name ?? 'employee'} has been ${editDefaults ? 'updated' : 'created'} successfully.`,
+        }
+      );
+      onSuccess?.();
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to save salary structure');
+    },
+  });
+
+  const onSubmit = (data: FormData) => {
+    saveMutation.mutate(data);
   };
+
+  // isSubmitting should reflect mutation state
+  const submitting = saveMutation.isPending;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -288,10 +380,10 @@ export default function SalaryStructureForm({
       {/* Submit */}
       <Button
         type="submit"
-        disabled={isSubmitting}
+        disabled={submitting}
         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
       >
-        {isSubmitting
+        {submitting
           ? 'Saving...'
           : editDefaults
             ? 'Update Salary Structure'

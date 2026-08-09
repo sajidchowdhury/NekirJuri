@@ -5,10 +5,11 @@
 // ============================================================
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   type ColumnDef,
 } from '@tanstack/react-table';
-import { Eye, MoreHorizontal, Printer } from 'lucide-react';
+import { Eye, MoreHorizontal, Printer, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -22,7 +23,6 @@ import { DataTable } from '@/components/organisms/data-table';
 import {
   type FeeInvoice,
   type InvoiceStatus,
-  sampleInvoices,
   formatTaka,
 } from '@/lib/finance/sample-data';
 
@@ -37,8 +37,39 @@ const statusMap: Record<InvoiceStatus, 'paid' | 'partial' | 'overdue'> = {
   overdue: 'overdue',
 };
 
+/** Map API invoice response to FeeInvoice shape the component expects */
+function mapApiInvoice(raw: Record<string, unknown>): FeeInvoice {
+  return {
+    id: String(raw.id ?? ''),
+    invoiceNo: String(raw.invoiceNo ?? raw.invoice_no ?? ''),
+    studentId: String(raw.studentId ?? raw.student_id ?? ''),
+    studentName: String(raw.studentName ?? raw.student_name ?? (raw.student as Record<string, unknown>)?.name ?? ''),
+    studentNameBn: String(raw.studentNameBn ?? raw.student_name_bn ?? (raw.student as Record<string, unknown>)?.nameBn ?? ''),
+    className: String(raw.className ?? raw.class_name ?? (raw.student as Record<string, unknown>)?.className ?? ''),
+    academicSession: String(raw.academicSession ?? raw.academic_session ?? ''),
+    totalAmount: Number(raw.totalAmount ?? raw.total_amount ?? 0),
+    paidAmount: Number(raw.paidAmount ?? raw.paid_amount ?? 0),
+    discountAmount: Number(raw.discountAmount ?? raw.discount_amount ?? 0),
+    balanceAmount: Number(raw.balanceAmount ?? raw.balance_amount ?? 0),
+    status: (raw.status as InvoiceStatus) ?? 'overdue',
+    dueDate: String(raw.dueDate ?? raw.due_date ?? ''),
+    generatedDate: String(raw.generatedDate ?? raw.generated_date ?? ''),
+    lineItems: (raw.lineItems ?? raw.line_items ?? []) as FeeInvoice['lineItems'],
+    payments: (raw.payments ?? []) as FeeInvoice['payments'],
+  };
+}
+
 export default function FeeInvoiceList({ onViewInvoice, onGenerateInvoice }: FeeInvoiceListProps) {
-  const invoices = sampleInvoices;
+  const { data: invoices = [], isLoading } = useQuery<FeeInvoice[]>({
+    queryKey: ['fee-invoices'],
+    queryFn: async () => {
+      const res = await fetch('/api/fee-invoices?limit=100');
+      if (!res.ok) throw new Error('Failed to fetch invoices');
+      const json = await res.json();
+      const rawList: unknown[] = json.data ?? json;
+      return rawList.map((r) => mapApiInvoice(r as Record<string, unknown>));
+    },
+  });
 
   const columns: ColumnDef<FeeInvoice, unknown>[] = [
     {
@@ -139,6 +170,7 @@ export default function FeeInvoiceList({ onViewInvoice, onGenerateInvoice }: Fee
     <DataTable
       columns={columns}
       data={invoices}
+      isLoading={isLoading}
       searchable
       searchPlaceholder="Search invoices..."
       sortable

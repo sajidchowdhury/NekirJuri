@@ -2,6 +2,7 @@
 
 // ============================================================
 // ExpenseForm — Add/Edit expense with react-hook-form + zod
+// Posts to /api/expenses for create
 // ============================================================
 
 import * as React from 'react';
@@ -9,6 +10,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiSubmit } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,12 +58,25 @@ const methodOptions: { value: PaymentMethod; label: string }[] = [
   { value: 'cheque', label: 'Cheque / চেক' },
 ];
 
+/** Map category enum string to a numeric ID for API */
+const categoryToId: Record<ExpenseCategory, number> = {
+  utilities: 1,
+  maintenance: 2,
+  stationery: 3,
+  food: 4,
+  transport: 5,
+  salary: 6,
+  misc: 7,
+};
+
 interface ExpenseFormProps {
   onSuccess?: () => void;
   editDefaults?: Partial<ExpenseFormValues>;
 }
 
 export default function ExpenseForm({ onSuccess, editDefaults }: ExpenseFormProps) {
+  const queryClient = useQueryClient();
+
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
@@ -74,11 +90,31 @@ export default function ExpenseForm({ onSuccess, editDefaults }: ExpenseFormProp
     },
   });
 
+  const createMutation = useMutation({
+    mutationFn: (data: ExpenseFormValues) =>
+      apiSubmit('/api/expenses', 'POST', {
+        expenseCategoryId: categoryToId[data.category],
+        amount: data.amount,
+        description: data.description,
+        expenseDate: data.date,
+        paymentMethod: data.method,
+        receiptRef: data.receiptRef,
+        note: data.note,
+      }),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Expense recorded successfully', {
+        description: `${variables.description} — ৳${variables.amount.toLocaleString('en-IN')} (${variables.category})`,
+      });
+      onSuccess?.();
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to record expense');
+    },
+  });
+
   const onSubmit = (data: ExpenseFormValues) => {
-    toast.success('Expense recorded successfully', {
-      description: `${data.description} — ৳${data.amount.toLocaleString('en-IN')} (${data.category})`,
-    });
-    onSuccess?.();
+    createMutation.mutate(data);
   };
 
   return (
@@ -193,9 +229,10 @@ export default function ExpenseForm({ onSuccess, editDefaults }: ExpenseFormProp
       {/* Submit */}
       <Button
         type="submit"
+        disabled={createMutation.isPending}
         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
       >
-        Record Expense
+        {createMutation.isPending ? 'Recording...' : 'Record Expense'}
       </Button>
     </motion.form>
   );

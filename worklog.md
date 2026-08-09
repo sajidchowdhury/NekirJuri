@@ -1410,3 +1410,35 @@ Stage Summary:
 - Key patterns established: error state with retry, loading skeletons, empty states, CUD invalidation, supporting data caching (10min staleTime), delete with confirmation
 - Stage 4 progress: 40% → 55%
 - Next: Session 2.2 — Finance Pages
+
+---
+Task ID: 2.2
+Agent: Main
+Task: Session 2.2 — Finance Pages Frontend→API Wiring
+
+Work Log:
+- Explored all 4 finance pages and 11 sub-components to understand current data sources
+- Found that only FeeCategoryForm and FeeCategoryList's delete handler actually called the API — everything else was sample data or simulated
+- Used general-purpose agent to wire 7 sub-components to API:
+  - fee-category-list.tsx: Replaced useState(sampleFeeCategories) with useQuery('/api/fee-categories'); delete via useMutation
+  - fee-invoice-list.tsx: Replaced sampleInvoices with useQuery('/api/fee-invoices')
+  - expense-list.tsx: Replaced sampleExpenses with useQuery('/api/expenses')
+  - expense-form.tsx: Now POSTs to /api/expenses (was toast-only)
+  - salary-structure-list.tsx: Replaced salaryStructures with useQuery('/api/salary-structures')
+  - salary-payment-list.tsx: Replaced salaryPayments with useQuery('/api/salary-payments')
+  - salary-structure-form.tsx: Replaced employees sample data with useQuery for /api/teachers + /api/employees; now POSTs to /api/salary-structures
+- Rewrote collections/page.tsx: Removed sampleCollections; useQuery for /api/fee-collections; error+retry state; query invalidation
+- Rewrote expenses/page.tsx: Added useQuery for expenses; delete mutation; error+retry; query invalidation; wired ExpenseForm properly
+- Rewrote payroll/page.tsx: Removed salaryStructures import; API connectivity check; query invalidation on structure save
+- Fees page mostly delegates to sub-components which are now API-wired
+- Ran lint: 0 errors, 14 pre-existing warnings
+- Updated PRODUCTION_ROADMAP.md: Session 2.2 marked ✅ DONE, Stage 4 updated to 70%, pages connected count updated to 19/27, Frontend→API wiring severity reduced from 🔴 CRITICAL to 🟡 HIGH
+
+Stage Summary:
+- 4 finance pages + 7 sub-components fully wired to real API data
+- Key breakthrough: ExpenseForm and SalaryStructureForm now actually persist data (were toast-only before)
+- Collections page uses real API for fee-collections list
+- Fee categories, invoices, expenses, salary structures, salary payments all from API
+- Stage 4 progress: 55% → 70%
+- Frontend→API gap reduced from 🔴 CRITICAL (8 pages) to 🟡 HIGH (4 pages)
+- Next: Session 2.3 — Inventory + Accounting Pages
