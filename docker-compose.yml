@@ -1,29 +1,60 @@
 # ============================================================
 # Madrasha ERP SaaS — Docker Compose
-# Pull & Run: docker-compose up -d
+# Production deployment with PostgreSQL
+# ============================================================
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose logs -f app        # Follow app logs
+#   docker-compose exec app bunx prisma migrate deploy  # Run migrations
 # ============================================================
 
 services:
+  # --- PostgreSQL Database ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: madrasha-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-madrasha_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-madrasha_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-madrasha_erp}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-madrasha_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # --- Next.js Application ---
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: madrasha-erp
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=file:./db/custom.db
-      - NODE_ENV=production
-    volumes:
-      - erp-db:/app/db
-    restart: unless-stopped
+      # PostgreSQL connection (links to the postgres service)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-madrasha_user}:${POSTGRES_PASSWORD:-madrasha_pass}@postgres:5432/${POSTGRES_DB:-madrasha_erp}?schema=public
+      NODE_ENV: production
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-this-in-production}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 40s
 
 volumes:
-  erp-db:
+  postgres-data:
     driver: local

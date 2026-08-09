@@ -1749,3 +1749,33 @@ Stage Summary:
 - Error boundaries wrapping all dashboard pages
 - Stage 4 progress: 95% (only SMS/email backend remaining for 100%)
 - Next phase: Phase 3 — SMS/Email Notification Infrastructure
+
+---
+Task ID: 4.1
+Agent: Main
+Task: Session 4.1 — Environment & Database Config (Phase 4)
+
+Work Log:
+- Expanded .env.example from 3 to 30+ documented variables across 8 categories (database, auth, app, SMTP, SMS, payments, backup, cron, logging, Docker)
+- Created .env.production template with PostgreSQL connection string, NEXTAUTH_SECRET, and all production-specific variables
+- Fixed Prisma client (db.ts): conditional query logging — dev: ['query','warn','error'], prod: ['warn','error'] only
+- Added graceful shutdown handlers to db.ts: SIGTERM/SIGINT listeners that call db.$disconnect() in production
+- Created GET /api/health endpoint: checks DB connectivity (SELECT 1), memory usage (heap, RSS, usage%), uptime, version, environment
+  - Returns HTTP 200 for healthy, 200 for degraded, 503 for unhealthy
+  - Includes X-Response-Time header and Cache-Control: no-store
+- Updated Dockerfile: PostgreSQL-ready with parametric DATABASE_URL (no hardcoded SQLite), HEALTHCHECK using /api/health, copies scripts/ for runtime migrations
+- Updated docker-compose.yml: added postgres:16-alpine service with health check, app depends_on postgres, DATABASE_URL auto-linked to postgres service
+- Updated .dockerignore: comprehensive exclusion (env files, dev files, skills, tests, docker files, worklog, roadmap docs)
+- Improved scripts/switch-to-prod.sh: added set -euo pipefail, DATABASE_URL validation, step-by-step guidance output
+- Added db:migrate:deploy and db:migrate:create scripts to package.json
+- Lint: 0 errors, 14 pre-existing warnings
+
+Stage Summary:
+- Phase 4, Session 4.1 is COMPLETE
+- Docker + PostgreSQL setup ready for production deployment
+- Health check endpoint live at GET /api/health
+- Graceful shutdown ensures clean DB disconnect on SIGTERM/SIGINT
+- Prisma query logging disabled in production (performance improvement)
+- Phase 3 (SMS/Email) SKIPPED per user request
+- Stage 5 progress: 25% (Docker done, security/CI/CD still pending)
+- Next session: 4.2 — Security Hardening

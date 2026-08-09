@@ -1,7 +1,12 @@
-# Dependencies
+# ============================================================
+# Madrasha ERP SaaS — .dockerignore
+# Files excluded from Docker build context
+# ============================================================
+
+# Dependencies (installed inside container)
 node_modules
 
-# Next.js build
+# Next.js build (rebuilt inside container)
 .next
 out
 
@@ -10,13 +15,17 @@ out
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+dev.log
+dev.out.log
+server.log
 
-# Environment files
+# Environment files (secrets must NOT be baked into image)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
 
 # IDE
 .vscode
@@ -28,23 +37,41 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Misc
+# Git
+.git
+.gitignore
+
+# AI / Config
 .claude
 .z-ai-config
+
+# Test / Coverage
 coverage
 test
-prompt
-skills
-download
-examples
 tests
+prompt
+vitest.config.ts
 
-# Upload specs (not needed in production)
+# Skills (not needed in production)
+skills
+
+# Upload / Download directories
 upload
+download
 
-# Dev files
-dev.log
-dev.out.log
-server.log
+# Dev-only files
 Caddyfile
 worklog.md
+PRODUCTION_ROADMAP.md
+DEPT_*.md
+UI-UX-ROADMAP.md
+examples
+
+# Docker files (prevent recursion)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc build artifacts
+*.tgz
+*.tar.gz
