@@ -8,6 +8,7 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, requireTenantId } from '@/lib/api-utils'
+import { settingsUpsertSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,16 +39,12 @@ export async function POST(request: NextRequest) {
     if (typeof tenantId !== 'number') return tenantId
 
     const body = await request.json()
-    const { settings } = body as { settings: Array<{ key: string; value?: string }> }
 
-    if (!settings || !Array.isArray(settings) || settings.length === 0) {
-      return error('settings array with {key, value} objects is required')
-    }
+    // Zod validation
+    const parsed = settingsUpsertSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
 
-    // Validate all items have keys
-    for (const item of settings) {
-      if (!item.key) return error('Each setting must have a key')
-    }
+    const { settings } = parsed.data
 
     // Upsert each setting
     const results = await db.$transaction(

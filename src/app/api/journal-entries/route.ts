@@ -5,6 +5,7 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, paginated, getPaginationParams, getTenantId, getUserId } from '@/lib/api-utils'
+import { journalEntryCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,6 +79,11 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Zod validation
+    const parsed = journalEntryCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
     const {
       entryNo,
       entryDate,
@@ -86,25 +92,7 @@ export async function POST(request: NextRequest) {
       referenceId,
       status = 'draft',
       items,
-    } = body
-
-    // Validate required fields
-    if (!entryNo || !entryDate) {
-      return error('entryNo and entryDate are required')
-    }
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return error('At least one journal entry item is required')
-    }
-
-    // Validate each item has accountId and either debit or credit
-    for (const item of items) {
-      if (!item.accountId) {
-        return error('Each item must have an accountId')
-      }
-      if (!item.debit && !item.credit) {
-        return error('Each item must have either a debit or credit value')
-      }
-    }
+    } = parsed.data
 
     // Validate that all accounts exist and belong to tenant
     const accountIds = items.map((item: { accountId: number }) => Number(item.accountId))

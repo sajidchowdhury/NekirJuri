@@ -1332,3 +1332,54 @@ Stage Summary:
 - 3 validation module files: academic.ts, finance.ts, inventory.ts
 - All Decimal fields support both number and string inputs
 - All enum fields use z.enum() for strict validation
+
+---
+Task ID: 1.3
+Agent: Main
+Task: Session 1.3 — System + Accounting Validation
+
+Work Log:
+- Read Prisma schema for all system + accounting models (ChartOfAccount, JournalEntry, JournalEntryItem, SalaryStructure, SalaryPayment, Tenant, User, Role, Notice, WebsitePage, Settings, SubscriptionPlan, Subscription, SubscriptionPayment, Gallery, GalleryImage)
+- Read all 15+ route files for these entities
+- Created `src/lib/validations/accounting.ts` with 8 Zod schemas for 4 accounting entities:
+  - accountCreateSchema + accountUpdateSchema (ChartOfAccount)
+  - journalEntryCreateSchema + journalEntryUpdateSchema (JournalEntry with items array)
+  - salaryStructureCreateSchema + salaryStructureUpdateSchema (SalaryStructure)
+  - salaryPaymentCreateSchema (SalaryPayment)
+- Created `src/lib/validations/system.ts` with 20 Zod schemas for 9 system entities:
+  - tenantCreateSchema + tenantUpdateSchema
+  - userCreateSchema + userUpdateSchema
+  - roleCreateSchema + roleUpdateSchema
+  - noticeCreateSchema + noticeUpdateSchema
+  - websitePageCreateSchema + websitePageUpdateSchema
+  - settingsUpsertSchema
+  - subscriptionPlanCreateSchema + subscriptionPlanUpdateSchema
+  - subscriptionCreateSchema + subscriptionPaymentSchema
+  - galleryCreateSchema + galleryUpdateSchema
+- Defined subscription business model per user requirement:
+  - FREE_PLAN: 20 students, 5 employees, 50MB, limited features
+  - PAID_PLAN: 300 BDT/month, unlimited students/employees, 5GB, all features
+  - SUBSCRIPTION_PAYMENT_METHODS: ['bkash', 'nagad']
+- Updated `src/lib/validations/index.ts` to export accounting + system modules
+- Wired Zod validation into 15 route files:
+  - accounts/route.ts, journal-entries/route.ts
+  - salary-structures/route.ts, salary-payments/route.ts
+  - tenants/route.ts, tenants/[id]/route.ts
+  - users/route.ts, roles/route.ts, notices/route.ts
+  - pages/route.ts, pages/[id]/route.ts, settings/route.ts
+  - subscription-plans/route.ts, subscription-plans/[id]/route.ts
+  - subscriptions/route.ts, subscriptions/payment/route.ts
+  - galleries/route.ts, galleries/[id]/route.ts
+- Fixed test in subscription-plans.test.ts (error message format changed from "Name" to "name" due to Zod format)
+- Ran lint: 0 errors, 14 pre-existing warnings
+- Ran tests: 108/108 passing
+- Updated PRODUCTION_ROADMAP.md: Session 1.3 marked ✅ DONE, Stage 3 = 100%
+
+Stage Summary:
+- Phase 1 (Validation & Audit) is now COMPLETE
+- All 61 mutation routes have Zod validation
+- Stage 3 = 100% ✅
+- 5 validation module files: academic.ts, finance.ts, inventory.ts, accounting.ts, system.ts
+- 28+ Zod schemas total across all modules
+- Subscription business model defined: FREE (20 students) / PAID (300 BDT/month, bKash/Nagad)
+- Next: Phase 2, Session 2.1 — Frontend→API Data Wiring (Academic Pages)

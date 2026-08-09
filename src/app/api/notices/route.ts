@@ -14,6 +14,7 @@ import {
   getPaginationParams,
   requireTenantId,
 } from '@/lib/api-utils'
+import { noticeCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,11 +60,12 @@ export async function POST(request: NextRequest) {
 
     const userId = request.headers.get('x-user-id')
     const body = await request.json()
-    const { title, content, noticeType, targetAudience, attachmentUrl, isPublished } = body
 
-    if (!title || !noticeType) {
-      return error('title and noticeType are required')
-    }
+    // Zod validation
+    const parsed = noticeCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
+    const { title, content, noticeType, targetAudience, attachmentUrl, isPublished } = parsed.data
 
     const notice = await db.notice.create({
       data: {

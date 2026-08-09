@@ -5,6 +5,7 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, paginated, getPaginationParams, getTenantId, getUserId } from '@/lib/api-utils'
+import { salaryStructureCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,6 +65,11 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Zod validation
+    const parsed = salaryStructureCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
     const {
       employeeType,
       teacherId,
@@ -78,15 +84,9 @@ export async function POST(request: NextRequest) {
       otherDeduction = 0,
       effectiveFrom,
       effectiveTo,
-    } = body
+    } = parsed.data
 
-    // Validate required fields
-    if (!employeeType || basicSalary === undefined || basicSalary === null || !effectiveFrom) {
-      return error('employeeType, basicSalary, and effectiveFrom are required')
-    }
-    if (employeeType !== 'teacher' && employeeType !== 'staff') {
-      return error('employeeType must be "teacher" or "staff"')
-    }
+    // Validate employee reference based on type
     if (employeeType === 'teacher' && !teacherId) {
       return error('teacherId is required for teacher employeeType')
     }

@@ -15,6 +15,7 @@ import {
   getTenantId,
   requireTenantId,
 } from '@/lib/api-utils'
+import { websitePageCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,11 +59,12 @@ export async function POST(request: NextRequest) {
 
     const userId = request.headers.get('x-user-id')
     const body = await request.json()
-    const { title, slug, content, metaTitle, metaDescription, featuredImageUrl, isPublished, sortOrder } = body
 
-    if (!title || !slug) {
-      return error('title and slug are required')
-    }
+    // Zod validation
+    const parsed = websitePageCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
+    const { title, slug, content, metaTitle, metaDescription, featuredImageUrl, isPublished, sortOrder } = parsed.data
 
     // Check slug uniqueness within tenant
     const existing = await db.websitePage.findUnique({

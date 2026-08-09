@@ -13,6 +13,7 @@ import {
   requireTenantId,
   getUserId,
 } from '@/lib/api-utils'
+import { subscriptionPlanUpdateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(
   request: NextRequest,
@@ -53,10 +54,14 @@ export async function PATCH(
 
     const body = await request.json()
 
+    // Zod validation
+    const parsed = subscriptionPlanUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
     // If slug is being changed, check uniqueness
-    if (body.slug && body.slug !== existing.slug) {
+    if (parsed.data.slug && parsed.data.slug !== existing.slug) {
       const slugConflict = await db.subscriptionPlan.findUnique({
-        where: { slug: body.slug },
+        where: { slug: parsed.data.slug },
       })
       if (slugConflict) return error('Plan slug already exists')
     }
@@ -64,21 +69,21 @@ export async function PATCH(
     const updated = await db.subscriptionPlan.update({
       where: { id: planId },
       data: {
-        ...(body.name !== undefined && { name: body.name }),
-        ...(body.slug !== undefined && { slug: body.slug }),
-        ...(body.description !== undefined && { description: body.description || null }),
-        ...(body.priceMonthly !== undefined && { priceMonthly: Number(body.priceMonthly) }),
-        ...(body.price6Monthly !== undefined && { price6Monthly: body.price6Monthly ? Number(body.price6Monthly) : null }),
-        ...(body.priceYearly !== undefined && { priceYearly: body.priceYearly ? Number(body.priceYearly) : null }),
-        ...(body.maxStudents !== undefined && { maxStudents: Number(body.maxStudents) }),
-        ...(body.maxEmployees !== undefined && { maxEmployees: Number(body.maxEmployees) }),
-        ...(body.maxStorageMb !== undefined && { maxStorageMb: Number(body.maxStorageMb) }),
+        ...(parsed.data.name !== undefined && { name: parsed.data.name }),
+        ...(parsed.data.slug !== undefined && { slug: parsed.data.slug }),
+        ...(parsed.data.description !== undefined && { description: parsed.data.description || null }),
+        ...(parsed.data.priceMonthly !== undefined && { priceMonthly: Number(parsed.data.priceMonthly) }),
+        ...(parsed.data.price6Monthly !== undefined && { price6Monthly: parsed.data.price6Monthly ? Number(parsed.data.price6Monthly) : null }),
+        ...(parsed.data.priceYearly !== undefined && { priceYearly: parsed.data.priceYearly ? Number(parsed.data.priceYearly) : null }),
+        ...(parsed.data.maxStudents !== undefined && { maxStudents: Number(parsed.data.maxStudents) }),
+        ...(parsed.data.maxEmployees !== undefined && { maxEmployees: Number(parsed.data.maxEmployees) }),
+        ...(parsed.data.maxStorageMb !== undefined && { maxStorageMb: Number(parsed.data.maxStorageMb) }),
         // CR-11: Gallery limit fields
-        ...(body.maxAlbums !== undefined && { maxAlbums: Number(body.maxAlbums) }),
-        ...(body.maxImagesPerAlbum !== undefined && { maxImagesPerAlbum: Number(body.maxImagesPerAlbum) }),
-        ...(body.maxImageSizeMb !== undefined && { maxImageSizeMb: Number(body.maxImageSizeMb) }),
-        ...(body.features !== undefined && { features: body.features }),
-        ...(body.isActive !== undefined && { isActive: body.isActive }),
+        ...(parsed.data.maxAlbums !== undefined && { maxAlbums: Number(parsed.data.maxAlbums) }),
+        ...(parsed.data.maxImagesPerAlbum !== undefined && { maxImagesPerAlbum: Number(parsed.data.maxImagesPerAlbum) }),
+        ...(parsed.data.maxImageSizeMb !== undefined && { maxImageSizeMb: Number(parsed.data.maxImageSizeMb) }),
+        ...(parsed.data.features !== undefined && { features: parsed.data.features }),
+        ...(parsed.data.isActive !== undefined && { isActive: parsed.data.isActive }),
       },
     })
 

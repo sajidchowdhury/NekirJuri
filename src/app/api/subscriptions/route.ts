@@ -29,6 +29,7 @@ import {
   type BillingDuration,
   type PaymentMethod,
 } from '@/lib/subscription'
+import { subscriptionCreateSchema, formatZodError } from '@/lib/validations'
 
 // -----------------------------------------------------------
 // GET /api/subscriptions?tenantId=1
@@ -107,18 +108,15 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.tenantId) return error('tenantId is required')
-    if (!body.planId) return error('planId is required')
-    if (![1, 6, 12].includes(body.duration)) return error('duration must be 1, 6, or 12')
-    if (!['bkash', 'nagad', 'bank', 'manual'].includes(body.paymentMethod)) {
-      return error('paymentMethod must be bkash, nagad, bank, or manual')
-    }
+    // Zod validation
+    const parsed = subscriptionCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
 
+    if (!body.tenantId) return error('tenantId is required')
     const tenantId = Number(body.tenantId)
-    const planId = Number(body.planId)
-    const duration = body.duration as BillingDuration
-    const paymentMethod = body.paymentMethod as PaymentMethod
+    const planId = Number(parsed.data.planId)
+    const duration = parsed.data.billingDuration as BillingDuration
+    const paymentMethod = (parsed.data.paymentMethod || 'bkash') as PaymentMethod
 
     // Verify tenant exists
     const tenant = await db.tenant.findUnique({ where: { id: tenantId } })

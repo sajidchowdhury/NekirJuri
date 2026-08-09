@@ -14,6 +14,7 @@ import {
   getPaginationParams,
   requireTenantId,
 } from '@/lib/api-utils'
+import { galleryCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -62,11 +63,12 @@ export async function POST(request: NextRequest) {
 
     const userId = request.headers.get('x-user-id')
     const body = await request.json()
-    const { title, description, coverImageUrl, isPublished, images } = body
 
-    if (!title) {
-      return error('title is required')
-    }
+    // Zod validation
+    const parsed = galleryCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
+    const { title, description, coverImageUrl, isPublished, images } = parsed.data
 
     // CR-11: Check maxAlbums limit before creating
     const subscription = await db.subscription.findFirst({

@@ -13,6 +13,7 @@ import {
   getPaginationParams,
   getUserId,
 } from '@/lib/api-utils'
+import { tenantCreateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/tenants — List all tenants (super-admin only) */
 export async function GET(request: NextRequest) {
@@ -84,20 +85,19 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.name || !body.slug) {
-      return error('Name and slug are required')
-    }
+    // Zod validation
+    const parsed = tenantCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
 
     // Check slug uniqueness
-    const existing = await db.tenant.findUnique({ where: { slug: body.slug } })
+    const existing = await db.tenant.findUnique({ where: { slug: parsed.data.slug } })
     if (existing) {
       return error('Slug already exists')
     }
 
     // Check domain uniqueness if provided
-    if (body.domain) {
-      const domainExists = await db.tenant.findUnique({ where: { domain: body.domain } })
+    if (parsed.data.domain) {
+      const domainExists = await db.tenant.findUnique({ where: { domain: parsed.data.domain } })
       if (domainExists) {
         return error('Domain already in use')
       }
@@ -105,20 +105,20 @@ export async function POST(request: NextRequest) {
 
     const data = await db.tenant.create({
       data: {
-        name: body.name,
-        slug: body.slug,
-        domain: body.domain || null,
-        logoUrl: body.logoUrl || null,
-        address: body.address || null,
-        city: body.city || null,
-        state: body.state || null,
-        country: body.country || 'Bangladesh',
-        postalCode: body.postalCode || null,
-        phone: body.phone || null,
-        email: body.email || null,
-        website: body.website || null,
-        isActive: body.isActive !== undefined ? body.isActive : true,
-        settings: body.settings || null,
+        name: parsed.data.name,
+        slug: parsed.data.slug,
+        domain: parsed.data.domain || null,
+        logoUrl: parsed.data.logoUrl || null,
+        address: parsed.data.address || null,
+        city: parsed.data.city || null,
+        state: parsed.data.state || null,
+        country: parsed.data.country || 'Bangladesh',
+        postalCode: parsed.data.postalCode || null,
+        phone: parsed.data.phone || null,
+        email: parsed.data.email || null,
+        website: parsed.data.website || null,
+        isActive: parsed.data.isActive !== undefined ? parsed.data.isActive : true,
+        settings: parsed.data.settings || null,
       },
     })
 

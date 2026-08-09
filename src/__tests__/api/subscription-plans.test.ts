@@ -84,7 +84,7 @@ describe('POST /api/subscription-plans', () => {
     const res = await POST(req)
     const body = await res.json()
     expect(body.success).toBe(false)
-    expect(body.error).toContain('Name')
+    expect(body.error).toContain('name')
   })
 
   it('returns 400 when required pricing is missing', async () => {

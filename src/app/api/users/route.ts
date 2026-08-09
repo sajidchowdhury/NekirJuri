@@ -15,6 +15,7 @@ import {
   requireTenantId,
 } from '@/lib/api-utils'
 import bcrypt from 'bcryptjs'
+import { userCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -81,6 +82,11 @@ export async function POST(request: NextRequest) {
     if (typeof tenantId !== 'number') return tenantId
 
     const body = await request.json()
+
+    // Zod validation
+    const parsed = userCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
     const {
       email,
       password,
@@ -90,20 +96,7 @@ export async function POST(request: NextRequest) {
       isActive,
       isSuperAdmin,
       roleIds,
-    } = body as {
-      email: string
-      password: string
-      name: string
-      phone?: string
-      avatarUrl?: string
-      isActive?: boolean
-      isSuperAdmin?: boolean
-      roleIds?: number[]
-    }
-
-    if (!email || !password || !name) {
-      return error('email, password, and name are required')
-    }
+    } = parsed.data
 
     // Check email uniqueness within tenant
     const existing = await db.user.findFirst({

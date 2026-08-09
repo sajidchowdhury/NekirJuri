@@ -16,6 +16,7 @@ import {
   getTenantId,
   getUserId,
 } from '@/lib/api-utils'
+import { subscriptionPlanCreateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/subscription-plans — List all subscription plans */
 export async function GET(request: NextRequest) {
@@ -68,44 +69,38 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.name || !body.slug) {
-      return error('Name and slug are required')
-    }
-    if (body.priceMonthly === undefined || body.priceMonthly === null) {
-      return error('priceMonthly is required')
-    }
-    if (!body.maxStudents || !body.maxEmployees || !body.maxStorageMb) {
-      return error('maxStudents, maxEmployees, and maxStorageMb are required')
-    }
+    // Zod validation
+    const parsed = subscriptionPlanCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
     // CR-11: Gallery limit fields (with sensible defaults)
-    const maxAlbums = body.maxAlbums ? Number(body.maxAlbums) : 5
-    const maxImagesPerAlbum = body.maxImagesPerAlbum ? Number(body.maxImagesPerAlbum) : 20
-    const maxImageSizeMb = body.maxImageSizeMb ? Number(body.maxImageSizeMb) : 2
+    const maxAlbums = parsed.data.maxAlbums ?? 5
+    const maxImagesPerAlbum = parsed.data.maxImagesPerAlbum ?? 20
+    const maxImageSizeMb = parsed.data.maxImageSizeMb ?? 2
 
     // Check slug uniqueness
-    const existing = await db.subscriptionPlan.findUnique({ where: { slug: body.slug } })
+    const existing = await db.subscriptionPlan.findUnique({ where: { slug: parsed.data.slug } })
     if (existing) {
       return error('Plan slug already exists')
     }
 
     const data = await db.subscriptionPlan.create({
       data: {
-        name: body.name,
-        slug: body.slug,
-        description: body.description || null,
-        priceMonthly: Number(body.priceMonthly),
-        price6Monthly: body.price6Monthly ? Number(body.price6Monthly) : null,
-        priceYearly: body.priceYearly ? Number(body.priceYearly) : null,
-        maxStudents: Number(body.maxStudents),
-        maxEmployees: Number(body.maxEmployees),
-        maxStorageMb: Number(body.maxStorageMb),
+        name: parsed.data.name,
+        slug: parsed.data.slug,
+        description: parsed.data.description || null,
+        priceMonthly: Number(parsed.data.priceMonthly),
+        price6Monthly: parsed.data.price6Monthly ? Number(parsed.data.price6Monthly) : null,
+        priceYearly: parsed.data.priceYearly ? Number(parsed.data.priceYearly) : null,
+        maxStudents: Number(parsed.data.maxStudents),
+        maxEmployees: Number(parsed.data.maxEmployees),
+        maxStorageMb: Number(parsed.data.maxStorageMb),
         // CR-11: Gallery limits
         maxAlbums,
         maxImagesPerAlbum,
         maxImageSizeMb,
-        features: body.features || null,
-        isActive: body.isActive !== undefined ? body.isActive : true,
+        features: parsed.data.features || null,
+        isActive: parsed.data.isActive !== undefined ? parsed.data.isActive : true,
       },
     })
 

@@ -20,6 +20,7 @@ import {
   type BillingDuration,
   type PaymentMethod,
 } from '@/lib/subscription'
+import { subscriptionPaymentSchema, formatZodError } from '@/lib/validations'
 
 // -----------------------------------------------------------
 // POST /api/subscriptions/payment
@@ -34,22 +35,17 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!body.subscriptionId) return error('subscriptionId is required')
     if (!body.tenantId) return error('tenantId is required')
-    if (!['bkash', 'nagad', 'bank', 'manual'].includes(body.paymentMethod)) {
-      return error('paymentMethod must be bkash, nagad, bank, or manual')
-    }
-    if (!body.amount || Number(body.amount) <= 0) {
-      return error('amount must be a positive number')
-    }
-    if (![1, 6, 12].includes(body.duration)) {
-      return error('duration must be 1, 6, or 12')
-    }
+
+    // Zod validation for payment fields
+    const parsed = subscriptionPaymentSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
 
     const subscriptionId = Number(body.subscriptionId)
     const tenantId = Number(body.tenantId)
-    const paymentMethod = body.paymentMethod as PaymentMethod
-    const paymentPhone = body.paymentPhone || null
-    const amount = Number(body.amount)
-    const duration = body.duration as BillingDuration
+    const paymentMethod = parsed.data.paymentMethod as PaymentMethod
+    const paymentPhone = parsed.data.paymentPhone || null
+    const amount = Number(parsed.data.amount)
+    const duration = parsed.data.duration as BillingDuration
 
     // Verify subscription exists and belongs to this tenant
     const subscription = await db.subscription.findFirst({

@@ -11,6 +11,7 @@ import {
   unauthorized,
   getUserId,
 } from '@/lib/api-utils'
+import { tenantUpdateSchema, formatZodError } from '@/lib/validations'
 
 /** GET /api/tenants/[id] — Get single tenant */
 export async function GET(
@@ -78,35 +79,39 @@ export async function PUT(
 
     const body = await request.json()
 
+    // Zod validation
+    const parsed = tenantUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
     // Check slug uniqueness if changing
-    if (body.slug && body.slug !== existing.slug) {
-      const slugExists = await db.tenant.findUnique({ where: { slug: body.slug } })
+    if (parsed.data.slug && parsed.data.slug !== existing.slug) {
+      const slugExists = await db.tenant.findUnique({ where: { slug: parsed.data.slug } })
       if (slugExists) return error('Slug already exists')
     }
 
     // Check domain uniqueness if changing
-    if (body.domain && body.domain !== existing.domain) {
-      const domainExists = await db.tenant.findUnique({ where: { domain: body.domain } })
+    if (parsed.data.domain && parsed.data.domain !== existing.domain) {
+      const domainExists = await db.tenant.findUnique({ where: { domain: parsed.data.domain } })
       if (domainExists) return error('Domain already in use')
     }
 
     const data = await db.tenant.update({
       where: { id: tenantId },
       data: {
-        ...(body.name && { name: body.name }),
-        ...(body.slug && { slug: body.slug }),
-        ...(body.domain !== undefined && { domain: body.domain }),
-        ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl }),
-        ...(body.address !== undefined && { address: body.address }),
-        ...(body.city !== undefined && { city: body.city }),
-        ...(body.state !== undefined && { state: body.state }),
-        ...(body.country && { country: body.country }),
-        ...(body.postalCode !== undefined && { postalCode: body.postalCode }),
-        ...(body.phone !== undefined && { phone: body.phone }),
-        ...(body.email !== undefined && { email: body.email }),
-        ...(body.website !== undefined && { website: body.website }),
-        ...(body.isActive !== undefined && { isActive: body.isActive }),
-        ...(body.settings !== undefined && { settings: body.settings }),
+        ...(parsed.data.name && { name: parsed.data.name }),
+        ...(parsed.data.slug && { slug: parsed.data.slug }),
+        ...(parsed.data.domain !== undefined && { domain: parsed.data.domain }),
+        ...(parsed.data.logoUrl !== undefined && { logoUrl: parsed.data.logoUrl }),
+        ...(parsed.data.address !== undefined && { address: parsed.data.address }),
+        ...(parsed.data.city !== undefined && { city: parsed.data.city }),
+        ...(parsed.data.state !== undefined && { state: parsed.data.state }),
+        ...(parsed.data.country && { country: parsed.data.country }),
+        ...(parsed.data.postalCode !== undefined && { postalCode: parsed.data.postalCode }),
+        ...(parsed.data.phone !== undefined && { phone: parsed.data.phone }),
+        ...(parsed.data.email !== undefined && { email: parsed.data.email }),
+        ...(parsed.data.website !== undefined && { website: parsed.data.website }),
+        ...(parsed.data.isActive !== undefined && { isActive: parsed.data.isActive }),
+        ...(parsed.data.settings !== undefined && { settings: parsed.data.settings }),
       },
     })
 

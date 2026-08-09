@@ -5,6 +5,7 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, paginated, getPaginationParams, getTenantId, getUserId } from '@/lib/api-utils'
+import { accountCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -69,6 +70,11 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Zod validation
+    const parsed = accountCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
     const {
       code,
       name,
@@ -76,17 +82,7 @@ export async function POST(request: NextRequest) {
       parentId,
       openingBalance = 0,
       description,
-    } = body
-
-    // Validate required fields
-    if (!code || !name || !accountType) {
-      return error('code, name, and accountType are required')
-    }
-
-    const validAccountTypes = ['asset', 'liability', 'equity', 'income', 'expense']
-    if (!validAccountTypes.includes(accountType)) {
-      return error(`accountType must be one of: ${validAccountTypes.join(', ')}`)
-    }
+    } = parsed.data
 
     // Check for duplicate code within tenant
     const existing = await db.chartOfAccount.findFirst({

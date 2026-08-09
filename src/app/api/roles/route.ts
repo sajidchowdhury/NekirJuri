@@ -14,6 +14,7 @@ import {
   getPaginationParams,
   requireTenantId,
 } from '@/lib/api-utils'
+import { roleCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,17 +64,12 @@ export async function POST(request: NextRequest) {
     if (typeof tenantId !== 'number') return tenantId
 
     const body = await request.json()
-    const { name, slug, description, isSystem, permissionIds } = body as {
-      name: string
-      slug: string
-      description?: string
-      isSystem?: boolean
-      permissionIds?: number[]
-    }
 
-    if (!name || !slug) {
-      return error('name and slug are required')
-    }
+    // Zod validation
+    const parsed = roleCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
+    const { name, slug, description, isSystem, permissionIds } = parsed.data
 
     // Check slug uniqueness within tenant
     const existing = await db.role.findFirst({

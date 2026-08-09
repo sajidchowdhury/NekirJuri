@@ -5,6 +5,7 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { success, created, error, paginated, getPaginationParams, getTenantId, getUserId } from '@/lib/api-utils'
+import { salaryPaymentCreateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -76,6 +77,11 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request)
 
     const body = await request.json()
+
+    // Zod validation
+    const parsed = salaryPaymentCreateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
     const {
       employeeType,
       teacherId,
@@ -88,15 +94,7 @@ export async function POST(request: NextRequest) {
       transactionRef,
       status = 'paid',
       remarks,
-    } = body
-
-    // Validate required fields
-    if (!employeeType || !salaryStructureId || !month || !year || !paymentMethod || !paymentDate) {
-      return error('employeeType, salaryStructureId, month, year, paymentMethod, and paymentDate are required')
-    }
-    if (employeeType !== 'teacher' && employeeType !== 'staff') {
-      return error('employeeType must be "teacher" or "staff"')
-    }
+    } = parsed.data
 
     // Fetch salary structure to get salary breakdown
     const salaryStructure = await db.salaryStructure.findFirst({

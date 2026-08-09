@@ -12,6 +12,7 @@ import {
   requireTenantId,
   getUserId,
 } from '@/lib/api-utils'
+import { galleryUpdateSchema, formatZodError } from '@/lib/validations'
 
 export async function GET(
   request: NextRequest,
@@ -53,7 +54,12 @@ export async function PATCH(
     if (!existing) return notFound('Gallery/Album')
 
     const body = await request.json()
-    const { title, description, coverImageUrl, isPublished } = body
+
+    // Zod validation
+    const parsed = galleryUpdateSchema.safeParse(body)
+    if (!parsed.success) return error(formatZodError(parsed.error), 400)
+
+    const { title, description, coverImageUrl, isPublished } = parsed.data
 
     const updated = await db.gallery.update({
       where: { id: galleryId },
