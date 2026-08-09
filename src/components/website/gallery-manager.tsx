@@ -58,6 +58,8 @@ interface GalleryManagerProps {
   } | null;
   /** Whether album creation is blocked by subscription limit */
   canCreateAlbum?: boolean;
+  /** Loading state */
+  isLoading?: boolean;
 }
 
 export default function GalleryManager({
@@ -69,6 +71,7 @@ export default function GalleryManager({
   onEditImage,
   limits,
   canCreateAlbum = true,
+  isLoading = false,
 }: GalleryManagerProps) {
   const [selectedAlbum, setSelectedAlbum] = React.useState<GalleryAlbum | null>(null);
 
@@ -86,7 +89,20 @@ export default function GalleryManager({
   if (!selectedAlbum) {
     return (
       <div className="space-y-4">
-        {albums.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="border-border/60">
+                <div className="h-40 bg-muted animate-pulse" />
+                <CardContent className="p-4 space-y-2">
+                  <div className="h-4 w-3/4 bg-muted animate-pulse rounded" />
+                  <div className="h-3 w-1/2 bg-muted animate-pulse rounded" />
+                  <div className="h-3 w-1/3 bg-muted animate-pulse rounded" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : albums.length === 0 ? (
           <EmptyState
             title="No albums yet"
             description="Create your first photo album to start building your gallery."

@@ -41,6 +41,7 @@ interface PageListProps {
   onEdit: (page: WebsitePage) => void;
   onDelete: (pageId: string) => void;
   onToggleStatus: (pageId: string) => void;
+  isLoading?: boolean;
 }
 
 function StatusBadge({ status }: { status: PageStatus }) {
@@ -58,7 +59,7 @@ function StatusBadge({ status }: { status: PageStatus }) {
   );
 }
 
-export default function PageList({ pages, onEdit, onDelete, onToggleStatus }: PageListProps) {
+export default function PageList({ pages, onEdit, onDelete, onToggleStatus, isLoading = false }: PageListProps) {
   const [filter, setFilter] = React.useState('all');
 
   const filteredPages = React.useMemo(() => {
@@ -221,6 +222,7 @@ export default function PageList({ pages, onEdit, onDelete, onToggleStatus }: Pa
                 searchable
                 searchPlaceholder="Search pages..."
                 renderCard={renderCard}
+                isLoading={isLoading}
                 emptyMessage="No pages found"
                 emptyDescription="Create your first website page to get started."
               />

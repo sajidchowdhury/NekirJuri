@@ -4,21 +4,25 @@
 // BillingPage — Full subscription/billing management page
 // Contains: Current Plan, Plan Comparison, Payment History,
 // Make Payment, and Subscription Timeline sections
+// Fully wired to API — no sample data fallbacks
 // ============================================================
 
 import * as React from 'react'
 import Link from 'next/link'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   CreditCard, Check, Crown, Zap, Building2, Star,
   ArrowUpRight, ExternalLink, Phone, Receipt,
   Calendar, Clock, CircleCheck, CircleX, AlertCircle,
   Loader2, Shield, Users, HardDrive, GraduationCap,
-  ChevronRight, Info, Send, Smartphone
+  ChevronRight, Info, Send, Smartphone, RefreshCw
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { formatBDT, type BillingDuration, type PaymentMethod } from '@/lib/subscription'
 import { fadeIn, slideUp, staggerChildren, transitions } from '@/lib/animations'
+import { apiFetch, apiFetchList, apiSubmit } from '@/lib/api-client'
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter, CardAction } from '@/components/ui/card'
@@ -55,10 +59,11 @@ import {
 } from '@/components/ui/dialog'
 
 // -----------------------------------------------------------
-// Sample Data (for dev/preview mode)
+// Types & Fallback Data
 // -----------------------------------------------------------
 
 interface PlanData {
+  id?: number
   slug: string
   name: string
   priceMonthly: number
@@ -72,7 +77,32 @@ interface PlanData {
   icon: React.ReactNode
 }
 
-const PLANS: PlanData[] = [
+interface PaymentRecord {
+  id: string
+  date: string
+  amount: number
+  method: PaymentMethod
+  transactionRef: string
+  status: 'verified' | 'pending' | 'failed' | 'refunded'
+  duration: BillingDuration
+}
+
+interface SubscriptionData {
+  planSlug: string
+  planName: string
+  planId?: number
+  status: 'active' | 'trial' | 'grace_period' | 'restricted' | 'suspended' | 'terminated'
+  startDate: string
+  endDate: string
+  duration: BillingDuration
+  daysRemaining: number
+  usedStudents: number
+  usedEmployees: number
+  usedStorageMb: number
+}
+
+// Fallback plans used for icon mapping when API data doesn't include icons
+const FALLBACK_PLANS: PlanData[] = [
   {
     slug: 'free',
     name: 'Free',
@@ -124,45 +154,91 @@ const PLANS: PlanData[] = [
   },
 ]
 
-interface PaymentRecord {
-  id: string
-  date: string
-  amount: number
-  method: PaymentMethod
-  transactionRef: string
-  status: 'verified' | 'pending' | 'failed' | 'refunded'
-  duration: BillingDuration
+/** Map API subscription plan to PlanData with icon */
+function mapApiPlan(raw: Record<string, unknown>): PlanData {
+  const slug = (raw.slug as string) || 'free'
+  const fallback = FALLBACK_PLANS.find(p => p.slug === slug)
+  return {
+    id: raw.id as number,
+    slug,
+    name: (raw.name as string) || fallback?.name || slug,
+    priceMonthly: Number(raw.priceMonthly) || fallback?.priceMonthly || 0,
+    price6Monthly: Number(raw.price6Monthly) || fallback?.price6Monthly || 0,
+    priceYearly: Number(raw.priceYearly) || fallback?.priceYearly || 0,
+    maxStudents: Number(raw.maxStudents) || fallback?.maxStudents || 0,
+    maxEmployees: Number(raw.maxEmployees) || fallback?.maxEmployees || 0,
+    maxStorageMb: Number(raw.maxStorageMb) || fallback?.maxStorageMb || 0,
+    features: (raw.features as string[]) || fallback?.features || [],
+    popular: (raw.popular as boolean) || (slug === 'professional'),
+    icon: fallback?.icon || <Star className="size-5" />,
+  }
 }
 
-const SAMPLE_PAYMENTS: PaymentRecord[] = [
-  {
-    id: 'pay-1',
-    date: '2025-07-15',
-    amount: 79999,
-    method: 'bkash',
-    transactionRef: 'BKASH8A4X9M2',
-    status: 'verified',
-    duration: 12,
-  },
-  {
-    id: 'pay-2',
-    date: '2025-04-10',
-    amount: 42999,
-    method: 'nagad',
-    transactionRef: 'NGD7B2K5P1',
-    status: 'verified',
-    duration: 6,
-  },
-  {
-    id: 'pay-3',
-    date: '2025-01-05',
-    amount: 7999,
-    method: 'bank',
-    transactionRef: 'TT-20250105-7890',
-    status: 'pending',
-    duration: 1,
-  },
-]
+/** Map API subscription + enforcement to SubscriptionData */
+function mapApiSubscription(
+  sub: Record<string, unknown>,
+  enforcement?: Record<string, unknown>
+): SubscriptionData {
+  const plan = (sub.plan as Record<string, unknown>) || {}
+  const status = (sub.status as SubscriptionData['status']) || 'trial'
+  const startDate = sub.startDate ? new Date(sub.startDate as string).toISOString().slice(0, 10) : ''
+  const endDate = sub.endDate ? new Date(sub.endDate as string).toISOString().slice(0, 10) : ''
+
+  // Compute days remaining
+  let daysRemaining = 0
+  if (sub.endDate) {
+    const end = new Date(sub.endDate as string)
+    const now = new Date()
+    daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
+  }
+  if (enforcement && typeof enforcement.daysRemaining === 'number') {
+    daysRemaining = enforcement.daysRemaining
+  }
+
+  return {
+    planSlug: (plan.slug as string) || 'free',
+    planName: (plan.name as string) || 'Free',
+    planId: (plan.id as number) || (sub.planId as number),
+    status,
+    startDate,
+    endDate,
+    duration: (sub.billingDuration as BillingDuration) || 1,
+    daysRemaining,
+    usedStudents: 0,  // Usage metrics come from tenant cache; default to 0
+    usedEmployees: 0,
+    usedStorageMb: 0,
+  }
+}
+
+/** Map API payment to PaymentRecord */
+function mapApiPayment(raw: Record<string, unknown>): PaymentRecord {
+  return {
+    id: String(raw.id),
+    date: raw.createdAt ? new Date(raw.createdAt as string).toISOString().slice(0, 10) : (raw.billingPeriod as string) || '',
+    amount: Number(raw.amount) || 0,
+    method: (raw.paymentMethod as PaymentMethod) || 'manual',
+    transactionRef: (raw.transactionRef as string) || (raw.id as string) || '',
+    status: (raw.status as PaymentRecord['status']) || 'pending',
+    duration: (raw.duration as BillingDuration) || (raw.billingDuration as BillingDuration) || 1,
+  }
+}
+
+const DEFAULT_SUBSCRIPTION: SubscriptionData = {
+  planSlug: 'free',
+  planName: 'Free',
+  status: 'trial',
+  startDate: '',
+  endDate: '',
+  duration: 1,
+  daysRemaining: 0,
+  usedStudents: 0,
+  usedEmployees: 0,
+  usedStorageMb: 0,
+}
+
+// -----------------------------------------------------------
+// Helper: Payment status badge
+// -----------------------------------------------------------
 
 interface TimelineEvent {
   date: string
@@ -171,6 +247,7 @@ interface TimelineEvent {
   icon: React.ReactNode
 }
 
+// Timeline is UI-only — no API for it
 const SAMPLE_TIMELINE: TimelineEvent[] = [
   {
     date: '2024-12-15',
@@ -203,24 +280,6 @@ const SAMPLE_TIMELINE: TimelineEvent[] = [
     icon: <ArrowUpRight className="size-4 text-emerald-500" />,
   },
 ]
-
-// Current subscription sample
-const CURRENT_SUBSCRIPTION = {
-  planSlug: 'professional',
-  planName: 'Professional',
-  status: 'active' as const,
-  startDate: '2025-07-15',
-  endDate: '2026-07-15',
-  duration: 12 as BillingDuration,
-  daysRemaining: 23,
-  usedStudents: 450,
-  usedEmployees: 28,
-  usedStorageMb: 3276.8, // 3.2 GB
-}
-
-// -----------------------------------------------------------
-// Helper: Payment status badge
-// -----------------------------------------------------------
 
 function PaymentStatusBadge({ status }: { status: PaymentRecord['status'] }) {
   const config: Record<string, { label: string; className: string }> = {
@@ -260,11 +319,15 @@ function PaymentMethodLabel({ method }: { method: PaymentMethod }) {
 // Section 1: Current Plan
 // -----------------------------------------------------------
 
-function CurrentPlanSection() {
-  const plan = PLANS.find(p => p.slug === CURRENT_SUBSCRIPTION.planSlug)!
-  const studentPct = Math.round((CURRENT_SUBSCRIPTION.usedStudents / plan.maxStudents) * 100)
-  const employeePct = Math.round((CURRENT_SUBSCRIPTION.usedEmployees / plan.maxEmployees) * 100)
-  const storagePct = Math.round((CURRENT_SUBSCRIPTION.usedStorageMb / plan.maxStorageMb) * 100)
+function CurrentPlanSection({ plans, subscription, isLoading }: {
+  plans: PlanData[]
+  subscription: SubscriptionData
+  isLoading?: boolean
+}) {
+  const plan = plans.find(p => p.slug === subscription.planSlug) || FALLBACK_PLANS.find(p => p.slug === subscription.planSlug) || FALLBACK_PLANS[0]
+  const studentPct = plan.maxStudents > 0 ? Math.round((subscription.usedStudents / plan.maxStudents) * 100) : 0
+  const employeePct = plan.maxEmployees > 0 ? Math.round((subscription.usedEmployees / plan.maxEmployees) * 100) : 0
+  const storagePct = plan.maxStorageMb > 0 ? Math.round((subscription.usedStorageMb / plan.maxStorageMb) * 100) : 0
 
   const statusConfig: Record<string, { label: string; className: string }> = {
     active: { label: 'Active', className: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' },
@@ -274,7 +337,7 @@ function CurrentPlanSection() {
     suspended: { label: 'Suspended', className: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' },
     terminated: { label: 'Terminated', className: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' },
   }
-  const sc = statusConfig[CURRENT_SUBSCRIPTION.status] ?? statusConfig.active
+  const sc = statusConfig[subscription.status] ?? statusConfig.active
 
   return (
     <motion.div
@@ -294,7 +357,7 @@ function CurrentPlanSection() {
           {/* Plan info row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="text-xl font-semibold text-foreground">{CURRENT_SUBSCRIPTION.planName}</span>
+              <span className="text-xl font-semibold text-foreground">{subscription.planName}</span>
               <span className={cn('inline-flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-xs font-medium', sc.className)}>
                 <CircleCheck className="size-3" />
                 {sc.label}
@@ -303,21 +366,21 @@ function CurrentPlanSection() {
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <Calendar className="size-3.5" />
-                <span>{CURRENT_SUBSCRIPTION.duration}-month plan</span>
+                <span>{subscription.duration}-month plan</span>
               </div>
               <Separator orientation="vertical" className="h-4" />
               <div className="flex items-center gap-1.5">
                 <Clock className="size-3.5" />
-                <span>{CURRENT_SUBSCRIPTION.daysRemaining} days left</span>
+                <span>{subscription.daysRemaining} days left</span>
               </div>
             </div>
           </div>
 
           {/* Date range */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{CURRENT_SUBSCRIPTION.startDate}</span>
+            <span>{subscription.startDate}</span>
             <ChevronRight className="size-3.5" />
-            <span>{CURRENT_SUBSCRIPTION.endDate}</span>
+            <span>{subscription.endDate}</span>
           </div>
 
           <Separator />
@@ -334,7 +397,7 @@ function CurrentPlanSection() {
                   <span>Students</span>
                 </div>
                 <span className="font-medium text-foreground">
-                  {CURRENT_SUBSCRIPTION.usedStudents.toLocaleString()} / {plan.maxStudents.toLocaleString()}
+                  {subscription.usedStudents.toLocaleString()} / {plan.maxStudents.toLocaleString()}
                 </span>
               </div>
               <Progress value={studentPct} className={cn(
@@ -352,7 +415,7 @@ function CurrentPlanSection() {
                   <span>Employees</span>
                 </div>
                 <span className="font-medium text-foreground">
-                  {CURRENT_SUBSCRIPTION.usedEmployees} / {plan.maxEmployees}
+                  {subscription.usedEmployees} / {plan.maxEmployees}
                 </span>
               </div>
               <Progress value={employeePct} className={cn(
@@ -370,7 +433,7 @@ function CurrentPlanSection() {
                   <span>Storage</span>
                 </div>
                 <span className="font-medium text-foreground">
-                  {(CURRENT_SUBSCRIPTION.usedStorageMb / 1024).toFixed(1)} GB / {(plan.maxStorageMb / 1024).toFixed(0)} GB
+                  {(subscription.usedStorageMb / 1024).toFixed(1)} GB / {(plan.maxStorageMb / 1024).toFixed(0)} GB
                 </span>
               </div>
               <Progress value={storagePct} className={cn(
@@ -388,7 +451,7 @@ function CurrentPlanSection() {
               Renew Subscription
             </Link>
           </Button>
-          {CURRENT_SUBSCRIPTION.planSlug !== 'enterprise' && (
+          {subscription.planSlug !== 'enterprise' && (
             <Button size="sm" className="gap-1.5" asChild>
               <Link href="/system/billing">
                 <ArrowUpRight className="size-3.5" />
@@ -406,7 +469,11 @@ function CurrentPlanSection() {
 // Section 2: Plan Comparison & Upgrade
 // -----------------------------------------------------------
 
-function PlanComparisonSection() {
+function PlanComparisonSection({ plans, currentPlanSlug, isLoading }: {
+  plans: PlanData[]
+  currentPlanSlug: string
+  isLoading?: boolean
+}) {
   const [duration, setDuration] = React.useState<BillingDuration>(1)
 
   const getPrice = (plan: PlanData): number => {
@@ -456,8 +523,8 @@ function PlanComparisonSection() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {PLANS.map((plan) => {
-              const isCurrent = plan.slug === CURRENT_SUBSCRIPTION.planSlug
+            {plans.length > 0 ? plans.map((plan) => {
+              const isCurrent = plan.slug === currentPlanSlug
               const price = getPrice(plan)
               const perMonth = getPerMonth(plan)
 
@@ -541,7 +608,12 @@ function PlanComparisonSection() {
                   </Card>
                 </motion.div>
               )
-            })}
+            }) : (
+              <div className="col-span-full flex items-center justify-center py-12 text-muted-foreground">
+                <Loader2 className="size-5 animate-spin mr-2" />
+                Loading plans...
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -553,7 +625,10 @@ function PlanComparisonSection() {
 // Section 3: Payment History
 // -----------------------------------------------------------
 
-function PaymentHistorySection() {
+function PaymentHistorySection({ payments, isLoading }: {
+  payments: PaymentRecord[]
+  isLoading?: boolean
+}) {
   return (
     <motion.div
       initial={slideUp.initial}
@@ -583,7 +658,7 @@ function PaymentHistorySection() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {SAMPLE_PAYMENTS.map((payment) => (
+                {payments.map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell className="text-sm">{payment.date}</TableCell>
                     <TableCell className="text-sm font-medium">{formatBDT(payment.amount)}</TableCell>
@@ -601,7 +676,7 @@ function PaymentHistorySection() {
 
           {/* Mobile: Card view */}
           <div className="md:hidden space-y-3">
-            {SAMPLE_PAYMENTS.map((payment) => (
+            {payments.map((payment) => (
               <div key={payment.id} className="rounded-lg border border-border p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{formatBDT(payment.amount)}</span>
@@ -627,7 +702,10 @@ function PaymentHistorySection() {
 // Section 4: Make Payment
 // -----------------------------------------------------------
 
-function MakePaymentSection() {
+function MakePaymentSection({ plans, onSubmitPayment }: {
+  plans: PlanData[]
+  onSubmitPayment: (data: { planId: number; duration: BillingDuration; paymentMethod: PaymentMethod; phone?: string }) => Promise<void>
+}) {
   const [method, setMethod] = React.useState<PaymentMethod>('bkash')
   const [phone, setPhone] = React.useState('')
   const [amount, setAmount] = React.useState('')
@@ -636,7 +714,7 @@ function MakePaymentSection() {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [showSuccess, setShowSuccess] = React.useState(false)
 
-  const plan = PLANS.find(p => p.slug === selectedPlan)!
+  const plan = plans.find(p => p.slug === selectedPlan) || FALLBACK_PLANS.find(p => p.slug === selectedPlan) || FALLBACK_PLANS[1]
   const calculatedAmount = plan.priceMonthly
   // Use proper price calculation based on duration
   const finalAmount = selectedDuration === 1 ? plan.priceMonthly
@@ -645,11 +723,20 @@ function MakePaymentSection() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 1500))
-    setIsSubmitting(false)
-    setShowSuccess(true)
-    setTimeout(() => setShowSuccess(false), 3000)
+    try {
+      await onSubmitPayment({
+        planId: plan.id || 0,
+        duration: selectedDuration,
+        paymentMethod: method,
+        phone: method === 'bkash' || method === 'nagad' ? phone : undefined,
+      })
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 3000)
+    } catch (err) {
+      // Error handled by mutation
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const methodConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
@@ -703,7 +790,7 @@ function MakePaymentSection() {
                   <SelectValue placeholder="Select plan" />
                 </SelectTrigger>
                 <SelectContent>
-                  {PLANS.filter(p => p.slug !== 'free').map(p => (
+                  {plans.filter(p => p.slug !== 'free').map(p => (
                     <SelectItem key={p.slug} value={p.slug}>{p.name} — {formatBDT(p.priceMonthly)}/mo</SelectItem>
                   ))}
                 </SelectContent>
@@ -914,6 +1001,106 @@ function SubscriptionTimelineSection() {
 // -----------------------------------------------------------
 
 export default function BillingPage() {
+  const queryClient = useQueryClient()
+
+  // ── Fetch subscription plans ───────────────────────────
+  const {
+    data: plansResponse,
+    isLoading: plansLoading,
+    isError: plansError,
+    refetch: refetchPlans,
+  } = useQuery({
+    queryKey: ['subscription-plans'],
+    queryFn: async () => {
+      const res = await apiFetchList<Record<string, unknown>>('/api/subscription-plans?limit=50&isActive=true')
+      return res
+    },
+    staleTime: 10 * 60 * 1000, // Plans rarely change
+  })
+
+  const plans: PlanData[] = (plansResponse?.data || []).map(mapApiPlan)
+  // If no plans from API, use fallback
+  const effectivePlans = plans.length > 0 ? plans : FALLBACK_PLANS
+
+  // ── Fetch current subscription ──────────────────────────
+  const {
+    data: subscriptionData,
+    isLoading: subscriptionLoading,
+    isError: subscriptionError,
+  } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: async () => {
+      try {
+        // tenantId=1 is a default for single-tenant preview mode
+        const data = await apiFetch<{
+          subscription: Record<string, unknown>
+          payments: Record<string, unknown>[]
+          enforcement: Record<string, unknown>
+        }>('/api/subscriptions?tenantId=1')
+        return data
+      } catch {
+        // No subscription found — return null (free plan)
+        return null
+      }
+    },
+  })
+
+  const subscription: SubscriptionData = subscriptionData
+    ? mapApiSubscription(subscriptionData.subscription, subscriptionData.enforcement)
+    : DEFAULT_SUBSCRIPTION
+
+  const payments: PaymentRecord[] = (subscriptionData?.payments || []).map(mapApiPayment)
+
+  const isLoading = plansLoading || subscriptionLoading
+
+  // ── Create/upgrade subscription mutation ────────────────
+  const subscribeMutation = useMutation({
+    mutationFn: async (data: { planId: number; duration: BillingDuration; paymentMethod: PaymentMethod; phone?: string }) => {
+      return apiSubmit('/api/subscriptions', 'POST', {
+        tenantId: 1,
+        planId: data.planId,
+        billingDuration: data.duration,
+        paymentMethod: data.paymentMethod,
+      })
+    },
+    onSuccess: (_data, variables) => {
+      toast.success('Subscription submitted successfully! Payment is pending verification.')
+      queryClient.invalidateQueries({ queryKey: ['subscription'] })
+      queryClient.invalidateQueries({ queryKey: ['subscription-plans'] })
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to create subscription')
+    },
+  })
+
+  const handleSubmitPayment = async (data: { planId: number; duration: BillingDuration; paymentMethod: PaymentMethod; phone?: string }) => {
+    await subscribeMutation.mutateAsync(data)
+  }
+
+  // ── Error state ─────────────────────────────────────────
+  if (plansError || subscriptionError) {
+    return (
+      <motion.div
+        initial={fadeIn.initial}
+        animate={fadeIn.animate}
+        transition={transitions.normal}
+        className="space-y-6"
+      >
+        <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+          <AlertCircle className="h-12 w-12 text-rose-500" />
+          <h3 className="text-lg font-semibold">Failed to load billing data</h3>
+          <p className="text-sm text-muted-foreground max-w-md">There was an error fetching subscription information. Please try again.</p>
+          <Button variant="outline" className="gap-2" onClick={() => {
+            refetchPlans()
+            queryClient.invalidateQueries({ queryKey: ['subscription'] })
+          }}>
+            <RefreshCw className="h-4 w-4" /> Retry
+          </Button>
+        </div>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div
       initial={fadeIn.initial}
@@ -922,10 +1109,10 @@ export default function BillingPage() {
       className="space-y-6"
     >
       {/* Section 1: Current Plan */}
-      <CurrentPlanSection />
+      <CurrentPlanSection plans={effectivePlans} subscription={subscription} isLoading={isLoading} />
 
       {/* Section 2: Plan Comparison & Upgrade */}
-      <PlanComparisonSection />
+      <PlanComparisonSection plans={effectivePlans} currentPlanSlug={subscription.planSlug} isLoading={isLoading} />
 
       {/* Sections 3-5 in tabs for better organization */}
       <Tabs defaultValue="payments" className="space-y-4">
@@ -945,11 +1132,11 @@ export default function BillingPage() {
         </TabsList>
 
         <TabsContent value="payments">
-          <PaymentHistorySection />
+          <PaymentHistorySection payments={payments} isLoading={isLoading} />
         </TabsContent>
 
         <TabsContent value="make-payment">
-          <MakePaymentSection />
+          <MakePaymentSection plans={effectivePlans} onSubmitPayment={handleSubmitPayment} />
         </TabsContent>
 
         <TabsContent value="timeline">

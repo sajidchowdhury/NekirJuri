@@ -18,18 +18,29 @@ import {
 } from '@/components/ui/tooltip';
 import {
   type Role,
-  sampleRoles,
   allPermissions,
 } from '@/lib/system/sample-data';
 import { slideUp, staggerChildren, transitions } from '@/lib/animations';
 
 interface RoleManagerProps {
+  roles?: Role[];
+  isLoading?: boolean;
   onEditRole?: (role: Role) => void;
 }
 
-export default function RoleManager({ onEditRole }: RoleManagerProps) {
-  const roles = sampleRoles;
+export default function RoleManager({ roles: rolesProp, isLoading, onEditRole }: RoleManagerProps) {
+  const roles = rolesProp ?? [];
   const totalPermissions = allPermissions.length;
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-48 rounded-lg border bg-card animate-pulse" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <motion.div

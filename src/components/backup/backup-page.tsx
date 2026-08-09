@@ -2,10 +2,13 @@
 
 // ============================================================
 // BackupPage — Main page combining all backup components
+// Fully wired to API — no sample data fallbacks
 // ============================================================
 
 import * as React from 'react';
-import { Database, Clock, Calendar } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Database, Clock, Calendar, AlertCircle, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/atoms/page-header';
@@ -21,84 +24,19 @@ import {
   type BackupType,
   type BackupScope,
 } from './backup-types';
+import { apiFetch, apiFetchList, apiSubmit, apiDelete } from '@/lib/api-client';
 
-// ============================================================
-// Sample data for demonstration (will be replaced by API calls)
-// ============================================================
-
-const sampleBackups: BackupRecord[] = [
-  {
-    id: 'b1',
-    type: 'full',
-    status: 'completed',
-    scopes: [],
-    description: 'End of semester backup',
-    recordsCount: 12450,
-    sizeMb: 256.4,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 2 * 60 * 60 * 1000 + 5 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'b2',
-    type: 'partial',
-    status: 'completed',
-    scopes: ['academic', 'finance'],
-    description: 'Mid-term partial backup',
-    recordsCount: 5230,
-    sizeMb: 89.2,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 24 * 60 * 60 * 1000 + 3 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'b3',
-    type: 'full',
-    status: 'running',
-    scopes: [],
-    description: 'Scheduled daily backup',
-    recordsCount: 0,
-    sizeMb: 0,
-    createdAt: new Date().toISOString(),
-    expiresAt: null,
-    completedAt: null,
-  },
-  {
-    id: 'b4',
-    type: 'partial',
-    status: 'failed',
-    scopes: ['inventory'],
-    description: 'Inventory backup attempt',
-    recordsCount: 0,
-    sizeMb: 0,
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    expiresAt: null,
-    completedAt: null,
-  },
-  {
-    id: 'b5',
-    type: 'full',
-    status: 'expired',
-    scopes: [],
-    description: 'Old monthly backup',
-    recordsCount: 10200,
-    sizeMb: 210.8,
-    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000 + 8 * 60 * 1000).toISOString(),
-  },
-];
-
-const sampleStats: BackupStats = {
-  totalBackups: 5,
-  totalSizeMb: 556.4,
-  lastBackupDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  scheduleEnabled: true,
-  nextScheduledDate: new Date(Date.now() + 22 * 60 * 60 * 1000).toISOString(),
+// ── Default empty stats ────────────────────────────────────
+const emptyStats: BackupStats = {
+  totalBackups: 0,
+  totalSizeMb: 0,
+  lastBackupDate: null,
+  scheduleEnabled: false,
+  nextScheduledDate: null,
 };
 
-const sampleScheduleConfig: BackupScheduleConfig = {
-  enabled: true,
+const defaultScheduleConfig: BackupScheduleConfig = {
+  enabled: false,
   frequency: 'daily',
   time: '02:00',
   retentionDays: 30,
@@ -106,78 +44,174 @@ const sampleScheduleConfig: BackupScheduleConfig = {
   scopes: [],
 };
 
+// ── Map API backup record to component BackupRecord ────────
+function mapApiBackup(raw: Record<string, unknown>): BackupRecord {
+  return {
+    id: String(raw.id),
+    type: (raw.type as BackupType) || 'full',
+    status: (raw.status as BackupRecord['status']) || 'pending',
+    scopes: (raw.scopes as BackupScope[]) || [],
+    description: (raw.description as string) || '',
+    recordsCount: (raw.recordCount as number) || (raw.recordsCount as number) || 0,
+    sizeMb: (raw.sizeMb as number) || 0,
+    createdAt: raw.createdAt ? new Date(raw.createdAt as string).toISOString() : new Date().toISOString(),
+    expiresAt: raw.expiresAt ? new Date(raw.expiresAt as string).toISOString() : null,
+    completedAt: raw.completedAt ? new Date(raw.completedAt as string).toISOString() : null,
+  };
+}
+
+// ── Compute stats from backup list ─────────────────────────
+function computeStats(backups: BackupRecord[], scheduleEnabled: boolean, nextScheduledDate: string | null): BackupStats {
+  const completed = backups.filter(b => b.status === 'completed');
+  return {
+    totalBackups: backups.length,
+    totalSizeMb: Math.round(completed.reduce((sum, b) => sum + b.sizeMb, 0) * 10) / 10,
+    lastBackupDate: completed.length > 0 ? completed[0].completedAt || completed[0].createdAt : null,
+    scheduleEnabled,
+    nextScheduledDate,
+  };
+}
+
 export default function BackupPage() {
-  // State
-  const [backups, setBackups] = React.useState<BackupRecord[]>(sampleBackups);
-  const [stats, setStats] = React.useState<BackupStats>(sampleStats);
-  const [scheduleConfig, setScheduleConfig] = React.useState<BackupScheduleConfig>(sampleScheduleConfig);
-  const [loading, setLoading] = React.useState(true);
+  const queryClient = useQueryClient();
   const [restoreTarget, setRestoreTarget] = React.useState<BackupRecord | null>(null);
   const [restoreDialogOpen, setRestoreDialogOpen] = React.useState(false);
 
-  // Simulate loading
-  React.useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
+  // ── Fetch backups ──────────────────────────────────────
+  const {
+    data: backupsResponse,
+    isLoading: backupsLoading,
+    isError: backupsError,
+    refetch: refetchBackups,
+  } = useQuery({
+    queryKey: ['backups'],
+    queryFn: async () => {
+      const res = await apiFetchList<Record<string, unknown>>('/api/backups?limit=100');
+      return res;
+    },
+  });
 
-  // Handlers
+  const backups: BackupRecord[] = (backupsResponse?.data || []).map(mapApiBackup);
+
+  // ── Fetch schedule config ──────────────────────────────
+  const {
+    data: scheduleData,
+    isLoading: scheduleLoading,
+  } = useQuery({
+    queryKey: ['backup-schedule'],
+    queryFn: async () => {
+      return apiFetch<BackupScheduleConfig>('/api/backup-schedule');
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const scheduleConfig: BackupScheduleConfig = scheduleData
+    ? {
+        enabled: scheduleData.enabled ?? false,
+        frequency: scheduleData.frequency ?? 'daily',
+        time: scheduleData.time ?? '02:00',
+        retentionDays: scheduleData.retentionDays ?? 30,
+        backupType: (scheduleData.backupType ?? ((scheduleData as unknown as Record<string, unknown>).type as BackupType)) ?? 'full',
+        scopes: scheduleData.scopes ?? [],
+      }
+    : defaultScheduleConfig;
+
+  // Compute stats from fetched data
+  const nextScheduledDate = scheduleConfig.enabled
+    ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    : null;
+  const stats = computeStats(backups, scheduleConfig.enabled, nextScheduledDate);
+  const loading = backupsLoading || scheduleLoading;
+
+  // ── Create backup mutation ──────────────────────────────
+  const createBackupMutation = useMutation({
+    mutationFn: async (options: {
+      type: BackupType;
+      scopes: BackupScope[];
+      description: string;
+      retentionDays: number;
+    }) => {
+      return apiSubmit<Record<string, unknown>>('/api/backups', 'POST', {
+        type: options.type,
+        scopes: options.scopes,
+        description: options.description,
+        retentionDays: options.retentionDays,
+        triggerSource: 'manual',
+      });
+    },
+    onSuccess: () => {
+      toast.success('Backup created successfully');
+      queryClient.invalidateQueries({ queryKey: ['backups'] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to create backup');
+    },
+  });
+
+  // ── Delete backup mutation ──────────────────────────────
+  const deleteBackupMutation = useMutation({
+    mutationFn: async (backupId: string) => {
+      return apiDelete(`/api/backups/${backupId}`);
+    },
+    onSuccess: () => {
+      toast.success('Backup deleted');
+      queryClient.invalidateQueries({ queryKey: ['backups'] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to delete backup');
+    },
+  });
+
+  // ── Restore mutation ────────────────────────────────────
+  const restoreMutation = useMutation({
+    mutationFn: async (backupId: string) => {
+      return apiSubmit<{ success: boolean; message: string; recordCount?: number }>(
+        '/api/restore',
+        'POST',
+        { backupId: Number(backupId), confirmOverwrite: true }
+      );
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'Restore completed successfully');
+      queryClient.invalidateQueries({ queryKey: ['backups'] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to restore backup');
+    },
+  });
+
+  // ── Save schedule mutation ──────────────────────────────
+  const saveScheduleMutation = useMutation({
+    mutationFn: async (config: BackupScheduleConfig) => {
+      return apiSubmit<BackupScheduleConfig>('/api/backup-schedule', 'PUT', {
+        enabled: config.enabled,
+        frequency: config.frequency,
+        time: config.time,
+        retentionDays: config.retentionDays,
+        type: config.backupType,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Backup schedule updated');
+      queryClient.invalidateQueries({ queryKey: ['backup-schedule'] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to update schedule');
+    },
+  });
+
+  // ── Handlers ────────────────────────────────────────────
   const handleCreateBackup = async (options: {
     type: BackupType;
     scopes: BackupScope[];
     description: string;
     retentionDays: number;
   }) => {
-    // POST /api/backups — simulated
-    const newBackup: BackupRecord = {
-      id: `b${Date.now()}`,
-      type: options.type,
-      status: 'pending',
-      scopes: options.scopes,
-      description: options.description,
-      recordsCount: 0,
-      sizeMb: 0,
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + options.retentionDays * 24 * 60 * 60 * 1000).toISOString(),
-      completedAt: null,
-    };
-    setBackups((prev) => [newBackup, ...prev]);
-    setStats((prev) => ({
-      ...prev,
-      totalBackups: prev.totalBackups + 1,
-    }));
-
-    // Simulate progression to running then completed
-    setTimeout(() => {
-      setBackups((prev) =>
-        prev.map((b) => (b.id === newBackup.id ? { ...b, status: 'running' } : b))
-      );
-    }, 1000);
-
-    setTimeout(() => {
-      setBackups((prev) =>
-        prev.map((b) =>
-          b.id === newBackup.id
-            ? {
-                ...b,
-                status: 'completed',
-                recordsCount: Math.floor(Math.random() * 15000) + 3000,
-                sizeMb: Math.round((Math.random() * 300 + 50) * 10) / 10,
-                completedAt: new Date().toISOString(),
-              }
-            : b
-        )
-      );
-      setStats((prev) => ({
-        ...prev,
-        lastBackupDate: new Date().toISOString(),
-      }));
-    }, 5000);
+    createBackupMutation.mutate(options);
   };
 
   const handleDownload = (backup: BackupRecord) => {
-    // In production: window.open(`/api/backups/${backup.id}/download`)
-    console.log('Download backup:', backup.id);
+    window.open(`/api/backups/${backup.id}/download`, '_blank');
   };
 
   const handleRestore = (backup: BackupRecord) => {
@@ -186,32 +220,39 @@ export default function BackupPage() {
   };
 
   const handleRestoreConfirm = async (backupId: string) => {
-    // POST /api/restore — simulated
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    return { success: true, message: 'All data restored successfully. 12,450 records have been recovered.' };
+    const result = await restoreMutation.mutateAsync(backupId);
+    return { success: result.success ?? true, message: result.message || 'Restore completed' };
   };
 
   const handleDelete = (backup: BackupRecord) => {
-    setBackups((prev) => prev.filter((b) => b.id !== backup.id));
-    setStats((prev) => ({
-      ...prev,
-      totalBackups: prev.totalBackups - 1,
-      totalSizeMb: prev.totalSizeMb - backup.sizeMb,
-    }));
+    if (confirm(`Are you sure you want to delete this backup? This action cannot be undone.`)) {
+      deleteBackupMutation.mutate(backup.id);
+    }
   };
 
   const handleSaveSchedule = async (config: BackupScheduleConfig) => {
-    // PUT /api/backup-schedule — simulated
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setScheduleConfig(config);
-    setStats((prev) => ({
-      ...prev,
-      scheduleEnabled: config.enabled,
-      nextScheduledDate: config.enabled
-        ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-        : null,
-    }));
+    saveScheduleMutation.mutate(config);
   };
+
+  // ── Error state ─────────────────────────────────────────
+  if (backupsError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Backup & Restore"
+          description="Manage data backups, restore points, and automated schedules"
+        />
+        <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+          <AlertCircle className="h-12 w-12 text-rose-500" />
+          <h3 className="text-lg font-semibold">Failed to load backups</h3>
+          <p className="text-sm text-muted-foreground max-w-md">There was an error fetching backup data. Please try again.</p>
+          <Button variant="outline" className="gap-2" onClick={() => refetchBackups()}>
+            <RefreshCw className="h-4 w-4" /> Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -250,7 +291,11 @@ export default function BackupPage() {
             {/* Quick actions */}
             <div className="flex flex-col sm:flex-row gap-3">
               <BackupCreateDialog onCreateBackup={handleCreateBackup} />
-              <Button variant="outline" size="sm" className="gap-1.5">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                const latest = backups.find(b => b.status === 'completed');
+                if (latest) handleDownload(latest);
+                else toast.info('No completed backups available to download');
+              }}>
                 <Database className="h-4 w-4" />
                 Download Latest
               </Button>

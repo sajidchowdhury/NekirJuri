@@ -22,15 +22,20 @@ import {
   type ActivityLog,
   type AuditLog,
   type ActionType,
-  sampleActivityLogs,
-  sampleAuditLogs,
-  sampleUsers,
+  type SystemUser,
   getInitials,
   actionBadgeColors,
 } from '@/lib/system/sample-data';
 import { slideUp, staggerChildren, transitions } from '@/lib/animations';
 
-export default function ActivityLogViewer() {
+interface ActivityLogViewerProps {
+  activityLogs?: ActivityLog[];
+  auditLogs?: AuditLog[];
+  users?: SystemUser[];
+  isLoading?: boolean;
+}
+
+export default function ActivityLogViewer({ activityLogs = [], auditLogs = [], users = [], isLoading }: ActivityLogViewerProps) {
   // Activity log state
   const [actionFilter, setActionFilter] = React.useState<'All' | ActionType>('All');
   const [userFilter, setUserFilter] = React.useState<string>('All');
@@ -39,7 +44,7 @@ export default function ActivityLogViewer() {
 
   // Filtered activity logs
   const filteredActivityLogs = React.useMemo(() => {
-    return sampleActivityLogs.filter((log) => {
+    return activityLogs.filter((log) => {
       if (actionFilter !== 'All' && log.action !== actionFilter) return false;
       if (userFilter !== 'All' && log.userId !== userFilter) return false;
       if (searchQuery) {
@@ -52,9 +57,9 @@ export default function ActivityLogViewer() {
       }
       return true;
     });
-  }, [actionFilter, userFilter, searchQuery]);
+  }, [activityLogs, actionFilter, userFilter, searchQuery]);
 
-  const filteredAuditLogs = sampleAuditLogs;
+  const filteredAuditLogs = auditLogs;
 
   return (
     <Tabs defaultValue="activity" className="space-y-4">
@@ -79,7 +84,7 @@ export default function ActivityLogViewer() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Users</SelectItem>
-              {sampleUsers.map((user) => (
+              {users.map((user) => (
                 <SelectItem key={user.id} value={user.id}>
                   {user.name.split(' ').slice(-1)[0]}
                 </SelectItem>
@@ -112,8 +117,18 @@ export default function ActivityLogViewer() {
           </Select>
         </div>
 
-        {/* Timeline */}
-        <motion.div
+      {/* Loading state */}
+      {isLoading && (
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-16 rounded-lg border bg-card animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {/* Timeline */}
+      {!isLoading && (
+      <motion.div
           initial={staggerChildren.initial}
           animate={staggerChildren.animate}
           className="space-y-2 max-h-[60vh] overflow-y-auto pr-1"
@@ -165,6 +180,7 @@ export default function ActivityLogViewer() {
             })
           )}
         </motion.div>
+      )}
       </TabsContent>
 
       {/* Audit Log Tab */}

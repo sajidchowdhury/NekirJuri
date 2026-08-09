@@ -22,19 +22,20 @@ import {
   type SystemUser,
   type UserRole,
   type UserStatus,
-  sampleUsers,
   getInitials,
   roleBadgeColors,
   userStatusColors,
 } from '@/lib/system/sample-data';
 
 interface UserManagementProps {
+  users?: SystemUser[];
+  isLoading?: boolean;
   onEditUser?: (user: SystemUser) => void;
   onAddUser?: () => void;
 }
 
-export default function UserManagement({ onEditUser, onAddUser }: UserManagementProps) {
-  const [users, setUsers] = React.useState<SystemUser[]>(sampleUsers);
+export default function UserManagement({ users: usersProp, isLoading, onEditUser, onAddUser }: UserManagementProps) {
+  const users = usersProp ?? [];
   const [statusFilter, setStatusFilter] = React.useState<'All' | 'Active' | 'Inactive'>('All');
 
   const filteredUsers = React.useMemo(() => {
@@ -123,13 +124,8 @@ export default function UserManagement({ onEditUser, onAddUser }: UserManagement
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  setUsers((prev) =>
-                    prev.map((u) =>
-                      u.id === user.id
-                        ? { ...u, status: u.status === 'Active' ? 'Inactive' : 'Active' }
-                        : u
-                    )
-                  );
+                  // Toggle status handled by parent via API
+                  onEditUser?.(user);
                 }}
                 className="gap-2 cursor-pointer"
               >
@@ -194,6 +190,9 @@ export default function UserManagement({ onEditUser, onAddUser }: UserManagement
           data={filteredUsers}
           searchKey="name"
           searchPlaceholder="Search users..."
+          isLoading={isLoading}
+          emptyMessage="No users found"
+          emptyDescription="Add your first user to get started."
         />
       </div>
 

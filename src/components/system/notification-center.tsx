@@ -20,7 +20,6 @@ import {
   type SystemNotification,
   type NotificationType,
   type NotificationStatus,
-  sampleNotifications,
 } from '@/lib/system/sample-data';
 import { slideUp, staggerChildren, transitions } from '@/lib/animations';
 
@@ -45,8 +44,15 @@ const typeBgColors: Record<NotificationType, string> = {
   General: 'bg-stone-50 dark:bg-stone-800/30',
 };
 
-export default function NotificationCenter() {
-  const [notifications, setNotifications] = React.useState<SystemNotification[]>(sampleNotifications);
+interface NotificationCenterProps {
+  notifications?: SystemNotification[];
+  isLoading?: boolean;
+  onMarkAsRead?: (id: string) => void;
+  onMarkAllAsRead?: () => void;
+}
+
+export default function NotificationCenter({ notifications: notificationsProp, isLoading, onMarkAsRead, onMarkAllAsRead }: NotificationCenterProps) {
+  const notifications = notificationsProp ?? [];
   const [typeFilter, setTypeFilter] = React.useState<'All' | NotificationType>('All');
   const [statusFilter, setStatusFilter] = React.useState<'All' | NotificationStatus>('All');
 
@@ -61,15 +67,11 @@ export default function NotificationCenter() {
   }, [notifications, typeFilter, statusFilter]);
 
   const handleMarkAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, status: 'Read' as NotificationStatus } : n))
-    );
+    onMarkAsRead?.(id);
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, status: 'Read' as NotificationStatus }))
-    );
+    onMarkAllAsRead?.();
   };
 
   return (
@@ -128,7 +130,17 @@ export default function NotificationCenter() {
         </div>
       </div>
 
+      {/* Loading state */}
+      {isLoading && (
+        <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-20 rounded-lg border bg-card animate-pulse" />
+          ))}
+        </div>
+      )}
+
       {/* Notification list */}
+      {!isLoading && (
       <motion.div
         initial={staggerChildren.initial}
         animate={staggerChildren.animate}
@@ -192,6 +204,7 @@ export default function NotificationCenter() {
           })
         )}
       </motion.div>
+      )}
     </div>
   );
 }

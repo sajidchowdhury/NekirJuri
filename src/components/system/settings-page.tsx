@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { HardDrive } from 'lucide-react';
+import { HardDrive, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -97,9 +97,12 @@ export const defaultSettings: SettingsState = {
 interface SettingsPageProps {
   settings: SettingsState;
   onSettingsChange: (settings: SettingsState) => void;
+  onSave?: () => void;
+  isSaving?: boolean;
+  isLoading?: boolean;
 }
 
-export default function SettingsPage({ settings, onSettingsChange }: SettingsPageProps) {
+export default function SettingsPage({ settings, onSettingsChange, onSave, isSaving, isLoading }: SettingsPageProps) {
   const update = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
     onSettingsChange({ ...settings, [key]: value });
   };
@@ -483,8 +486,18 @@ export default function SettingsPage({ settings, onSettingsChange }: SettingsPag
 
       {/* Save button */}
       <div className="flex justify-end pt-2">
-        <Button className="bg-emerald-600 hover:bg-emerald-700 gap-1.5" size="sm">
-          Save Settings
+        <Button
+          className="bg-emerald-600 hover:bg-emerald-700 gap-1.5"
+          size="sm"
+          onClick={onSave}
+          disabled={isSaving || isLoading}
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : 'Save Settings'}
         </Button>
       </div>
     </div>
