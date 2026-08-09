@@ -1779,3 +1779,50 @@ Stage Summary:
 - Phase 3 (SMS/Email) SKIPPED per user request
 - Stage 5 progress: 25% (Docker done, security/CI/CD still pending)
 - Next session: 4.2 — Security Hardening
+
+---
+Task ID: 4.2
+Agent: Main
+Task: Session 4.2 — Security Hardening (Phase 4)
+
+Work Log:
+- Created src/lib/rate-limit.ts: in-memory sliding window rate limiter with 6 presets
+  - login: 5 req/15min, register: 3 req/hr, forgot-password: 3 req/hr, api: 100 req/min, write: 30 req/min, health: 10 req/min
+  - Automatic cleanup (every 5 min) to prevent memory leaks
+  - IP detection from X-Forwarded-For and X-Real-IP headers
+- Created src/lib/csrf.ts: CSRF protection using double-submit cookie pattern
+  - crypto.randomUUID() (Edge Runtime compatible, not Node.js crypto module)
+  - SameSite=Strict cookie, constant-time comparison to prevent timing attacks
+  - Skip CSRF for /api/auth/* routes (NextAuth has its own CSRF)
+- Created src/lib/security-headers.ts: comprehensive security headers
+  - CSP (programmatic, dev vs prod differences), HSTS (production only), X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
+- Created src/lib/error-sanitizer.ts: production-safe error messages
+  - Maps known Prisma errors (unique constraint, foreign key, not found)
+  - Generic fallback in production, full message in development
+- Created src/lib/csrf-client.ts: client-side CSRF helper for fetch requests
+- Updated src/middleware.ts: complete security middleware
+  - Rate limiting (6 presets by route type, with 429 + Retry-After + X-RateLimit-* headers)
+  - CSRF validation on POST/PUT/PATCH/DELETE
+  - CORS with configurable origins (CORS_ORIGINS env var) + preflight handling
+  - Request body size limit (1MB via Content-Length check)
+  - Security headers on ALL responses
+- Updated src/lib/auth.ts: brute-force protection
+  - Per-email lockout: 5 failed attempts → 15 min lock (defense in depth with IP rate limit)
+  - Auto-cleanup of expired entries every 10 min
+  - Removed hardcoded NEXTAUTH_SECRET fallback, added fail-fast validation
+- Updated src/lib/api-client.ts: CSRF token integration
+  - All mutation requests (POST/PUT/PATCH/DELETE) automatically include X-CSRF-Token header
+  - Reads token from csrf-token cookie set by middleware
+- Updated next.config.ts: static security headers + serverActions bodySizeLimit 1MB
+- Updated .env.example + .env.production: added CORS_ORIGINS variable
+- Fixed Edge Runtime compatibility: replaced `import { randomUUID } from 'crypto'` with `crypto.randomUUID()` (Web Crypto API)
+- Lint: 0 errors, 14 pre-existing warnings
+
+Stage Summary:
+- Phase 4, Session 4.2 is COMPLETE
+- Full security hardening: rate limiting, CSRF, CORS, CSP, brute-force protection
+- 5 new security utility modules created
+- 5 files modified (middleware, auth, api-client, next.config, env files)
+- Security posture transformed from "no protection" to "production-hardened"
+- Stage 5 progress: 50% (Docker + Security done, CI/CD + monitoring still pending)
+- Next session: 4.3 — Monitoring & Error Handling

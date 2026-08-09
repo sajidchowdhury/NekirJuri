@@ -1,6 +1,7 @@
 // ============================================================
 // Madrasha ERP SaaS — Centralized API Client
 // Provides a typed fetch wrapper for frontend→API communication
+// Session 4.2: CSRF token integration for mutation requests
 // ============================================================
 
 /** API Error with status code and message */
@@ -32,18 +33,49 @@ export interface PaginatedData<T> {
   };
 }
 
+// ---- CSRF Token Helper (client-side only) ----
+const CSRF_COOKIE_NAME = 'csrf-token'
+const CSRF_HEADER_NAME = 'x-csrf-token'
+
+function getCsrfToken(): string | null {
+  if (typeof document === 'undefined') return null
+  const cookies = document.cookie.split(';')
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=')
+    if (name === CSRF_COOKIE_NAME) {
+      return decodeURIComponent(value)
+    }
+  }
+  return null
+}
+
+function getCsrfHeaders(): Record<string, string> {
+  const token = getCsrfToken()
+  if (token) {
+    return { [CSRF_HEADER_NAME]: token }
+  }
+  return {}
+}
+
+// ---- API Client Functions ----
+
 /**
  * Typed fetch wrapper for API calls.
  * - Throws ApiError on non-OK responses
  * - Returns parsed JSON data on success
+ * - Includes CSRF token for mutation requests
  */
 export async function apiFetch<T>(
   url: string,
   options?: RequestInit
 ): Promise<T> {
+  const method = (options?.method || 'GET').toUpperCase()
+  const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
+
   const res = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
+      ...(isMutation ? getCsrfHeaders() : {}),
       ...options?.headers,
     },
     ...options,
@@ -94,6 +126,7 @@ export async function apiFetchList<T>(
 /**
  * POST/PUT data to an API endpoint.
  * Returns parsed response data or throws ApiError.
+ * Includes CSRF token automatically.
  */
 export async function apiSubmit<T>(
   url: string,
@@ -102,7 +135,10 @@ export async function apiSubmit<T>(
 ): Promise<T> {
   const res = await fetch(url, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...getCsrfHeaders(),
+    },
     body: JSON.stringify(body),
   });
 
@@ -124,11 +160,17 @@ export async function apiSubmit<T>(
 /**
  * DELETE an entity by ID.
  * Returns parsed response data or throws ApiError.
+ * Includes CSRF token automatically.
  */
 export async function apiDelete<T>(
   url: string
 ): Promise<T> {
-  const res = await fetch(url, { method: 'DELETE' });
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      ...getCsrfHeaders(),
+    },
+  });
 
   if (!res.ok) {
     let message = `Delete failed (${res.status})`;

@@ -27,6 +27,12 @@
 | Health Check | ✅ Done | GET /api/health — DB connectivity, memory, uptime, provider detection |
 | Docker Setup | ✅ Done | Multi-stage Dockerfile + docker-compose with PostgreSQL |
 | Graceful Shutdown | ✅ Done | SIGTERM/SIGINT handlers in db.ts for clean DB disconnect |
+| Rate Limiting | ✅ Done | In-memory sliding window: 6 presets (login, register, forgot-password, api, write, health) |
+| CSRF Protection | ✅ Done | Double-submit cookie + SameSite=Strict + constant-time comparison |
+| Brute-Force Protection | ✅ Done | Per-email lockout (5 attempts → 15 min) + IP rate limiting |
+| Security Headers | ✅ Done | CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy |
+| CORS | ✅ Done | Configurable origins via CORS_ORIGINS env var |
+| Body Size Limit | ✅ Done | 1MB max request body (middleware + next.config) |
 
 ## Critical Gaps (What's NOT Done)
 
@@ -38,7 +44,7 @@
 | **SMS/Email backend** | 🟡 HIGH | Not implemented (Phase 3 skipped) | No notification delivery |
 | **Seed data with i18n** | 🟢 MEDIUM | No Bengali/Arabic seed data | Demo shows empty or English-only data |
 | **Production config** | ✅ COMPLETE | Docker + PostgreSQL + health check + env config done | Deployable |
-| **Security hardening** | 🔴 CRITICAL | No rate limiting, CSRF, CORS, CSP | Vulnerable to attacks |
+| **Security hardening** | ✅ COMPLETE | Rate limiting + CSRF + CORS + CSP + brute-force protection | Production-hardened |
 | **Monitoring/logging** | 🟡 HIGH | No structured logging or error tracking | Hard to debug production issues |
 
 ## Frontend→API Gap Detail
@@ -386,17 +392,46 @@
 
 **Lint**: 0 errors, 14 pre-existing warnings
 
-### Session 4.2: Security Hardening (3-4 hours)
+### Session 4.2: Security Hardening (3-4 hours) ✅ DONE
+**Completed**: March 2026
 **Tasks**:
-- [ ] Add rate limiting to API routes (upstash/redis or in-memory)
-- [ ] Add CORS configuration for production
-- [ ] Add CSRF protection
-- [ ] Add request size limits (prevent large payload attacks)
-- [ ] Review and rotate any exposed secrets
-- [ ] Add `Helmet`-like security headers
-- [ ] Configure Content Security Policy
-- [ ] Verify all passwords are bcrypt hashed (not plaintext)
-- [ ] Add brute-force protection on login route
+- [x] Add rate limiting to API routes (in-memory sliding window, 6 presets: login, register, forgot-password, api, write, health)
+- [x] Add CORS configuration for production (CORS_ORIGINS env var, preflight handling)
+- [x] Add CSRF protection (double-submit cookie pattern, SameSite=Strict, constant-time comparison)
+- [x] Add request size limits (1MB max body size via middleware + next.config.ts)
+- [x] Review and rotate any exposed secrets (NEXTAUTH_SECRET fallback removed, fail-fast in production)
+- [x] Add `Helmet`-like security headers (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy)
+- [x] Configure Content Security Policy (programmatic CSP for dev/prod differences)
+- [x] Verify all passwords are bcrypt hashed (bcrypt with cost 12 for register, bcrypt.compare for login)
+- [x] Add brute-force protection on login route (per-email lockout: 5 failed attempts → 15 min lock, defense in depth with IP rate limit)
+
+**Files created** (4 new):
+- `src/lib/rate-limit.ts` — In-memory sliding window rate limiter with 6 presets, automatic cleanup, IP detection from proxy headers
+- `src/lib/csrf.ts` — CSRF protection: double-submit cookie, crypto.randomUUID() (Edge Runtime safe), constant-time comparison, SameSite=Strict
+- `src/lib/security-headers.ts` — Security headers: CSP builder, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+- `src/lib/error-sanitizer.ts` — Error sanitization: production-safe messages, known Prisma error mapping, server-side logging helper
+- `src/lib/csrf-client.ts` — Client-side CSRF helper: reads cookie, provides headers for fetch
+
+**Files modified** (5 files):
+- `src/middleware.ts` — Complete security middleware: rate limiting (6 presets by route type), CSRF validation on mutations, CORS with preflight, body size check, security headers on all responses
+- `src/lib/auth.ts` — Brute-force protection: per-email lockout (5 attempts → 15 min), failed attempt tracking with auto-cleanup, NEXTAUTH_SECRET fail-fast validation
+- `src/lib/api-client.ts` — CSRF integration: all mutation requests (POST/PUT/PATCH/DELETE) automatically include X-CSRF-Token header
+- `next.config.ts` — Static security headers via headers() config, serverActions bodySizeLimit 1MB
+- `.env.example` + `.env.production` — Added CORS_ORIGINS variable
+
+**Security posture after Session 4.2:**
+| Protection | Before | After |
+|-----------|--------|-------|
+| Rate limiting | ❌ None | ✅ 6 presets (login 5/15min, register 3/hr, API 100/min, write 30/min) |
+| CSRF | ❌ None | ✅ Double-submit cookie + SameSite=Strict |
+| Brute-force | ❌ None | ✅ Per-email lockout (5 attempts → 15 min) |
+| Security headers | ❌ None | ✅ CSP, HSTS, X-Frame-Options, X-Content-Type-Options, etc. |
+| CORS | ❌ None | ✅ Configurable origins via CORS_ORIGINS |
+| Body size limit | ❌ None | ✅ 1MB max |
+| NEXTAUTH_SECRET | ⚠️ Hardcoded fallback | ✅ Fail-fast in production |
+| Error disclosure | ⚠️ String(e) leaks internals | ✅ Sanitized in production |
+
+**Lint**: 0 errors, 14 pre-existing warnings
 
 ### Session 4.3: Monitoring & Error Handling (3-4 hours)
 **Tasks**:
@@ -560,7 +595,7 @@ If you need to launch sooner, the **minimum path to production** is:
 ## Stage 5: Production Deploy — 100% when:
 - [x] **Docker setup working** ← Phase 4, Session 4.1 ✅
 - [ ] **CI/CD pipeline active** ← Phase 4
-- [ ] **Security hardening complete** ← Phase 4
+- [x] **Security hardening complete** ← Phase 4, Session 4.2 ✅
 - [ ] **Integration tests passing (200+)** ← Phase 5
 - [ ] **Performance benchmarks met** ← Phase 5
 - [ ] **Documentation complete** ← Phase 6
@@ -570,23 +605,25 @@ If you need to launch sooner, the **minimum path to production** is:
 
 # 📋 Quick Reference: What To Do Next
 
-**RIGHT NOW → Start Phase 4, Session 4.2**
+**RIGHT NOW → Start Phase 4, Session 4.3**
 
-1. Add rate limiting to API routes
-2. Add CORS configuration for production
-3. Add CSRF protection
-4. Add security headers + CSP
+1. Add structured logging (pino or winston)
+2. Add error tracking (Sentry integration)
+3. Add performance monitoring (Web Vitals)
+4. Create admin metrics endpoint
 5. Commit + push
 
 Phase 1 (Validation & Audit) is COMPLETE. Phase 2 (Backend Wiring) is COMPLETE.
 Phase 3 (SMS/Email) is SKIPPED per user request.
 Phase 4, Session 4.1 (Environment & Database Config) is COMPLETE.
+Phase 4, Session 4.2 (Security Hardening) is COMPLETE.
 
 All 27 pages are wired to real API data — **0 pages using sample data!**
 Docker + PostgreSQL setup is ready. Health check endpoint is live.
+Full security hardening: rate limiting, CSRF, CORS, CSP, brute-force protection.
 Graceful shutdown and conditional Prisma logging implemented.
 
-The next work is Session 4.2: **Security Hardening**.
+The next work is Session 4.3: **Monitoring & Error Handling**.
 
 ---
 

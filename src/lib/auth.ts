@@ -7,6 +7,23 @@ import type { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { db } from './db'
 import bcrypt from 'bcryptjs'
+import { rateLimit, RateLimits } from './rate-limit'
+
+// Track failed login attempts for brute-force protection (defense in depth)
+// The middleware also rate-limits by IP, but this adds per-user protection
+const failedLoginAttempts = new Map<string, { count: number; lockedUntil: number }>()
+const MAX_FAILED_ATTEMPTS = 5
+const LOCKOUT_DURATION = 15 * 60 * 1000 // 15 minutes
+
+// Clean up old entries every 10 minutes
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, entry] of failedLoginAttempts) {
+    if (now > entry.lockedUntil) {
+      failedLoginAttempts.delete(key)
+    }
+  }
+}, 10 * 60 * 1000)
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -20,6 +37,14 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password are required')
+        }
+
+        // Brute-force protection: check if account is temporarily locked
+        const lockoutKey = credentials.email.toLowerCase()
+        const lockoutEntry = failedLoginAttempts.get(lockoutKey)
+        if (lockoutEntry && Date.now() < lockoutEntry.lockedUntil) {
+          const remainingMinutes = Math.ceil((lockoutEntry.lockedUntil - Date.now()) / 60000)
+          throw new Error(`Account temporarily locked. Try again in ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}.`)
         }
 
         const user = await db.user.findFirst({
@@ -50,6 +75,18 @@ export const authOptions: NextAuthOptions = {
 
         const isValid = await bcrypt.compare(credentials.password, user.passwordHash)
         if (!isValid) {
+          // Track failed login attempt for brute-force protection
+          const existing = failedLoginAttempts.get(lockoutKey) || { count: 0, lockedUntil: 0 }
+          const newCount = existing.count + 1
+          if (newCount >= MAX_FAILED_ATTEMPTS) {
+            failedLoginAttempts.set(lockoutKey, {
+              count: newCount,
+              lockedUntil: Date.now() + LOCKOUT_DURATION,
+            })
+            throw new Error(`Too many failed attempts. Account locked for 15 minutes.`)
+          } else {
+            failedLoginAttempts.set(lockoutKey, { count: newCount, lockedUntil: 0 })
+          }
           throw new Error('Invalid email or password')
         }
 
@@ -58,6 +95,9 @@ export const authOptions: NextAuthOptions = {
             throw new Error('Access denied for this institution')
           }
         }
+
+        // Clear failed login attempts on successful login
+        failedLoginAttempts.delete(lockoutKey)
 
         const roles = user.userRoles.map(ur => ur.role.slug)
         const permissions = user.userRoles.flatMap(ur =>
@@ -195,7 +235,15 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 24 * 60 * 60,
   },
-  secret: process.env.NEXTAUTH_SECRET || 'madrasha-erp-dev-secret-change-in-production',
+  secret: process.env.NEXTAUTH_SECRET,
+}
+
+// Validate that NEXTAUTH_SECRET is set (fail fast in production)
+if (!process.env.NEXTAUTH_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'NEXTAUTH_SECRET environment variable is required in production. ' +
+    'Generate one with: openssl rand -base64 32'
+  )
 }
 
 declare module 'next-auth' {
